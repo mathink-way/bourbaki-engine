@@ -2,7 +2,7 @@
 
 **English** | [Русский](README.ru.md)
 
-Chapter I of N. Bourbaki's *Theory of Sets* as a program. You write proofs the way the
+N. Bourbaki's *Theory of Sets* as a program: all of chapter I and chapter II, §§ 1-6. You write proofs the way the
 book writes them; the program checks every line and, on request, unfolds it all the way
 down to explicit axioms, schemes and modus ponens. There are no types: only what Bourbaki
 has, namely assemblies with τ and □, terms, relations, theories, schemes and proofs.
@@ -185,6 +185,10 @@ LaTeX works in the comments of the notes and in rustdoc, see [docs/DOCS.md](docs
 * Unfolded proofs of late criteria are huge (C40 and C42 exceed 100,000 lines); C51 does
   not fit into 6 GB. Fast checking is unaffected.
 * For schemes like S6, where R occurs only as R(T), the substitution must be written.
+* Inferring the substitution can be slow for the largest statements of § 5: `by
+  prodmaps_comp` takes minutes without `with` and a tenth of a second with
+  `with F(x) := F(x); ...`. The result is always checked literally, so this costs time,
+  never correctness.
 * No step-by-step unfolding yet. The VS Code extension has not been tried inside VS Code
   itself yet (it packages, and its grammar was tested with `vscode-textmate`).
 
@@ -193,8 +197,10 @@ LaTeX works in the comments of the notes and in rustdoc, see [docs/DOCS.md](docs
 The code and texts of this repository are licensed under MIT ([LICENSE](LICENSE)).
 
 The repository does not contain the text of the book. The notes are an independent
-retelling: formal statements, the numbering of criteria (C1-C51, S1-S8) and page
+retelling: formal statements, the numbering of criteria (C1-C57, S1-S8) and page
 references to the Russian translation (N. Bourbaki, *Теория множеств*, Moscow: Mir, 1965).
 Mathematical statements and ideas are not protected by copyright, while the text of the book
-and of its translation is; therefore no scans and no long quotations are included. This
-project is not affiliated with the Bourbaki association or any rights holder.
+and of its translation is; therefore no scans and no long quotations are included. The name
+Bourbaki is used only to say which book the notes follow. This project is not affiliated
+with the Association des collaborateurs de Nicolas Bourbaki, the publishers or any other
+rights holder.

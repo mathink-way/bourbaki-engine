@@ -309,6 +309,9 @@ enum Cls {
     Atom,
     /// x ∈ y: без скобок внутри ∨, ⇒, но в скобках под ¬ и квантором.
     Infix,
+    /// Инфиксный терм X × Y, H ∘ G: без скобок как операнд соотношения (x ∈ X × Y),
+    /// в скобках как операнд другого инфиксного терма ((A × B) × C).
+    TermInfix,
     /// A ∨ B, A ⇒ B, ...
     Binary,
     /// (∃x)R.
@@ -495,6 +498,7 @@ fn user_abbrev_args(e: &Expr, want: Sort) -> Option<Recognized> {
 
 fn user_abbrev_args_uncached(e: &Expr, want: Sort) -> Option<Recognized> {
     ABBREVS.with(|c| {
+        let mut found: Option<Recognized> = None;
         for a in c.borrow().iter().rev() {
             if a.sort != want || !a.fold {
                 continue;
@@ -517,6 +521,24 @@ fn user_abbrev_args_uncached(e: &Expr, want: Sort) -> Option<Recognized> {
                         (v.fill_holes(&fill[..p.weight()]), a.param_sort(i))
                     })
                     .collect();
+                // сокращение не должно съедать ¬ от квантора всеобщности внутри: (∀x)(A ⇒ X ⊂ Y)
+                // буквально есть AllA_x(A, R), где ¬¬R это X ⊂ Y; такое R печатается через τ.
+                // То же для (∃y), спрятанного в R
+                let eats_quant = a.params.iter().zip(&args).any(|(p, (v, sort))| {
+                    p.weight() > 0 && *sort == Sort::Relation && v.is_closed() && {
+                        let nn = Relation(v.clone()).not().not();
+                        forall_reading(&nn).is_some() || exists_reading(nn.expr()).is_some()
+                    }
+                });
+                // и не должно прятать квантор существования: (∃x)(x ∉ X) буквально есть
+                // τx(x ∉ X) ∉ X, а (∃S)Sect(S, ...) есть Sect(τS(...), ...)
+                let hides_exists = args.iter().any(|(v, sort)| {
+                    *sort == Sort::Term
+                        && matches!(v.shape(), Shape::Tau(_, b) if b.instantiate(v) == *e)
+                });
+                if eats_quant || hides_exists {
+                    continue;
+                }
                 let name = match xs.len() {
                     0 => a.name.clone(),
                     1 => format!("{}_{}", a.name, xs[0]),
@@ -529,10 +551,16 @@ fn user_abbrev_args_uncached(e: &Expr, want: Sort) -> Option<Recognized> {
                             .join(",")
                     ),
                 };
-                return Some((a.clone(), name, args));
+                // сокращение без связанных букв конкретнее: X × Y, а не Pairs_{x,y}(x ∈ X ∧ y ∈ Y)
+                if a.binders.is_empty() {
+                    return Some((a.clone(), name, args));
+                }
+                if found.is_none() {
+                    found = Some((a.clone(), name, args));
+                }
             }
         }
-        None
+        found
     })
 }
 
@@ -570,7 +598,12 @@ fn quant_reading(r: &Relation) -> Option<(bool, Letter, Expr)> {
 /// тогда исходное ¬(∃x)(A ∧ B) понятнее.
 fn forall_reading(r: &Relation) -> Option<Abs> {
     let a = r.as_forall()?;
-    let neg_and = matches!(Relation(a.body.clone()).as_or(), Some((p, q)) if p.as_not().is_some() && q.as_not().is_some());
+    // тело ¬P ∨ ¬Q лучше читать как ¬(∃x)(P ∧ Q), но не когда ¬Q это само (∀y)...:
+    // (∀x)(A ⇒ X ⊂ Y) так и печатается
+    // (тело проверяется с подставленной буквой: внутренний τ зависит от x и иначе не замкнут)
+    let x = Letter::new("x").fresh(|l| r.expr().contains_letter(l));
+    let body = Relation(a.body.instantiate(&Expr::letter(x)));
+    let neg_and = matches!(body.as_or(), Some((p, q)) if p.as_not().is_some() && q.as_not().is_some() && q.as_forall().is_none() && exists_reading(q.expr()).is_none());
     (!neg_and).then_some(a)
 }
 
@@ -653,17 +686,16 @@ fn show_app(name: &str, fixity: Fixity, args: &[(Expr, Sort)], result: Sort) -> 
             Sort::Term => term(x),
             Sort::Relation => rel(x),
         };
-        if as_operand && c != Cls::Atom {
-            paren(s)
-        } else {
-            s
-        }
+        let bare = c == Cls::Atom || (c == Cls::TermInfix && result == Sort::Relation);
+        if as_operand && !bare { paren(s) } else { s }
     };
     if fixity == Fixity::Infix && args.len() == 2 {
         let s = format!("{} {name} {}", one(&args[0], true), one(&args[1], true));
         // инфиксное сокращение над соотношениями ведёт себя как связка
         let cls = if args[0].1 == Sort::Relation && result == Sort::Relation {
             Cls::Binary
+        } else if result == Sort::Term {
+            Cls::TermInfix
         } else {
             Cls::Infix
         };

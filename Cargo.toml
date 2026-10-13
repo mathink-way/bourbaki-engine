@@ -11,7 +11,7 @@ readme = "README.md"
 repository = "https://github.com/mathink-way/bourbaki-engine"
 keywords = ["bourbaki", "logic", "proof-checker", "set-theory", "mathematics"]
 categories = ["mathematics", "science"]
-exclude = ["/zed", "/vscode", "/.zed", "/CLAUDE.md"]
+exclude = ["/zed", "/vscode", "/.zed", "/.github", "/.cargo", "/CLAUDE.md", "/docs/history"]
 
 [package.metadata.docs.rs]
 rustdoc-args = ["--html-in-header", "katex-header.html"]

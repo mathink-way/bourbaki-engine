@@ -547,6 +547,28 @@ fn binder_abbreviations() {
     }
 }
 
+/// Печать не прячет кванторы внутрь сокращений: (∀x)(A ⇒ X ⊂ Y) литерально есть и
+/// AllA_x(A, ...) с раскрытым ⊂, и τx(x ∉ X) ∉ X есть (∃x)(x ∉ X).
+#[test]
+fn printing_keeps_quantifiers() {
+    let mut k = with_logic();
+    ok(
+        &mut k,
+        "sign ∈ : rel 2 infix\nabbrev ⊂ (X Y : term) infix := (∀z)(z ∈ X ⇒ z ∈ Y)\nabbrev ∉ (X Y : term) infix := ¬(X ∈ Y)\nabbrev AllA (A R : rel 1) := ¬(∃x)(A(x) ∧ ¬R(x))\nabbrev Coll (R : rel 1) := (∃y)(∀x)(x ∈ y ⇔ R(x))",
+    );
+    let s = &k.scope;
+    for f in [
+        "(∀i)(i ∈ I ⇒ i ⊂ Y)",
+        "(∀x)(x ∈ A ⇒ (∀y)(y ∈ x))",
+        "(∀X)(∃x)(x ∉ X)",
+        "(∀y)(y ∈ B ⇒ (∃x)(x ∈ A ∧ y ∈ x))",
+        "AllA_x(x ∈ A, x ∈ B)",
+        "Coll_x((∃y)(x ∈ y ∧ y ∈ a))",
+    ] {
+        assert_eq!(s.parse_rel(f).unwrap().to_string(), f);
+    }
+}
+
 #[test]
 fn bound_metavariables_are_inferred() {
     let mut k = with_logic();

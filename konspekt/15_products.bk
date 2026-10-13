@@ -1216,7 +1216,7 @@ theorem choice_fn {L : term} {J : term 1} {P : rel 2} (h : (∀l)(l ∈ L ⇒ (�
   _                                                                   by C20 fp ^
 }
 
--- Предложение 8 (стр. 119): при L ≠ ∅ и J_λ ≠ ∅
+-- Предложение 8 (стр. 119), первая формула: при J_λ ≠ ∅
 -- ⋃_λ ⋂_{ι∈J_λ} X_{λ,ι} = ⋂_{f∈I} ⋃_λ X_{λ,f(λ)}, где I = ∏ J_λ.
 theorem union_inter_distrib {L : term} {J : term 1} {X : term 2} (hj : (∀l)(l ∈ L ⇒ J(l) ≠ ∅)) : ⋃_l(L, ⋂_i(J(l), X(l, i))) = ⋂_f(∏_l(L, J(l)), ⋃_l(L, X(l, ap(f, l)))) {
   hI. ∏_l(L, J(l)) ≠ ∅                                                        by prodJ_nonempty hj
@@ -1280,6 +1280,7 @@ theorem union_inter_distrib {L : term} {J : term 1} {X : term 2} (hj : (∀l)(l 
   _                                                                   by ext_iff ^
 }
 
+-- Предложение 8, вторая формула: ⋂_λ ⋃_{ι∈J_λ} X_{λ,ι} = ⋃_{f∈I} ⋂_λ X_{λ,f(λ)} (L ≠ ∅).
 theorem inter_union_distrib {L : term} {J : term 1} {X : term 2} (hl : L ≠ ∅) : ⋂_l(L, ⋃_i(J(l), X(l, i))) = ⋃_f(∏_l(L, J(l)), ⋂_l(L, X(l, ap(f, l)))) {
   a. x ∈ ⋂_l(L, ⋃_i(J(l), X(l, i))) ⇔ (∀l)(l ∈ L ⇒ x ∈ ⋃_i(J(l), X(l, i)))                 by mem_inter hl
   x ∈ ⋃_i(J(l), X(l, i)) ⇔ (∃i)(i ∈ J(l) ∧ x ∈ X(l, i))              by mem_union
