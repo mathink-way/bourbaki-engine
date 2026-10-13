@@ -57,6 +57,8 @@ fn later_chapters_expand_and_verify() {
         "ch1.C28",
         "ch1.CS8_example",
         "ch1.C30_2",
+        "ch1.C19",
+        "ch1.obtain",
         "ch1.C34",
         "ch1.C38",
         "ch1.C43",
@@ -704,4 +706,37 @@ fn imports_do_not_leak_file_state() {
         &mut k,
         "in sets.Sets\ntheorem t {X : term} : X ⊂ X by sets.subset_refl",
     );
+}
+
+#[test]
+fn auxiliary_constant_is_a_theorem_not_a_rule() {
+    // C19 без нового правила: блок assume, обобщение, теорема obtain
+    let mut k = Konspekt::with_prelude();
+    let r = k.check_file(Path::new("konspekt/05_quant.bk"));
+    assert!(r.is_ok(), "{r}");
+    ok(
+        &mut k,
+        "open ch1\nin Quantified
+theorem t {P : rel 1} (e : (∃x)P(x)) : (∃z)P(z) {
+  P(x) ⇒ (∃z)P(z) by assume h {
+    P(x) ⇒ (∃z)P(z)   by S5
+    (∃z)P(z)          by mp h ^
+  }
+  (∀x)(P(x) ⇒ (∃z)P(z))   by gen ^ with x
+  _                       by obtain e ^
+}",
+    );
+    // вывод не может говорить о самой вспомогательной константе: x входит в B
+    let e = first_error(
+        &mut k,
+        "open ch1\nin Quantified
+theorem u {P : rel 1} (e : (∃x)P(x)) : P(x) {
+  P(x) ⇒ P(x) by assume h {
+    P(x) by h
+  }
+  (∀x)(P(x) ⇒ P(x))   by gen ^ with x
+  P(x)                by obtain e ^
+}",
+    );
+    assert!(e.contains("obtain"), "{e}");
 }

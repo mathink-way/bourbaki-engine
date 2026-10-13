@@ -30,6 +30,8 @@ theorem exists_intro {R : rel 1} {T : term} (h : R(T)) : (∃x) R(x) {
 
 -- Удаление ∃ одной подстановкой: x не константа и не входит в A, поэтому из
 -- (R(x) и A) ⇒ A подстановкой τx(R(x) и A) вместо x получается ((∃x)(R(x) и A)) ⇒ A.
+-- Это частный случай метода вспомогательной константы C19; общий вид: ch1.obtain
+-- в 05_quant.bk ("пусть x такой, что R(x)").
 theorem exists_elim {R : rel 1} {A : rel} : (∃x)(R(x) ∧ A) ⇒ A {
   (R(x) ∧ A) ⇒ A          by C21'
   (∃x)(R(x) ∧ A) ⇒ A      by subst ^ with x := τx(R(x) ∧ A)

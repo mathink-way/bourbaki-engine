@@ -56,6 +56,23 @@ theorem C30_2 {R : rel 2} {T U : term} : (∀x)(∀y)R(x, y) ⇒ R(T, U) {
   _                               by C6 1 2
 }
 
+-- C19, метод вспомогательной константы (§ 3, n° 3, стр. 48-49).
+-- Это не новое правило языка, а теорема: новые "правила" пишутся теоремами с гипотезами.
+-- "Пусть x такой предмет, что A(x)" записывается блоком assume, затем обобщением по x;
+-- условие "x не константа" проверяет gen, а условие "x не встречается в B" выполнено
+-- само: B метапеременная веса 0, в неё никакая буква не входит.
+--   A(x) ⇒ B           by assume h { ... }    -- внутри блока x вспомогательная константа
+--   (∀x)(A(x) ⇒ B)     by gen ^ with x
+--   B                  by C19 t ^              -- t: строка A(T), "теорема узаконения"
+theorem C19 {A : rel 1} {B : rel} {T : term} (h : A(T)) (hb : (∀x)(A(x) ⇒ B)) : B {
+  (∀x)(A(x) ⇒ B) ⇒ (A(T) ⇒ B)   by C30 with R(t) := A(t) ⇒ B; T := T
+  A(T) ⇒ B                      by mp hb ^
+  B                             by mp h ^
+}
+
+-- C19, когда известно только (∃x)A(x): это буквально A(τx(A(x))), так что T := τx(A(x)).
+theorem obtain {A : rel 1} {B : rel} (h : (∃x)A(x)) (hb : (∀x)(A(x) ⇒ B)) : B by C19 h hb
+
 -- C31 (∀, стр. 56). План книги: присоединим (∀x)R; тогда R, значит S, значит (∀x)S.
 theorem C31 {R S : rel 1} (h : (∀x)(R(x) ⇒ S(x))) : (∀x)R(x) ⇒ (∀x)S(x) {
   (∀x)R(x) ⇒ (∀x)S(x) by assume a {
@@ -158,11 +175,21 @@ theorem C33' {R : rel} {S : rel 1} : (∃x)(R ∧ S(x)) ⇔ (R ∧ (∃x)S(x)) {
   (R ∧ S(x)) ⇒ (∃x)S(x)                   by C6 2 3
   (R ∧ S(x)) ⇒ (R ∧ (∃x)S(x))             by imp_and 1 4
   (∃x)(R ∧ S(x)) ⇒ (R ∧ (∃x)S(x))         by subst ^ with x := τx(R ∧ S(x))
-  (R ∧ S(x)) ⇒ (∃x)(R ∧ S(x))             by S5
-  S(x) ⇒ (R ⇒ (∃x)(R ∧ S(x)))             by curry ^
-  (∃x)S(x) ⇒ (R ⇒ (∃x)(R ∧ S(x)))         by subst ^ with x := τx(S(x))
-  (R ∧ (∃x)S(x)) ⇒ (∃x)(R ∧ S(x))         by uncurry ^
-  _                                       by C20 6 10
+  -- обратно: пусть R и (∃x)S(x); возьмём x такой, что S(x) (C19)
+  (R ∧ (∃x)S(x)) ⇒ (∃x)(R ∧ S(x)) by assume h {
+    (R ∧ (∃x)S(x)) ⇒ R                    by C21
+    r. R                                  by mp h ^
+    (R ∧ (∃x)S(x)) ⇒ (∃x)S(x)             by C21'
+    e. (∃x)S(x)                           by mp h ^
+    S(x) ⇒ (∃x)(R ∧ S(x)) by assume s {
+      R ∧ S(x)                            by C20 r s
+      (R ∧ S(x)) ⇒ (∃x)(R ∧ S(x))         by S5
+      (∃x)(R ∧ S(x))                      by mp 1 2
+    }
+    (∀x)(S(x) ⇒ (∃x)(R ∧ S(x)))           by gen ^ with x
+    (∃x)(R ∧ S(x))                        by obtain e ^
+  }
+  _                                       by C20 6 7
 }
 
 -- C33 (∀ и ∨): двойственно, через ¬ и C33'.
@@ -213,14 +240,19 @@ theorem C34' {R : rel 2} : (∃x)(∃y)R(x, y) ⇔ (∃y)(∃x)R(x, y) {
 }
 
 -- Обратное неверно: из (∀y)(∃x)R не следует (∃x)(∀y)R (см. замечание после C34, стр. 57).
+-- Как в книге: пусть (∃x)(∀y)R; возьмём такой x (C19); тогда для всякого y R(x, y),
+-- значит (∃x)R(x, y), и это верно для всякого y.
 theorem C34'' {R : rel 2} : (∃x)(∀y)R(x, y) ⇒ (∀y)(∃x)R(x, y) {
-  (∀y)R(x, y) ⇒ R(x, y)                         by C30 with R(t) := R(x, t); T := y
-  R(x, y) ⇒ (∃x)R(x, y)                         by S5 with R(t) := R(t, y); T := x
-  (∀y)R(x, y) ⇒ (∃x)R(x, y)                     by C6 1 2
-  e. (∃x)(∀y)R(x, y) ⇒ (∃x)R(x, y)              by subst ^ with x := τx((∀y)R(x, y))
   (∃x)(∀y)R(x, y) ⇒ (∀y)(∃x)R(x, y) by assume h {
-    (∃x)R(x, y)                                 by mp h e
-    (∀y)(∃x)R(x, y)                             by gen ^ with y
+    (∀y)R(x, y) ⇒ (∀y)(∃x)R(x, y) by assume a {
+      (∀y)R(x, y) ⇒ R(x, y)                   by C30 with R(t) := R(x, t); T := y
+      R(x, y)                                 by mp a ^
+      R(x, y) ⇒ (∃x)R(x, y)                   by S5 with R(t) := R(t, y); T := x
+      (∃x)R(x, y)                             by mp 2 3
+      (∀y)(∃x)R(x, y)                         by gen ^ with y
+    }
+    (∀x)((∀y)R(x, y) ⇒ (∀y)(∃x)R(x, y))       by gen ^ with x
+    (∀y)(∃x)R(x, y)                           by obtain h ^
   }
 }
 
