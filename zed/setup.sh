@@ -15,7 +15,8 @@ rev=$(git rev-parse HEAD)
 cd "$here/bourbaki"
 sed -i.bak \
   -e "s|^repository = .*|repository = \"file://$dst\"|" \
-  -e "s|^rev = .*|rev = \"$rev\"|" extension.toml
+  -e "s|^rev = .*|rev = \"$rev\"|" \
+  -e "/^path = /d" extension.toml
 rm -f extension.toml.bak
 echo "грамматика: $dst @ $rev"
 echo "дальше: в Zed команда 'zed: install dev extension', папка $here/bourbaki"

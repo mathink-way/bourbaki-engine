@@ -5,12 +5,13 @@ schema_version = 1
 authors = ["Rushan Davlitshin (mathink-way)"]
 description = "Конспекты .bk (bourbaki-engine): подсветка, ошибки проверки, подсказки"
 
-# Откуда Zed берёт грамматику подсветки (см. zed/README.md):
-# либо GitHub-репозиторий проекта с path = "zed/tree-sitter-bourbaki",
-# либо локальная копия, которую готовит zed/setup.sh (он сам заполнит две строки ниже).
+# Откуда Zed берёт грамматику подсветки (см. zed/README.md): GitHub-репозиторий проекта,
+# rev это коммит, в котором лежит zed/tree-sitter-bourbaki. После изменения grammar.js
+# нужен новый коммит на GitHub и новый rev здесь. Без интернета: sh zed/setup.sh.
 [grammars.bourbaki]
-repository = "file:///Users/mathink-way/.local/share/bourbaki/tree-sitter-bourbaki"
-rev = "0e2edb3ec426ff61320a28a7e76d1be744553747"
+repository = "https://github.com/mathink-way/bourbaki-engine"
+rev = "c3524b26811f639a8672ecfd3178a85ac1531a76"
+path = "zed/tree-sitter-bourbaki"
 
 [language_servers.bourbaki-lsp]
 name = "bourbaki-lsp"

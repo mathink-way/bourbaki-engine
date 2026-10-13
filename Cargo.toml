@@ -3,6 +3,7 @@ name = "bourbaki-engine"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
+default-run = "bourbaki"
 authors = ["Rushan Davlitshin <https://github.com/mathink-way>"]
 description = "A proof checker for Bourbaki's Theory of Sets: proofs are written the way the book writes them and checked down to the axioms"
 license = "MIT"
