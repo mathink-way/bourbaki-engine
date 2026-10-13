@@ -1,5 +1,7 @@
 # bourbaki-engine
 
+[![crates.io](https://img.shields.io/crates/v/bourbaki-engine.svg)](https://crates.io/crates/bourbaki-engine) [![docs.rs](https://img.shields.io/docsrs/bourbaki-engine)](https://docs.rs/bourbaki-engine)
+
 [English](README.md) | **Русский**
 
 "Теория множеств" Н. Бурбаки как программа: вся глава I и глава II, §§ 1-6. Доказательства
@@ -34,7 +36,12 @@ theorem C8 {A : rel} : A ⇒ A {
 
 ## Быстрый старт
 
-Нужен Rust (1.85 или новее, `rustup`).
+* Пакет: [crates.io/crates/bourbaki-engine](https://crates.io/crates/bourbaki-engine)
+* Документация: [docs.rs/bourbaki-engine](https://docs.rs/bourbaki-engine); сам конспект с формулами в модуле
+  [`book`](https://docs.rs/bourbaki-engine/latest/bourbaki_engine/book/index.html).
+
+Нужен Rust (1.85 или новее, `rustup`). Команды `bourbaki` и `bourbaki-lsp` ставятся через
+`cargo install bourbaki-engine`, а конспект лежит в репозитории:
 
 ```
 git clone https://github.com/mathink-way/bourbaki-engine && cd bourbaki-engine

@@ -1,6 +1,6 @@
 [package]
 name = "bourbaki-engine"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 rust-version = "1.85"
 default-run = "bourbaki"
@@ -9,6 +9,8 @@ description = "A proof checker for Bourbaki's Theory of Sets: proofs are written
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/mathink-way/bourbaki-engine"
+documentation = "https://docs.rs/bourbaki-engine"
+homepage = "https://github.com/mathink-way/bourbaki-engine"
 keywords = ["bourbaki", "logic", "proof-checker", "set-theory", "mathematics"]
 categories = ["mathematics", "science"]
 exclude = ["/zed", "/vscode", "/.zed", "/.github", "/.cargo", "/CLAUDE.md", "/docs/history"]

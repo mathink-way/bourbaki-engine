@@ -1,5 +1,7 @@
 # bourbaki-engine
 
+[![crates.io](https://img.shields.io/crates/v/bourbaki-engine.svg)](https://crates.io/crates/bourbaki-engine) [![docs.rs](https://img.shields.io/docsrs/bourbaki-engine)](https://docs.rs/bourbaki-engine)
+
 **English** | [Русский](README.ru.md)
 
 N. Bourbaki's *Theory of Sets* as a program: all of chapter I and chapter II, §§ 1-6. You write proofs the way the
@@ -40,7 +42,12 @@ the line itself.
 
 ## Quick start
 
-You need Rust 1.85 or newer (via `rustup`).
+* Package: [crates.io/crates/bourbaki-engine](https://crates.io/crates/bourbaki-engine)
+* Documentation: [docs.rs/bourbaki-engine](https://docs.rs/bourbaki-engine); the notes themselves, rendered with
+  formulas, are in the [`book`](https://docs.rs/bourbaki-engine/latest/bourbaki_engine/book/index.html) module.
+
+You need Rust 1.85 or newer (via `rustup`). The two commands `bourbaki` and `bourbaki-lsp`
+install with `cargo install bourbaki-engine`; the notes are in the repository:
 
 ```
 git clone https://github.com/mathink-way/bourbaki-engine && cd bourbaki-engine
