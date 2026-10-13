@@ -73,6 +73,56 @@ theorem ext {X Y : term} (h1 : X ⊂ Y) (h2 : Y ⊂ X) : X = Y {
   X = Y                                                            by mp ^ ^^
 }
 
+-- Удобные формы A1 и S6 для множеств.
+theorem ext_iff {X Y : term} (h : (∀x)(x ∈ X ⇔ x ∈ Y)) : X = Y {
+  e. x ∈ X ⇔ x ∈ Y    by inst h
+  x ∈ X ⇒ x ∈ Y       by iff_imp e
+  l. X ⊂ Y            by gen ^ with x
+  x ∈ Y ⇒ x ∈ X       by iff_imp' e
+  r. Y ⊂ X            by gen ^ with x
+  _                   by ext l r
+}
+
+theorem eq_mem {X Y T : term} (h : X = Y) : T ∈ X ⇔ T ∈ Y {
+  X = Y ⇒ (T ∈ X ⇔ T ∈ Y)   by S6 with R(t) := T ∈ t; T := X; U := Y
+  _                         by mp h ^
+}
+
+theorem eq_subset {X Y : term} (h : X = Y) : X ⊂ Y {
+  X = Y ⇒ (X ⊂ X ⇔ X ⊂ Y)   by S6 with R(t) := X ⊂ t; T := X; U := Y
+  X ⊂ X ⇔ X ⊂ Y             by mp h ^
+  X ⊂ X                     by subset_refl
+  _                         by iff_mp 2 3
+}
+
+-- X = Y тогда и только тогда, когда X ⊂ Y и Y ⊂ X (A1 и S6).
+theorem eq_iff_subset {X Y : term} : X = Y ⇔ (X ⊂ Y ∧ Y ⊂ X) {
+  X = Y ⇒ (X ⊂ Y ∧ Y ⊂ X) by assume h {
+    X ⊂ Y                    by eq_subset h
+    Y = X                    by T2 h
+    Y ⊂ X                    by eq_subset ^
+    X ⊂ Y ∧ Y ⊂ X            by C20 1 3
+  }
+  (X ⊂ Y ∧ Y ⊂ X) ⇒ X = Y by assume h {
+    X ⊂ Y                    by taut h
+    Y ⊂ X                    by taut h
+    X = Y                    by ext 1 2
+  }
+  _                          by iff_intro 1 2
+}
+
+-- То же через элементы: X = Y ⇔ (∀x)(x ∈ X ⇔ x ∈ Y).
+theorem eq_iff_mem {X Y : term} : X = Y ⇔ (∀x)(x ∈ X ⇔ x ∈ Y) {
+  X = Y ⇒ (∀x)(x ∈ X ⇔ x ∈ Y) by assume h {
+    x ∈ X ⇔ x ∈ Y                  by eq_mem h
+    (∀x)(x ∈ X ⇔ x ∈ Y)            by gen ^ with x
+  }
+  (∀x)(x ∈ X ⇔ x ∈ Y) ⇒ X = Y by assume h {
+    X = Y                          by ext_iff h
+  }
+  _                                by iff_intro 1 2
+}
+
 -- C48 (стр. 77), по плану книги: присоединим обе гипотезы, получим y ⊂ z и z ⊂ y, затем A1.
 theorem C48 {R : rel 1} : Uniq_y((∀x)(x ∈ y ⇔ R(x))) {
   ((∀x)(x ∈ y ⇔ R(x)) ∧ (∀x)(x ∈ z ⇔ R(x))) ⇒ y = z by assume h {
@@ -237,9 +287,187 @@ theorem Th1 : ∃!_X((∀x)(x ∉ X)) {
 
 -- ∅ = τX((∀x)(x ∉ X)); то, что в нём нет элементов, это буквально (∃X)(∀x)(x ∉ X).
 theorem empty : (∀x)(x ∉ ∅) {
-  ∃!_X((∀x)(x ∉ X))                          by Th1
+  ∃!_Y((∀x)(x ∉ Y))                          by Th1
   ∃!_X((∀x)(x ∉ X)) ⇒ (∃X)(∀x)(x ∉ X)        by C21
   _                                          by mp 1 2
+}
+
+-- Если R коллективизирующее и (∀x)(x ∈ X ⇔ R), то X = ℰ_x(R).
+theorem eq_E {R : rel 1} {X : term} (hc : Coll_x(R(x))) (h : (∀x)(x ∈ X ⇔ R(x))) : X = ℰ_x(R(x)) {
+  a. x ∈ X ⇔ R(x)              by inst h
+  b. x ∈ ℰ_x(R(x)) ⇔ R(x)      by mem_E hc
+  x ∈ X ⇔ x ∈ ℰ_x(R(x))        by taut a b
+  (∀x)(x ∈ X ⇔ x ∈ ℰ_x(R(x)))  by gen ^ with x
+  _                            by ext_iff ^
+}
+
+-- C50 (стр. 78): для коллективизирующих R и S
+-- (∀x)(R ⇒ S) ⇔ ℰ_x(R) ⊂ ℰ_x(S)  и  (∀x)(R ⇔ S) ⇔ ℰ_x(R) = ℰ_x(S).
+theorem C50 {R S : rel 1} (hr : Coll_x(R(x))) (hs : Coll_x(S(x))) : (∀x)(R(x) ⇒ S(x)) ⇔ ℰ_x(R(x)) ⊂ ℰ_x(S(x)) {
+  a. x ∈ ℰ_x(R(x)) ⇔ R(x)                                     by mem_E hr
+  b. x ∈ ℰ_x(S(x)) ⇔ S(x)                                     by mem_E hs
+  (R(x) ⇒ S(x)) ⇔ (x ∈ ℰ_x(R(x)) ⇒ x ∈ ℰ_x(S(x)))             by taut a b
+  (∀x)((R(x) ⇒ S(x)) ⇔ (x ∈ ℰ_x(R(x)) ⇒ x ∈ ℰ_x(S(x))))       by gen ^ with x
+  _                                                           by C31_iff ^
+}
+
+theorem C50' {R S : rel 1} (hr : Coll_x(R(x))) (hs : Coll_x(S(x))) : (∀x)(R(x) ⇔ S(x)) ⇔ ℰ_x(R(x)) = ℰ_x(S(x)) {
+  a. (∀x)(R(x) ⇔ S(x)) ⇔ ((∀x)(R(x) ⇒ S(x)) ∧ (∀x)(S(x) ⇒ R(x)))   by C32
+  b. (∀x)(R(x) ⇒ S(x)) ⇔ ℰ_x(R(x)) ⊂ ℰ_x(S(x))                      by C50 hr hs
+  c. (∀x)(S(x) ⇒ R(x)) ⇔ ℰ_x(S(x)) ⊂ ℰ_x(R(x))                      by C50 hs hr
+  d. ℰ_x(R(x)) = ℰ_x(S(x)) ⇔ (ℰ_x(R(x)) ⊂ ℰ_x(S(x)) ∧ ℰ_x(S(x)) ⊂ ℰ_x(R(x)))   by eq_iff_subset
+  _                                                                 by taut a b c d
+}
+
+-- Замечание после определения 2 (стр. 79): R{x} и R{y} ⇔ (∀z)(z ∈ {x, y} ⇒ R{z}).
+theorem forall_set2 {R : rel 1} {X Y : term} : (∀z)(z ∈ set2(X, Y) ⇒ R(z)) ⇔ (R(X) ∧ R(Y)) {
+  m. z ∈ set2(X, Y) ⇔ (z = X ∨ z = Y)                                        by mem_set2
+  (z ∈ set2(X, Y) ⇒ R(z)) ⇔ ((z = X ⇒ R(z)) ∧ (z = Y ⇒ R(z)))               by taut m
+  (∀z)((z ∈ set2(X, Y) ⇒ R(z)) ⇔ ((z = X ⇒ R(z)) ∧ (z = Y ⇒ R(z))))         by gen ^ with z
+  a. (∀z)(z ∈ set2(X, Y) ⇒ R(z)) ⇔ (∀z)((z = X ⇒ R(z)) ∧ (z = Y ⇒ R(z)))    by C31_iff ^
+  b. (∀z)((z = X ⇒ R(z)) ∧ (z = Y ⇒ R(z))) ⇔ ((∀z)(z = X ⇒ R(z)) ∧ (∀z)(z = Y ⇒ R(z)))   by C32
+  c. (∀z)(z = X ⇒ R(z)) ⇔ R(X)                                              by forall_eq
+  d. (∀z)(z = Y ⇒ R(z)) ⇔ R(Y)                                              by forall_eq
+  _                                                                         by taut a b c d
+}
+
+-- x ∈ X ⇔ {x} ⊂ X (стр. 79).
+theorem mem_iff_set1 {T X : term} : T ∈ X ⇔ set1(T) ⊂ X {
+  (∀z)(z ∈ set2(T, T) ⇒ z ∈ X) ⇔ (T ∈ X ∧ T ∈ X)   by forall_set2 with R(t) := t ∈ X; X := T; Y := T
+  (T ∈ X ∧ T ∈ X) ⇔ T ∈ X                          by C24_3
+  _                                                by taut 1 2
+}
+
+-- C52 (стр. 80): если (∀x)(R ⇒ x ∈ A), то R коллективизирующее (A не зависит от x).
+theorem C52 {R : rel 1} {A : term} (h : (∀x)(R(x) ⇒ x ∈ A)) : Coll_x(R(x)) {
+  c. Coll_x(R(x) ∧ x ∈ A)                          by C51 with P(x) := R(x); A := A
+  R(x) ⇒ x ∈ A                                     by inst h
+  (R(x) ∧ x ∈ A) ⇔ R(x)                            by taut ^
+  (∀x)((R(x) ∧ x ∈ A) ⇔ R(x))                      by gen ^ with x
+  Coll_x(R(x) ∧ x ∈ A) ⇔ Coll_x(R(x))              by coll_iff ^
+  _                                                by iff_mp ^ c
+}
+
+-- Замечание к C52: если R коллективизирующее и (∀x)(S ⇒ R), то и S, причём ℰ_x(S) ⊂ ℰ_x(R).
+theorem coll_sub {R S : rel 1} (hr : Coll_x(R(x))) (h : (∀x)(S(x) ⇒ R(x))) : Coll_x(S(x)) {
+  S(x) ⇒ R(x)                          by inst h
+  x ∈ ℰ_x(R(x)) ⇔ R(x)                 by mem_E hr
+  S(x) ⇒ x ∈ ℰ_x(R(x))                 by taut 1 2
+  (∀x)(S(x) ⇒ x ∈ ℰ_x(R(x)))           by gen ^ with x
+  _                                    by C52 ^
+}
+
+theorem E_sub {R S : rel 1} (hr : Coll_x(R(x))) (h : (∀x)(S(x) ⇒ R(x))) : ℰ_x(S(x)) ⊂ ℰ_x(R(x)) {
+  Coll_x(S(x))                                        by coll_sub hr h
+  (∀x)(S(x) ⇒ R(x)) ⇔ ℰ_x(S(x)) ⊂ ℰ_x(R(x))           by C50 ^ hr
+  _                                                   by iff_mp ^ h
+}
+
+-- C53 (стр. 80): множество объектов вида T{x} для x ∈ A. S8 для R = "y = T{x}".
+theorem C53 {T : term 1} {A : term} : Coll_y((∃x)(y = T(x) ∧ x ∈ A)) {
+  y ∈ set1(T(x)) ⇔ y = T(x)                                          by mem_set1
+  y = T(x) ⇒ y ∈ set1(T(x))                                          by iff_imp' ^
+  (∀y)(y = T(x) ⇒ y ∈ set1(T(x)))                                    by gen ^ with y
+  (∀y)(y = T(x) ⇒ y ∈ set1(T(x))) ⇒ (∃X)(∀y)(y = T(x) ⇒ y ∈ X)      by S5 with R(t) := (∀y)(y = T(x) ⇒ y ∈ t); T := set1(T(x))
+  (∃X)(∀y)(y = T(x) ⇒ y ∈ X)                                         by mp 3 4
+  s8. (∀x)(∃X)(∀y)(y = T(x) ⇒ y ∈ X)                                 by gen ^ with x
+  (∀x)(∃X)(∀y)(y = T(x) ⇒ y ∈ X) ⇒ (∀Y)Coll_y((∃x)(x ∈ Y ∧ y = T(x)))   by S8 with R(s, t) := s = T(t)
+  (∀Y)Coll_y((∃x)(x ∈ Y ∧ y = T(x)))                                 by mp s8 ^
+  coll. Coll_y((∃x)(x ∈ A ∧ y = T(x)))                               by inst ^
+  (x ∈ A ∧ y = T(x)) ⇔ (y = T(x) ∧ x ∈ A)                            by C24_4
+  (∀x)((x ∈ A ∧ y = T(x)) ⇔ (y = T(x) ∧ x ∈ A))                      by gen ^ with x
+  (∃x)(x ∈ A ∧ y = T(x)) ⇔ (∃x)(y = T(x) ∧ x ∈ A)                    by C31_exists_iff ^
+  (∀y)((∃x)(x ∈ A ∧ y = T(x)) ⇔ (∃x)(y = T(x) ∧ x ∈ A))              by gen ^ with y
+  Coll_y((∃x)(x ∈ A ∧ y = T(x))) ⇔ Coll_y((∃x)(y = T(x) ∧ x ∈ A))    by coll_iff ^
+  _                                                                  by iff_mp ^ coll
+}
+
+-- n° 7. Если A ⊂ X, то ∁_X(∁_X A) = A (стр. 80).
+theorem compl_compl {A X : term} (h : A ⊂ X) : ∁(X, ∁(X, A)) = A {
+  a. x ∈ A ⇒ x ∈ X                                         by inst h
+  b. x ∈ ∁(X, ∁(X, A)) ⇔ (x ∉ ∁(X, A) ∧ x ∈ X)             by mem_compl
+  c. x ∈ ∁(X, A) ⇔ (x ∉ A ∧ x ∈ X)                         by mem_compl
+  x ∈ ∁(X, ∁(X, A)) ⇔ x ∈ A                                by taut a b c
+  (∀x)(x ∈ ∁(X, ∁(X, A)) ⇔ x ∈ A)                          by gen ^ with x
+  _                                                        by ext_iff ^
+}
+
+-- Если A ⊂ X, то A ⊂ B ⇔ ∁_X B ⊂ ∁_X A (стр. 81).
+theorem compl_anti {A B X : term} (h : A ⊂ X) : A ⊂ B ⇔ ∁(X, B) ⊂ ∁(X, A) {
+  a. x ∈ A ⇒ x ∈ X                                         by inst h
+  b. x ∈ ∁(X, B) ⇔ (x ∉ B ∧ x ∈ X)                         by mem_compl
+  c. x ∈ ∁(X, A) ⇔ (x ∉ A ∧ x ∈ X)                         by mem_compl
+  (x ∈ A ⇒ x ∈ B) ⇔ (x ∈ ∁(X, B) ⇒ x ∈ ∁(X, A))            by taut a b c
+  (∀x)((x ∈ A ⇒ x ∈ B) ⇔ (x ∈ ∁(X, B) ⇒ x ∈ ∁(X, A)))      by gen ^ with x
+  _                                                        by C31_iff ^
+}
+
+-- Свойства ∅ (стр. 81): x ∉ ∅, ∅ ⊂ X, ∁_X X = ∅, ∁_X ∅ = X, X ⊂ ∅ ⇔ X = ∅,
+-- (∀x)(x ∉ X) ⇔ X = ∅, (∀x)(x ∈ ∅ ⇒ R).
+theorem not_mem_empty {T : term} : T ∉ ∅ {
+  (∀x)(x ∉ ∅)      by empty
+  _                by inst ^
+}
+
+theorem empty_iff {X : term} : (∀x)(x ∉ X) ⇔ X = ∅ {
+  ∃!_Y((∀x)(x ∉ Y))                          by Th1
+  (∀x')(x' ∉ x) ⇔ x = ∅                      by C46 ^
+  _                                          by subst ^ with x := X
+}
+
+theorem empty_sub {X : term} : ∅ ⊂ X {
+  x ∉ ∅                 by not_mem_empty
+  x ∈ ∅ ⇒ x ∈ X         by taut ^
+  _                     by gen ^ with x
+}
+
+theorem forall_empty {R : rel 1} : (∀x)(x ∈ ∅ ⇒ R(x)) {
+  x ∉ ∅                 by not_mem_empty
+  x ∈ ∅ ⇒ R(x)          by taut ^
+  _                     by gen ^ with x
+}
+
+theorem sub_empty {X : term} : X ⊂ ∅ ⇔ X = ∅ {
+  X ⊂ ∅ ⇒ X = ∅ by assume h {
+    ∅ ⊂ X               by empty_sub
+    X = ∅               by ext h ^
+  }
+  X = ∅ ⇒ X ⊂ ∅ by assume h {
+    X ⊂ ∅               by eq_subset h
+  }
+  _                     by iff_intro 1 2
+}
+
+theorem compl_self {X : term} : ∁(X, X) = ∅ {
+  x ∈ ∁(X, X) ⇔ (x ∉ X ∧ x ∈ X)        by mem_compl
+  x ∉ ∁(X, X)                          by taut ^
+  (∀x)(x ∉ ∁(X, X))                    by gen ^ with x
+  (∀x)(x ∉ ∁(X, X)) ⇔ ∁(X, X) = ∅      by empty_iff
+  _                                    by iff_mp ^ ^^
+}
+
+theorem compl_empty {X : term} : ∁(X, ∅) = X {
+  a. x ∈ ∁(X, ∅) ⇔ (x ∉ ∅ ∧ x ∈ X)     by mem_compl
+  b. x ∉ ∅                             by not_mem_empty
+  x ∈ ∁(X, ∅) ⇔ x ∈ X                  by taut a b
+  (∀x)(x ∈ ∁(X, ∅) ⇔ x ∈ X)            by gen ^ with x
+  _                                    by ext_iff ^
+}
+
+-- Замечание (стр. 81): множества всех объектов нет. Иначе по C52 всякое соотношение
+-- было бы коллективизирующим, в том числе x ∉ x (парадокс Рассела).
+theorem no_universe : ¬(∃X)(∀x)(x ∈ X) {
+  (∀x)(x ∈ X) ⇒ Coll_x(x ∉ x) by assume h {
+    x ∈ X                       by inst h
+    x ∉ x ⇒ x ∈ X               by taut ^
+    (∀x)(x ∉ x ⇒ x ∈ X)         by gen ^ with x
+    Coll_x(x ∉ x)               by C52 ^
+  }
+  ¬Coll_x(x ∉ x)                by russell
+  ¬(∀x)(x ∈ X)                  by taut 1 2
+  (∀X)¬(∀x)(x ∈ X)              by gen ^ with X
+  ¬(∃X)(∀x)(x ∈ X) ⇔ (∀X)¬(∀x)(x ∈ X)   by C29
+  _                             by iff_mpr ^ ^^
 }
 
 -- § 2, n° 1. Из A3: равные пары имеют равные координаты.

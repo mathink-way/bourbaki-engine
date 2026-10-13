@@ -254,12 +254,13 @@ fn matching(s: &str, open: char, close: char) -> Option<usize> {
     None
 }
 
-/// `abbrev ⊂ [\subset] (A B : term) infix := (∀z)(z ∈ A ⇒ z ∈ B)`
+/// `abbrev ⊂ [\subset] (A B : term) infix := (∀z)(z ∈ A ⇒ z ∈ B)`, `abbrev ExA (...) nofold := ...`
 fn parse_abbrev(rest: &str) -> Result<Item, String> {
     let (name, rest) = first_word(rest);
     let (aliases, mut rest) = take_aliases(rest)?;
     let mut params = Vec::new();
     let mut infix = false;
+    let mut nofold = false;
     loop {
         rest = rest.trim_start();
         if rest.starts_with('(') {
@@ -273,15 +274,19 @@ fn parse_abbrev(rest: &str) -> Result<Item, String> {
                 params,
                 body: r.trim().to_string(),
                 infix,
+                nofold,
             });
         } else {
             let (w, r) = first_word(rest);
             if w == "infix" {
                 infix = true;
                 rest = r;
+            } else if w == "nofold" {
+                nofold = true;
+                rest = r;
             } else {
                 return Err(format!(
-                    "в abbrev ожидалось (параметры), infix или :=, а стоит \"{w}\""
+                    "в abbrev ожидалось (параметры), infix, nofold или :=, а стоит \"{w}\""
                 ));
             }
         }
@@ -677,9 +682,13 @@ pub fn parse_just(j: &str) -> Result<Just, String> {
         "sorry" => Ok(Just::Sorry),
         "taut" => {
             no_with("taut")?;
-            Ok(Just::Taut)
+            Ok(Just::Taut(args))
         }
         "axiom" => Ok(Just::Axiom(args.first().cloned())),
+        "chain" => {
+            no_with("chain")?;
+            Ok(Just::Chain(args))
+        }
         "assume" | "C14" => Ok(Just::Assume(args.first().cloned())),
         "contra" | "C15" => Ok(Just::Contra(args.first().cloned())),
         "mp" | "C1" => {

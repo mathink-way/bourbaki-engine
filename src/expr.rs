@@ -13,9 +13,51 @@
 //! Литеральная строка всегда восстанавливается: [`crate::assembly::Assembly::from_expr`].
 
 use crate::sign::{Kind, Letter, SpecialSign};
-use std::collections::hash_map::DefaultHasher;
-use std::collections::{BTreeSet, HashMap, HashSet};
-use std::hash::{Hash, Hasher};
+use std::collections::BTreeSet;
+use std::hash::{BuildHasherDefault, Hash, Hasher};
+
+/// Быстрый хеш для адресов и коротких ключей (как FxHash в rustc): стандартный SipHash
+/// защищён от атак, здесь это не нужно, а времени он съедал больше всего остального.
+#[derive(Default, Clone, Copy)]
+pub struct FxHasher {
+    hash: u64,
+}
+
+impl FxHasher {
+    fn add(&mut self, w: u64) {
+        self.hash = (self.hash.rotate_left(5) ^ w).wrapping_mul(0x51_7c_c1_b7_27_22_0a_95);
+    }
+}
+
+impl Hasher for FxHasher {
+    fn write(&mut self, bytes: &[u8]) {
+        for chunk in bytes.chunks(8) {
+            let mut b = [0u8; 8];
+            b[..chunk.len()].copy_from_slice(chunk);
+            self.add(u64::from_le_bytes(b));
+        }
+    }
+    fn write_u8(&mut self, i: u8) {
+        self.add(i as u64);
+    }
+    fn write_u32(&mut self, i: u32) {
+        self.add(i as u64);
+    }
+    fn write_u64(&mut self, i: u64) {
+        self.add(i);
+    }
+    fn write_usize(&mut self, i: usize) {
+        self.add(i as u64);
+    }
+    fn finish(&self) -> u64 {
+        self.hash
+    }
+}
+
+type FxBuild = BuildHasherDefault<FxHasher>;
+type HashMap<K, V> = std::collections::HashMap<K, V, FxBuild>;
+type HashSet<K> = std::collections::HashSet<K, FxBuild>;
+type DefaultHasher = FxHasher;
 use std::rc::Rc;
 
 /// Терм или соотношение (§ 1, n° 3).
@@ -48,37 +90,103 @@ pub struct Node {
     loose: u32,
     /// Грубый отпечаток множества букв (64-битный фильтр Блума).
     mask: u64,
+    /// То же для специальных знаков.
+    smask: u64,
 }
 
 #[derive(Clone)]
 pub struct Expr(Rc<Node>);
 
+fn sign_bit(s: &SpecialSign) -> u64 {
+    let mut h = DefaultHasher::default();
+    s.hash(&mut h);
+    1u64 << (h.finish() % 64)
+}
+
 pub(crate) fn letter_bit(l: &Letter) -> u64 {
-    let mut h = DefaultHasher::new();
+    let mut h = DefaultHasher::default();
     l.hash(&mut h);
     1u64 << (h.finish() % 64)
 }
 
 type Memo = HashMap<(*const Node, u32), Expr>;
 
+/// Ключ вершины для общего хранилища: вид вершины и адреса детей (дети уже из хранилища).
+#[derive(PartialEq, Eq, Hash)]
+enum Key {
+    Letter(Letter),
+    Bx(u32),
+    Not(usize),
+    Or(usize, usize),
+    Tau(Letter, usize),
+    Special(SpecialSign, Vec<usize>),
+}
+
+thread_local! {
+    /// Общее хранилище вершин: одинаковые знакосочетания строятся один раз и дальше
+    /// совпадают как указатели. Тогда сравнения и обходы с памятью работают по-настоящему
+    /// на дереве с общими частями, а не на копиях одного и того же.
+    static INTERN: std::cell::RefCell<(HashMap<Key, std::rc::Weak<Node>>, usize)> =
+        std::cell::RefCell::new((HashMap::default(), 0));
+}
+
+/// Память `fill_holes`: адреса (тела, аргументов) → (они сами, чтобы адреса жили, и результат).
+type FillCache = HashMap<Vec<usize>, (Vec<Expr>, Expr)>;
+
+thread_local! {
+    static FILL_CACHE: std::cell::RefCell<FillCache> =
+        std::cell::RefCell::new(HashMap::default());
+}
+
+fn intern_key(shape: &Shape) -> Key {
+    let p = |e: &Expr| Rc::as_ptr(&e.0) as usize;
+    match shape {
+        Shape::Letter(l) => Key::Letter(l.clone()),
+        Shape::Bx(k) => Key::Bx(*k),
+        Shape::Not(a) => Key::Not(p(a)),
+        Shape::Or(a, b) => Key::Or(p(a), p(b)),
+        Shape::Tau(h, b) => Key::Tau(h.clone(), p(b)),
+        Shape::Special(s, args) => Key::Special(s.clone(), args.iter().map(p).collect()),
+    }
+}
+
 impl Expr {
     fn mk(shape: Shape) -> Expr {
-        let mut h = DefaultHasher::new();
-        let (len, loose, mask) = match &shape {
+        let key = intern_key(&shape);
+        if let Some(e) = INTERN.with(|t| t.borrow().0.get(&key).and_then(|w| w.upgrade())) {
+            return Expr(e);
+        }
+        let e = Expr::mk_new(shape);
+        INTERN.with(|t| {
+            let mut t = t.borrow_mut();
+            t.0.insert(key, Rc::downgrade(&e.0));
+            t.1 += 1;
+            // время от времени выбросить записи об уже удалённых вершинах
+            if t.1 > 1 << 16 && t.1 > t.0.len() {
+                t.0.retain(|_, w| w.strong_count() > 0);
+                t.1 = 0;
+            }
+        });
+        e
+    }
+
+    fn mk_new(shape: Shape) -> Expr {
+        let mut h = DefaultHasher::default();
+        let (len, loose, mask, smask) = match &shape {
             Shape::Letter(l) => {
                 0u8.hash(&mut h);
                 l.hash(&mut h);
-                (1u128, 0u32, letter_bit(l))
+                (1u128, 0u32, letter_bit(l), 0u64)
             }
             Shape::Bx(k) => {
                 1u8.hash(&mut h);
                 k.hash(&mut h);
-                (1, k + 1, 0)
+                (1, k + 1, 0, 0)
             }
             Shape::Not(a) => {
                 2u8.hash(&mut h);
                 a.0.hash.hash(&mut h);
-                (a.0.len.saturating_add(1), a.0.loose, a.0.mask)
+                (a.0.len.saturating_add(1), a.0.loose, a.0.mask, a.0.smask)
             }
             Shape::Or(a, b) => {
                 3u8.hash(&mut h);
@@ -88,6 +196,7 @@ impl Expr {
                     a.0.len.saturating_add(b.0.len).saturating_add(1),
                     a.0.loose.max(b.0.loose),
                     a.0.mask | b.0.mask,
+                    a.0.smask | b.0.smask,
                 )
             }
             Shape::Tau(_, b) => {
@@ -97,19 +206,21 @@ impl Expr {
                     b.0.len.saturating_add(1),
                     b.0.loose.saturating_sub(1),
                     b.0.mask,
+                    b.0.smask,
                 )
             }
             Shape::Special(s, args) => {
                 5u8.hash(&mut h);
                 s.hash(&mut h);
-                let (mut len, mut loose, mut mask) = (1u128, 0u32, 0u64);
+                let (mut len, mut loose, mut mask, mut smask) = (1u128, 0u32, 0u64, sign_bit(s));
                 for a in args {
                     a.0.hash.hash(&mut h);
                     len = len.saturating_add(a.0.len);
                     loose = loose.max(a.0.loose);
                     mask |= a.0.mask;
+                    smask |= a.0.smask;
                 }
-                (len, loose, mask)
+                (len, loose, mask, smask)
             }
         };
         Expr(Rc::new(Node {
@@ -118,6 +229,7 @@ impl Expr {
             len,
             loose,
             mask,
+            smask,
         }))
     }
 
@@ -153,6 +265,27 @@ impl Expr {
         false
     }
 
+    /// Число различных вершин дерева с общими частями.
+    pub fn dag_size(&self) -> usize {
+        let mut seen = HashSet::default();
+        let mut stack = vec![self.clone()];
+        while let Some(e) = stack.pop() {
+            if !seen.insert(Rc::as_ptr(&e.0)) {
+                continue;
+            }
+            match e.shape() {
+                Shape::Letter(_) | Shape::Bx(_) => {}
+                Shape::Not(a) | Shape::Tau(_, a) => stack.push(a.clone()),
+                Shape::Or(a, b) => {
+                    stack.push(a.clone());
+                    stack.push(b.clone());
+                }
+                Shape::Special(_, args) => stack.extend(args.iter().cloned()),
+            }
+        }
+        seen.len()
+    }
+
     pub(crate) fn hash_value(&self) -> u64 {
         self.0.hash
     }
@@ -169,7 +302,7 @@ impl Expr {
     /// Встречается ли буква x.
     pub fn contains_letter(&self, x: &Letter) -> bool {
         let bit = letter_bit(x);
-        let mut seen = HashSet::new();
+        let mut seen = HashSet::default();
         self.contains_rec(x, bit, &mut seen)
     }
 
@@ -189,7 +322,7 @@ impl Expr {
     /// Все буквы, встречающиеся в знакосочетании.
     pub fn letters(&self) -> BTreeSet<Letter> {
         let mut out = BTreeSet::new();
-        let mut seen = HashSet::new();
+        let mut seen = HashSet::default();
         self.letters_rec(&mut out, &mut seen);
         out
     }
@@ -215,7 +348,7 @@ impl Expr {
     /// Все специальные знаки, встречающиеся в знакосочетании.
     pub fn special_signs(&self) -> Vec<SpecialSign> {
         let mut out: Vec<SpecialSign> = Vec::new();
-        let mut seen = HashSet::new();
+        let mut seen = HashSet::default();
         let mut stack = vec![self.clone()];
         while let Some(e) = stack.pop() {
             if !seen.insert(Rc::as_ptr(&e.0)) {
@@ -310,7 +443,7 @@ impl Expr {
                 _ => None,
             }
         };
-        self.transform(0, &mut HashMap::new(), &mut f)
+        self.transform(0, &mut HashMap::default(), &mut f)
     }
 
     /// Одновременная подстановка A(x₁,...,xₙ)[T₁,...,Tₙ] (обозначение Бурбаки `A{x,y}[B,C]`).
@@ -331,7 +464,7 @@ impl Expr {
                 _ => None,
             }
         };
-        self.transform(0, &mut HashMap::new(), &mut f)
+        self.transform(0, &mut HashMap::default(), &mut f)
     }
 
     /// Заменить букву x на □, связанный с (будущим) внешним τ. Тело для τ_x(A).
@@ -346,7 +479,7 @@ impl Expr {
                 _ => None,
             }
         };
-        self.transform(0, &mut HashMap::new(), &mut f)
+        self.transform(0, &mut HashMap::default(), &mut f)
     }
 
     /// Обратная операция: все □ внешнего τ заменить на знакосочетание t.
@@ -365,7 +498,7 @@ impl Expr {
                 _ => None,
             }
         };
-        self.transform(0, &mut HashMap::new(), &mut f)
+        self.transform(0, &mut HashMap::default(), &mut f)
     }
 
     /// Сдвинуть висячие □ на `k` (нужно, когда знакосочетание с висячими □ переносится
@@ -383,7 +516,7 @@ impl Expr {
                 _ => None,
             }
         };
-        self.transform(0, &mut HashMap::new(), &mut f)
+        self.transform(0, &mut HashMap::default(), &mut f)
     }
 
     /// Тело с n "дырами": буква `xs[i]` заменяется на дыру номер i.
@@ -402,24 +535,75 @@ impl Expr {
                 _ => None,
             }
         };
-        self.transform(0, &mut HashMap::new(), &mut f)
+        self.transform(0, &mut HashMap::default(), &mut f)
     }
 
     /// Заполнить дыры тела знакосочетаниями `args` (они могут содержать висячие □,
     /// которые относятся к τ снаружи места вставки; при вставке под τ тела они сдвигаются).
     pub fn fill_holes(&self, args: &[Expr]) -> Expr {
+        if self.is_closed() || args.is_empty() {
+            return self.clone();
+        }
+        // одно и то же тело с одними и теми же аргументами (а вершины общие, так что это
+        // просто одни и те же указатели) заполняется один раз
+        let key: Vec<usize> = std::iter::once(self)
+            .chain(args)
+            .map(|e| Rc::as_ptr(&e.0) as usize)
+            .collect();
+        if let Some(r) = FILL_CACHE.with(|c| c.borrow().get(&key).map(|(_, r)| r.clone())) {
+            return r;
+        }
+        let r = self.fill_holes_uncached(args);
+        FILL_CACHE.with(|c| {
+            let mut c = c.borrow_mut();
+            if c.len() > 100_000 {
+                c.clear();
+            }
+            // вместе с результатом храним сами тело и аргументы: пока запись жива, их
+            // адреса не достанутся другим вершинам
+            let mut keep = vec![self.clone()];
+            keep.extend(args.iter().cloned());
+            c.insert(key, (keep, r.clone()));
+        });
+        r
+    }
+
+    fn fill_holes_uncached(&self, args: &[Expr]) -> Expr {
         let n = args.len() as u32;
+        // сдвинутые аргументы для каждой глубины считаются один раз
+        let mut shifted: HashMap<(usize, u32), Expr> = HashMap::default();
         let mut f = |e: &Expr, d: u32| -> Option<Expr> {
             if e.0.loose <= d {
                 return Some(e.clone());
             }
             match e.shape() {
-                Shape::Bx(m) if *m >= d && *m < d + n => Some(args[(*m - d) as usize].shift(d)),
+                Shape::Bx(m) if *m >= d && *m < d + n => {
+                    let i = (*m - d) as usize;
+                    Some(
+                        shifted
+                            .entry((i, d))
+                            .or_insert_with(|| args[i].shift(d))
+                            .clone(),
+                    )
+                }
                 Shape::Bx(_) => Some(e.clone()),
                 _ => None,
             }
         };
-        self.transform(0, &mut HashMap::new(), &mut f)
+        self.transform(0, &mut HashMap::default(), &mut f)
+    }
+
+    /// Обратное к `fill_holes`: каждое вхождение `xs[i]` стало дырой i. `None`, если
+    /// после этого остались висячие □ (тело зависело бы от букв, связанных снаружи).
+    pub fn abstract_exprs(&self, xs: &[Expr]) -> Option<Expr> {
+        const FAR: u32 = 1 << 30;
+        let mut f = |e: &Expr, d: u32| -> Option<Expr> {
+            xs.iter()
+                .position(|x| *e == x.shift(d))
+                .map(|i| Expr::bx(d + FAR + i as u32))
+        };
+        let marked = self.transform(0, &mut HashMap::default(), &mut f);
+        marked.remap_loose(&|m| m.checked_sub(FAR))
     }
 
     /// Подстановка вместо специальных знаков: каждое вхождение `s T₁...Tₙ` заменяется
@@ -481,7 +665,7 @@ impl Expr {
             memo.insert(Rc::as_ptr(&e.0), r.clone());
             r
         }
-        go(self, map, &mut HashMap::new())
+        go(self, map, &mut HashMap::default())
     }
 
     /// Встречается ли знак.
@@ -511,7 +695,7 @@ impl Expr {
                 _ => None,
             }
         };
-        let r = self.transform(0, &mut HashMap::new(), &mut g);
+        let r = self.transform(0, &mut HashMap::default(), &mut g);
         (!failed.get()).then_some(r)
     }
 
@@ -539,16 +723,35 @@ impl Expr {
         metas: &[SpecialSign],
         got: &mut Vec<(SpecialSign, Expr)>,
     ) -> bool {
+        Expr::match_pairs(pairs, metas, got, true)
+    }
+
+    fn match_pairs(
+        pairs: &[(Expr, Expr)],
+        metas: &[SpecialSign],
+        got: &mut Vec<(SpecialSign, Expr)>,
+        guess: bool,
+    ) -> bool {
         if pairs.iter().any(|(p, t)| !p.skeleton_fits(t, metas, 6)) {
             return false;
         }
         let mut deferred: Vec<Deferred> = Vec::new();
+        let t0 = std::time::Instant::now();
         for (p, t) in pairs {
             if !p.match_rec(t, metas, got, &mut deferred, 0) {
                 return false;
             }
         }
-        solve(metas, got, deferred) != Solve::Fail
+        let t1 = t0.elapsed().as_secs_f64();
+        let r = solve(metas, got, deferred, guess) != Solve::Fail;
+        if guess && t0.elapsed().as_secs_f64() > 0.2 && std::env::var_os("BOURBAKI_DBG").is_some() {
+            let n: usize = pairs.iter().map(|(p, t)| p.dag_size() + t.dag_size()).sum();
+            eprintln!(
+                "match: {t1:.3} + solve {:.3}, узлов {n}",
+                t0.elapsed().as_secs_f64() - t1
+            );
+        }
+        r
     }
 
     /// Быстрая проверка формы на `depth` уровней вглубь: вершина с метапеременной
@@ -581,13 +784,15 @@ impl Expr {
 
     /// τ-подвыражения с глубиной (числом τ над ними), без повторов, не больше `limit`.
     fn pattern_taus(&self, depth: u32, out: &mut Vec<(Expr, u32)>) {
-        self.taus_rec(depth, None, out, &mut HashSet::new(), 64);
+        self.taus_rec(depth, None, out, &mut HashSet::default(), 64);
     }
 
     /// τ-подвыражения ровно на глубине `want` (не больше 64 разных).
     fn taus_at(&self, depth: u32, want: u32) -> Vec<Expr> {
         let mut out = Vec::new();
-        self.taus_rec(depth, Some(want), &mut out, &mut HashSet::new(), 64);
+        self.taus_rec(depth, Some(want), &mut out, &mut HashSet::default(), 64);
+        // сначала τ ровно на нужной глубине, потом замкнутые τ глубже
+        out.sort_by_key(|(_, d)| *d != want);
         let mut uniq: Vec<Expr> = Vec::new();
         for (t, _) in out {
             if !uniq.contains(&t) {
@@ -605,16 +810,17 @@ impl Expr {
         seen: &mut HashSet<(*const Node, u32)>,
         limit: usize,
     ) {
-        if out.len() >= limit
-            || want.is_some_and(|w| depth > w)
-            || !seen.insert((Rc::as_ptr(&self.0), depth))
-        {
+        // глубже нужной глубины годятся только замкнутые τ (они от глубины не зависят),
+        // поэтому там глубина не различается
+        let deep = want.is_some_and(|w| depth > w);
+        let key = if deep { u32::MAX } else { depth };
+        if out.len() >= limit || !seen.insert((Rc::as_ptr(&self.0), key)) {
             return;
         }
         match self.shape() {
             Shape::Letter(_) | Shape::Bx(_) => {}
             Shape::Tau(_, b) => {
-                if want.is_none_or(|w| w == depth) {
+                if want.is_none_or(|w| w == depth) || (deep && self.is_closed()) {
                     out.push((self.clone(), depth));
                 }
                 b.taus_rec(depth + 1, want, out, seen, limit);
@@ -638,7 +844,48 @@ impl Expr {
         deferred: &mut Vec<Deferred>,
         depth: u32,
     ) -> bool {
-        match (self.shape(), target.shape()) {
+        let mask = metas.iter().fold(0, |m, s| m | sign_bit(s));
+        self.match_go(
+            target,
+            metas,
+            mask,
+            got,
+            deferred,
+            depth,
+            &mut HashSet::default(),
+        )
+    }
+
+    /// `memo`: уже сопоставленные пары (образец, цель, глубина). Внутри одного обхода
+    /// найденное только пополняется, поэтому повторное сопоставление той же пары ничего не
+    /// даст; без памяти обход дерева с общими частями экспоненциален.
+    #[allow(clippy::too_many_arguments)]
+    fn match_go(
+        &self,
+        target: &Expr,
+        metas: &[SpecialSign],
+        mask: u64,
+        got: &mut Vec<(SpecialSign, Expr)>,
+        deferred: &mut Vec<Deferred>,
+        depth: u32,
+        memo: &mut HashSet<(*const Node, *const Node, u32)>,
+    ) -> bool {
+        // в образце нет метапеременных: остаётся буквальное сравнение (оно с памятью,
+        // а обход дерева без памяти экспоненциален на вложенных кванторах)
+        if self.0.smask & mask == 0 {
+            return self == target;
+        }
+        // при depth >= loose образца ход сопоставления от depth не зависит (все □ образца
+        // связаны внутри него), поэтому такие пары сливаются в одну
+        let key = (
+            Rc::as_ptr(&self.0),
+            Rc::as_ptr(&target.0),
+            depth.min(self.0.loose),
+        );
+        if memo.contains(&key) {
+            return true;
+        }
+        let r = match (self.shape(), target.shape()) {
             (Shape::Special(s, args), _) if metas.contains(s) => {
                 // образец Миллера: аргументы это различные □, связанные внутри образца
                 let mut holes: Vec<u32> = Vec::new();
@@ -667,29 +914,37 @@ impl Expr {
             }
             (Shape::Letter(a), Shape::Letter(b)) => a == b,
             (Shape::Bx(a), Shape::Bx(b)) => a == b,
-            (Shape::Not(a), Shape::Not(b)) => a.match_rec(b, metas, got, deferred, depth),
-            (Shape::Or(a1, b1), Shape::Or(a2, b2)) => {
-                a1.match_rec(a2, metas, got, deferred, depth)
-                    && b1.match_rec(b2, metas, got, deferred, depth)
+            (Shape::Not(a), Shape::Not(b)) => {
+                a.match_go(b, metas, mask, got, deferred, depth, memo)
             }
-            (Shape::Tau(_, a), Shape::Tau(_, b)) => a.match_rec(b, metas, got, deferred, depth + 1),
+            (Shape::Or(a1, b1), Shape::Or(a2, b2)) => {
+                a1.match_go(a2, metas, mask, got, deferred, depth, memo)
+                    && b1.match_go(b2, metas, mask, got, deferred, depth, memo)
+            }
+            (Shape::Tau(_, a), Shape::Tau(_, b)) => {
+                a.match_go(b, metas, mask, got, deferred, depth + 1, memo)
+            }
             (Shape::Special(s, xs), Shape::Special(t, ys)) => {
                 s == t
                     && xs.len() == ys.len()
                     && xs
                         .iter()
                         .zip(ys)
-                        .all(|(a, b)| a.match_rec(b, metas, got, deferred, depth))
+                        .all(|(a, b)| a.match_go(b, metas, mask, got, deferred, depth, memo))
             }
             _ => false,
+        };
+        if r {
+            memo.insert(key);
         }
+        r
     }
 
     /// Все замкнутые подтермы вида τ(...) в порядке "сверху вниз, слева направо".
     pub fn closed_taus(&self, limit: usize) -> Vec<Expr> {
         let mut out = Vec::new();
-        let mut seen_nodes = HashSet::new();
-        let mut seen = HashSet::new();
+        let mut seen_nodes = HashSet::default();
+        let mut seen = HashSet::default();
         self.closed_taus_rec(&mut out, &mut seen_nodes, &mut seen, limit);
         out
     }
@@ -772,7 +1027,7 @@ impl Expr {
             memo.insert(key, r);
             r
         }
-        go(self, 0, &mut HashMap::new())
+        go(self, 0, &mut HashMap::default())
     }
 
     fn eq_rec(&self, o: &Expr, memo: &mut HashSet<(*const Node, *const Node)>) -> bool {
@@ -824,6 +1079,7 @@ fn solve(
     metas: &[SpecialSign],
     got: &mut Vec<(SpecialSign, Expr)>,
     mut deferred: Vec<Deferred>,
+    guess: bool,
 ) -> Solve {
     // предохранитель: если знак метапеременной встречается и в цели, подстановка
     // может порождать отложенные вхождения без конца
@@ -845,7 +1101,19 @@ fn solve(
             match got.iter().find(|(m, _)| m == s).map(|(_, v)| v.clone()) {
                 Some(body) => {
                     progress = true;
-                    if !body
+                    // все метапеременные вхождения уже известны: подставить и сравнить
+                    // (сравнение идёт по общим частям дерева, сопоставление обходило бы
+                    // дерево целиком, а оно бывает экспоненциально большим)
+                    let inst = p.replace_signs(got);
+                    let open = metas
+                        .iter()
+                        .filter(|m| !got.iter().any(|(g, _)| g == *m))
+                        .fold(0, |acc, m| acc | sign_bit(m));
+                    if inst.0.smask & open == 0 {
+                        if inst != t {
+                            return Solve::Fail;
+                        }
+                    } else if !body
                         .fill_holes(args)
                         .match_rec(&t, metas, got, &mut deferred, d)
                     {
@@ -859,6 +1127,9 @@ fn solve(
         if !progress {
             break;
         }
+    }
+    if !guess {
+        return Solve::Stuck;
     }
     for (p, t, d) in &deferred {
         let Shape::Special(s, args) = p.shape() else {
@@ -880,12 +1151,35 @@ fn solve(
                 let mut d2 = deferred.clone();
                 if pt.match_rec(tt, metas, &mut g2, &mut d2, *pd)
                     && g2.iter().any(|(m, _)| m == s)
-                    && solve(metas, &mut g2, d2) == Solve::Done
+                    && solve(metas, &mut g2, d2, true) == Solve::Done
                 {
                     *got = g2;
                     return Solve::Done;
                 }
             }
+        }
+    }
+    // последняя догадка: аргументы R(T) уже известны, тогда тело R это цель, в которой
+    // все вхождения T стали дырой (так находится R в S6: T = U ⇒ (R(T) ⇔ R(U)))
+    for (p, t, _) in &deferred {
+        let Shape::Special(s, args) = p.shape() else {
+            unreachable!()
+        };
+        let known: Vec<Expr> = args.iter().map(|a| a.replace_signs(got)).collect();
+        if known
+            .iter()
+            .any(|a| metas.iter().any(|m| a.contains_sign(m)))
+        {
+            continue;
+        }
+        let Some(body) = t.abstract_exprs(&known) else {
+            continue;
+        };
+        let mut g2 = got.clone();
+        g2.push((s.clone(), body));
+        if solve(metas, &mut g2, deferred.clone(), true) == Solve::Done {
+            *got = g2;
+            return Solve::Done;
         }
     }
     Solve::Stuck
@@ -894,7 +1188,7 @@ fn solve(
 /// Тождественность знакосочетаний: литеральное совпадение строк со связями.
 impl PartialEq for Expr {
     fn eq(&self, o: &Expr) -> bool {
-        self.eq_rec(o, &mut HashSet::new())
+        self.eq_rec(o, &mut HashSet::default())
     }
 }
 impl Eq for Expr {}

@@ -679,6 +679,7 @@ impl Konspekt {
                 params,
                 body,
                 infix,
+                nofold,
             } => {
                 if self.name_taken(name) {
                     return Err(e(self, format!("имя {name} уже занято")));
@@ -709,9 +710,9 @@ impl Konspekt {
                 } else {
                     Fixity::Prefix
                 };
-                self.scope
-                    .abbrevs
-                    .push(Abbrev::new(name, ps, expr, sort, fixity, aliases.clone()));
+                let mut ab = Abbrev::new(name, ps, expr, sort, fixity, aliases.clone());
+                ab.fold = !*nofold;
+                self.scope.abbrevs.push(ab);
                 syntax::set_print_abbrevs(self.scope.abbrevs.clone());
             }
             Item::Scheme {
@@ -742,7 +743,11 @@ impl Konspekt {
                 if let Some(n) = self.format_once.take() {
                     self.set_notation(n);
                 }
+                let started = std::time::Instant::now();
                 let t = self.add_theorem(d);
+                if std::env::var_os("BOURBAKI_TIME").is_some() {
+                    eprintln!("{:8.3} с  {}", started.elapsed().as_secs_f64(), d.name);
+                }
                 let shown = t
                     .as_ref()
                     .map(|t| t.statement.to_string())

@@ -1,0 +1,1686 @@
+-- Глава II, § 3, n° 4-9. Функции (стр. 90-100).
+--
+-- Задача: функции, их значения, сужения, функции, заданные термом, композиция,
+-- инъекции, сюръекции, биекции, ретракции и сечения.
+-- Проблема: значение f(x) у Бурбаки это τ-терм "единственный y, такой что (x, y) ∈ F"; про
+-- него ничего не известно, пока не доказано, что x лежит в области определения.
+-- Решение: значение ap(F, x) = τy((x, y) ∈ F). Если x ∈ pr₁⟨F⟩, то (x, ap(F, x)) ∈ F
+-- буквально есть (∃y)((x, y) ∈ F) (лемма ap_spec), а для функционального F это
+-- единственная такая пара (ap_eq). Дальше функции сравниваются по значениям (map_ext).
+-- Что осталось: функция у Бурбаки это тройка (F, A, B); здесь "f отображение A в B"
+-- записано соотношением Map(F, A, B) о графике F, а f(x) это ap(F, x).
+
+import "00_prelude.bk"
+open base
+import "12_graphs.bk"
+open ch1
+open sets
+
+-- Определение 9 (стр. 90).
+abbrev FunGraph (F : term) := Graph(F) ∧ (∀x)Uniq_y(Ͻ(x, y) ∈ F)
+abbrev Map (F A B : term) := FunGraph(F) ∧ (proj1(F) = A ∧ proj2(F) ⊂ B)
+abbrev ap (F X : term) := τy(Ͻ(X, y) ∈ F)
+-- n° 6: функция x → T{x} (x ∈ A), её график.
+abbrev fn (A : term) (T : term 1) := Pairs_{x,y}(x ∈ A ∧ y = T(x))
+-- n° 5: сужение на A.
+abbrev restr (F A : term) := Pairs_{x,y}(x ∈ A ∧ Ͻ(x, y) ∈ F)
+-- n° 7, определение 10.
+abbrev Inj (F A B : term) := Map(F, A, B) ∧ (∀x)(∀y)((x ∈ A ∧ (y ∈ A ∧ ap(F, x) = ap(F, y))) ⇒ x = y)
+abbrev Surj (F A B : term) := Map(F, A, B) ∧ img(F, A) = B
+abbrev Bij (F A B : term) := Inj(F, A, B) ∧ img(F, A) = B
+-- n° 8, определение 11: ретракция и сечение, ассоциированные с F: A → B.
+abbrev Retr (R F A B : term) := Map(R, B, A) ∧ R ∘ F = Δ(A)
+abbrev Sect (S F A B : term) := Map(S, B, A) ∧ F ∘ S = Δ(B)
+-- n° 9: частное отображение x → f(x, y) (x ∈ A_y, A_y = срез D⁻¹ по y) и произведение
+-- отображений u × v: z → (u(pr₁ z), v(pr₂ z)) (z ∈ A × B).
+abbrev part1 (F D Y : term) := fn_x(sect(inv(D), Y), ap(F, Ͻ(x, Y)))
+abbrev part2 (F D X : term) := fn_y(sect(D, X), ap(F, Ͻ(X, y)))
+abbrev prodmap (U V A B : term) := fn_z(A × B, Ͻ(ap(U, pr1(z)), ap(V, pr2(z))))
+
+namespace ch2
+in Set
+
+-- Если x ∈ pr₁⟨F⟩, то (x, F(x)) ∈ F: это буквально (∃y)((x, y) ∈ F).
+theorem ap_spec {F T : term} (h : T ∈ proj1(F)) : Ͻ(T, ap(F, T)) ∈ F {
+  T ∈ proj1(F) ⇔ (∃y)(Ͻ(T, y) ∈ F)     by mem_proj1
+  (∃y)(Ͻ(T, y) ∈ F)                    by iff_mp ^ h
+  _                                    by ^
+}
+
+-- Стр. 90: для функционального F и x ∈ pr₁⟨F⟩: (x, y) ∈ F ⇔ y = F(x).
+theorem ap_eq {F T U : term} (hf : FunGraph(F)) (h : T ∈ proj1(F)) : Ͻ(T, U) ∈ F ⇔ U = ap(F, T) {
+  s. Ͻ(T, ap(F, T)) ∈ F                                        by ap_spec h
+  (∀x)Uniq_y(Ͻ(x, y) ∈ F)                                      by taut hf
+  Uniq_y(Ͻ(T, y) ∈ F)                                          by inst ^
+  u. (Ͻ(T, U) ∈ F ∧ Ͻ(T, ap(F, T)) ∈ F) ⇒ U = ap(F, T)         by inst2 ^
+  Ͻ(T, U) ∈ F ⇒ U = ap(F, T)                                   by taut s u
+  U = ap(F, T) ⇒ Ͻ(T, U) ∈ F by assume e {
+    Ͻ(T, U) ∈ F ⇔ Ͻ(T, ap(F, T)) ∈ F                           by rcong e
+    Ͻ(T, U) ∈ F                                                by taut s ^
+  }
+  _                                                            by iff_intro 5 6
+}
+
+-- Для отображения F множества A в B: (x, y) ∈ F ⇔ (x ∈ A и y = F(x)).
+theorem map_mem {F A B T U : term} (hm : Map(F, A, B)) : Ͻ(T, U) ∈ F ⇔ (T ∈ A ∧ U = ap(F, T)) {
+  hf. FunGraph(F)                                              by taut hm
+  pa. proj1(F) = A                                             by taut hm
+  ta. T ∈ proj1(F) ⇔ T ∈ A                                     by eq_mem pa
+  Ͻ(T, U) ∈ F ⇒ (T ∈ A ∧ U = ap(F, T)) by assume m {
+    T ∈ proj1(F) ∧ U ∈ proj2(F)                                by pair_proj m
+    a. T ∈ proj1(F)                                            by taut ^
+    Ͻ(T, U) ∈ F ⇔ U = ap(F, T)                                 by ap_eq hf a
+    T ∈ A ∧ U = ap(F, T)                                       by taut m a ta ^
+  }
+  (T ∈ A ∧ U = ap(F, T)) ⇒ Ͻ(T, U) ∈ F by assume m {
+    a. T ∈ proj1(F)                                            by taut m ta
+    Ͻ(T, U) ∈ F ⇔ U = ap(F, T)                                 by ap_eq hf a
+    Ͻ(T, U) ∈ F                                                by taut m ^
+  }
+  _                                                            by iff_intro 4 5
+}
+
+-- (x, F(x)) ∈ F и F(x) ∈ B для x ∈ A.
+theorem map_pair {F A B T : term} (hm : Map(F, A, B)) (h : T ∈ A) : Ͻ(T, ap(F, T)) ∈ F {
+  Ͻ(T, ap(F, T)) ∈ F ⇔ (T ∈ A ∧ ap(F, T) = ap(F, T))         by map_mem hm
+  ap(F, T) = ap(F, T)                                        by T1
+  _                                                          by taut h 1 2
+}
+
+theorem ap_mem {F A B T : term} (hm : Map(F, A, B)) (h : T ∈ A) : ap(F, T) ∈ B {
+  Ͻ(T, ap(F, T)) ∈ F                                         by map_pair hm h
+  T ∈ proj1(F) ∧ ap(F, T) ∈ proj2(F)                         by pair_proj ^
+  proj2(F) ⊂ B                                               by taut hm
+  ap(F, T) ∈ proj2(F) ⇒ ap(F, T) ∈ B                         by inst ^
+  _                                                          by taut 2 4
+}
+
+-- n° 5 (стр. 92): отображения A в B с одинаковыми значениями на A равны.
+theorem map_ext {F G A B C : term} (hf : Map(F, A, B)) (hg : Map(G, A, C)) (h : (∀x)(x ∈ A ⇒ ap(F, x) = ap(G, x))) : F = G {
+  a. Ͻ(x, y) ∈ F ⇔ (x ∈ A ∧ y = ap(F, x))                    by map_mem hf
+  b. Ͻ(x, y) ∈ G ⇔ (x ∈ A ∧ y = ap(G, x))                    by map_mem hg
+  x ∈ A ⇒ ap(F, x) = ap(G, x)                                by inst h
+  x ∈ A ⇒ (y = ap(F, x) ⇔ y = ap(G, x)) by assume m {
+    ap(F, x) = ap(G, x)                                      by mp m 3
+    y = ap(F, x) ⇔ y = ap(G, x)                              by rcong ^
+  }
+  Ͻ(x, y) ∈ F ⇔ Ͻ(x, y) ∈ G                                  by taut a b ^
+  (∀y)(Ͻ(x, y) ∈ F ⇔ Ͻ(x, y) ∈ G)                            by gen ^ with y
+  (∀x)(∀y)(Ͻ(x, y) ∈ F ⇔ Ͻ(x, y) ∈ G)                        by gen ^ with x
+  Graph(F)                                                   by taut hf
+  Graph(G)                                                   by taut hg
+  _                                                          by graph_eq ^^ ^ ^^^
+}
+
+-- Обратно: равные отображения имеют равные значения.
+theorem ap_cong {F G T : term} (h : F = G) : ap(F, T) = ap(G, T) by cong h
+
+-- n° 6, C54 (стр. 92): соотношение "x ∈ A и y = T{x}" обладает функциональным графиком
+-- с первой проекцией A; его значение в x ∈ A есть T{x}.
+theorem fn_coll {A : term} {T : term 1} : Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ (x ∈ A ∧ y = T(x)))) {
+  c. Coll_y((∃x)(y = T(x) ∧ x ∈ A))                          by C53
+  (x ∈ A ∧ y = T(x)) ⇒ Ͻ(x, y) ∈ A × ℰ_y((∃x)(y = T(x) ∧ x ∈ A)) by assume m {
+    y = T(x) ∧ x ∈ A                                         by taut m
+    (∃x)(y = T(x) ∧ x ∈ A)                                   by exists_intro ^
+    y ∈ ℰ_y((∃x)(y = T(x) ∧ x ∈ A)) ⇔ (∃x)(y = T(x) ∧ x ∈ A)   by mem_E c
+    Ͻ(x, y) ∈ A × ℰ_y((∃x)(y = T(x) ∧ x ∈ A)) ⇔ (x ∈ A ∧ y ∈ ℰ_y((∃x)(y = T(x) ∧ x ∈ A)))   by pair_mem_prod
+    Ͻ(x, y) ∈ A × ℰ_y((∃x)(y = T(x) ∧ x ∈ A))                by taut m 2 3 4
+  }
+  (∀y)((x ∈ A ∧ y = T(x)) ⇒ Ͻ(x, y) ∈ A × ℰ_y((∃x)(y = T(x) ∧ x ∈ A)))       by gen ^ with y
+  (∀x)(∀y)((x ∈ A ∧ y = T(x)) ⇒ Ͻ(x, y) ∈ A × ℰ_y((∃x)(y = T(x) ∧ x ∈ A)))   by gen ^ with x
+  _                                                          by graph_coll ^
+}
+
+theorem mem_fn {A U V : term} {T : term 1} : Ͻ(U, V) ∈ fn_x(A, T(x)) ⇔ (U ∈ A ∧ V = T(U)) {
+  Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ (x ∈ A ∧ y = T(x))))        by fn_coll
+  _                                                          by pairs_mem ^
+}
+
+theorem proj1_fn {A : term} {T : term 1} : proj1(fn_x(A, T(x))) = A {
+  a. x ∈ proj1(fn_x(A, T(x))) ⇔ (∃y)(Ͻ(x, y) ∈ fn_x(A, T(x)))   by mem_proj1
+  Ͻ(x, y) ∈ fn_x(A, T(x)) ⇔ (x ∈ A ∧ y = T(x))              by mem_fn
+  (∀y)(Ͻ(x, y) ∈ fn_x(A, T(x)) ⇔ (x ∈ A ∧ y = T(x)))        by gen ^ with y
+  b. (∃y)(Ͻ(x, y) ∈ fn_x(A, T(x))) ⇔ (∃y)(x ∈ A ∧ y = T(x)) by C31_exists_iff ^
+  c. (∃y)(x ∈ A ∧ y = T(x)) ⇔ (x ∈ A ∧ (∃y)(y = T(x)))      by C33'
+  T(x) = T(x)                                               by T1
+  d. (∃y)(y = T(x))                                         by exists_intro ^
+  x ∈ proj1(fn_x(A, T(x))) ⇔ x ∈ A                          by taut a b c d
+  (∀x)(x ∈ proj1(fn_x(A, T(x))) ⇔ x ∈ A)                    by gen ^ with x
+  _                                                         by ext_iff ^
+}
+
+theorem fn_map {A : term} {T : term 1} : Map(fn_x(A, T(x)), A, ℰ_y((∃x)(y = T(x) ∧ x ∈ A))) {
+  c. Coll_y((∃x)(y = T(x) ∧ x ∈ A))                          by C53
+  Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ (x ∈ A ∧ y = T(x))))        by fn_coll
+  g. Graph(fn_x(A, T(x)))                                    by pairs_graph ^
+  (Ͻ(x, y) ∈ fn_x(A, T(x)) ∧ Ͻ(x, y') ∈ fn_x(A, T(x))) ⇒ y = y' by assume m {
+    a. Ͻ(x, y) ∈ fn_x(A, T(x)) ⇔ (x ∈ A ∧ y = T(x))         by mem_fn
+    b. Ͻ(x, y') ∈ fn_x(A, T(x)) ⇔ (x ∈ A ∧ y' = T(x))       by mem_fn
+    y = T(x)                                                by taut m a
+    y' = T(x)                                               by taut m b
+    T(x) = y'                                               by T2 ^
+    y = y'                                                  by T3 3 5
+  }
+  (∀y')((Ͻ(x, y) ∈ fn_x(A, T(x)) ∧ Ͻ(x, y') ∈ fn_x(A, T(x))) ⇒ y = y')        by gen ^ with y'
+  Uniq_y(Ͻ(x, y) ∈ fn_x(A, T(x)))                           by gen ^ with y
+  u. (∀x)Uniq_y(Ͻ(x, y) ∈ fn_x(A, T(x)))                    by gen ^ with x
+  p1. proj1(fn_x(A, T(x))) = A                              by proj1_fn
+  y ∈ proj2(fn_x(A, T(x))) ⇒ y ∈ ℰ_y((∃x)(y = T(x) ∧ x ∈ A)) by assume m {
+    y ∈ proj2(fn_x(A, T(x))) ⇔ (∃x)(Ͻ(x, y) ∈ fn_x(A, T(x)))   by mem_proj2
+    e. (∃x)(Ͻ(x, y) ∈ fn_x(A, T(x)))                        by iff_mp ^ m
+    Ͻ(x, y) ∈ fn_x(A, T(x)) ⇒ (y = T(x) ∧ x ∈ A) by assume p {
+      Ͻ(x, y) ∈ fn_x(A, T(x)) ⇔ (x ∈ A ∧ y = T(x))          by mem_fn
+      y = T(x) ∧ x ∈ A                                      by taut p ^
+    }
+    (∀x)(Ͻ(x, y) ∈ fn_x(A, T(x)) ⇒ (y = T(x) ∧ x ∈ A))      by gen ^ with x
+    (∃x)(Ͻ(x, y) ∈ fn_x(A, T(x))) ⇒ (∃x)(y = T(x) ∧ x ∈ A)  by C31_exists ^
+    (∃x)(y = T(x) ∧ x ∈ A)                                  by mp e ^
+    y ∈ ℰ_y((∃x)(y = T(x) ∧ x ∈ A)) ⇔ (∃x)(y = T(x) ∧ x ∈ A)   by mem_E c
+    y ∈ ℰ_y((∃x)(y = T(x) ∧ x ∈ A))                         by iff_mpr ^ ^^
+  }
+  p2. proj2(fn_x(A, T(x))) ⊂ ℰ_y((∃x)(y = T(x) ∧ x ∈ A))    by gen ^ with y
+  _                                                         by taut g u p1 p2
+}
+
+-- Значение функции x → T{x} в x ∈ A есть T{x}.
+theorem ap_fn {A U : term} {T : term 1} (h : U ∈ A) : ap(fn_x(A, T(x)), U) = T(U) {
+  m. Map(fn_x(A, T(x)), A, ℰ_y((∃x)(y = T(x) ∧ x ∈ A)))      by fn_map
+  a. Ͻ(U, T(U)) ∈ fn_x(A, T(x)) ⇔ (U ∈ A ∧ T(U) = ap(fn_x(A, T(x)), U))   by map_mem m
+  b. Ͻ(U, T(U)) ∈ fn_x(A, T(x)) ⇔ (U ∈ A ∧ T(U) = T(U))     by mem_fn
+  T(U) = T(U)                                               by T1
+  T(U) = ap(fn_x(A, T(x)), U)                               by taut h a b ^
+  _                                                         by T2 ^
+}
+
+-- Всякое отображение F множества A в B есть x → F(x) (x ∈ A).
+theorem map_eq_fn {F A B : term} (hm : Map(F, A, B)) : F = fn_x(A, ap(F, x)) {
+  m. Map(fn_x(A, ap(F, x)), A, ℰ_y((∃x)(y = ap(F, x) ∧ x ∈ A)))   by fn_map
+  x ∈ A ⇒ ap(F, x) = ap(fn_x(A, ap(F, x)), x) by assume a {
+    ap(fn_x(A, ap(F, x)), x) = ap(F, x)                     by ap_fn a
+    ap(F, x) = ap(fn_x(A, ap(F, x)), x)                     by T2 ^
+  }
+  (∀x)(x ∈ A ⇒ ap(F, x) = ap(fn_x(A, ap(F, x)), x))         by gen ^ with x
+  _                                                         by map_ext hm m ^
+}
+
+-- C54 в форме "x → T (x ∈ A, T ∈ C)" (стр. 93): если T{x} ∈ C для x ∈ A, то это
+-- отображение A в C.
+theorem fn_map_into {A C : term} {T : term 1} (h : (∀x)(x ∈ A ⇒ T(x) ∈ C)) : Map(fn_x(A, T(x)), A, C) {
+  m. Map(fn_x(A, T(x)), A, ℰ_y((∃x)(y = T(x) ∧ x ∈ A)))     by fn_map
+  c. Coll_y((∃x)(y = T(x) ∧ x ∈ A))                         by C53
+  y ∈ ℰ_y((∃x)(y = T(x) ∧ x ∈ A)) ⇒ y ∈ C by assume p {
+    y ∈ ℰ_y((∃x)(y = T(x) ∧ x ∈ A)) ⇔ (∃x)(y = T(x) ∧ x ∈ A)   by mem_E c
+    e. (∃x)(y = T(x) ∧ x ∈ A)                               by iff_mp ^ p
+    (y = T(x) ∧ x ∈ A) ⇒ y ∈ C by assume a {
+      x ∈ A ⇒ T(x) ∈ C                                      by inst h
+      y = T(x)                                              by taut a
+      y ∈ C ⇔ T(x) ∈ C                                      by rcong ^
+      y ∈ C                                                 by taut a 1 3
+    }
+    (∀x)((y = T(x) ∧ x ∈ A) ⇒ y ∈ C)                        by gen ^ with x
+    y ∈ C                                                   by obtain e ^
+  }
+  s. ℰ_y((∃x)(y = T(x) ∧ x ∈ A)) ⊂ C                        by gen ^ with y
+  proj2(fn_x(A, T(x))) ⊂ ℰ_y((∃x)(y = T(x) ∧ x ∈ A))        by taut m
+  t. proj2(fn_x(A, T(x))) ⊂ C                               by subset_trans ^ s
+  _                                                         by taut m t
+}
+
+-- Область прибытия можно расширить.
+theorem map_target {F A B C : term} (hm : Map(F, A, B)) (h : B ⊂ C) : Map(F, A, C) {
+  proj2(F) ⊂ B                    by taut hm
+  proj2(F) ⊂ C                    by subset_trans ^ h
+  _                               by taut hm ^
+}
+
+-- Примеры (стр. 91): пустое множество есть функциональный график; тождественное
+-- отображение Δ_A множества A, Δ_A(x) = x.
+theorem empty_fungraph : FunGraph(∅) {
+  (∀z)(z ∈ ∅ ⇒ IsPair(z))                                   by forall_empty
+  x ∉ ∅                                                     by not_mem_empty
+  ¬(Ͻ(x, y) ∈ ∅)                                            by not_mem_empty
+  (Ͻ(x, y) ∈ ∅ ∧ Ͻ(x, y') ∈ ∅) ⇒ y = y'                     by taut ^
+  (∀y')((Ͻ(x, y) ∈ ∅ ∧ Ͻ(x, y') ∈ ∅) ⇒ y = y')               by gen ^ with y'
+  Uniq_y(Ͻ(x, y) ∈ ∅)                                       by gen ^ with y
+  (∀x)Uniq_y(Ͻ(x, y) ∈ ∅)                                   by gen ^ with x
+  _                                                         by C20 1 ^
+}
+
+theorem diag_map {A : term} : Map(Δ(A), A, A) {
+  g. Graph(Δ(A))                                            by diag_graph
+  (Ͻ(x, y) ∈ Δ(A) ∧ Ͻ(x, y') ∈ Δ(A)) ⇒ y = y' by assume m {
+    a. Ͻ(x, y) ∈ Δ(A) ⇔ (x ∈ A ∧ x = y)                     by mem_diag
+    b. Ͻ(x, y') ∈ Δ(A) ⇔ (x ∈ A ∧ x = y')                   by mem_diag
+    x = y                                                   by taut m a
+    y = x                                                   by T2 ^
+    x = y'                                                  by taut m b
+    y = y'                                                  by T3 4 5
+  }
+  (∀y')((Ͻ(x, y) ∈ Δ(A) ∧ Ͻ(x, y') ∈ Δ(A)) ⇒ y = y')        by gen ^ with y'
+  Uniq_y(Ͻ(x, y) ∈ Δ(A))                                    by gen ^ with y
+  u. (∀x)Uniq_y(Ͻ(x, y) ∈ Δ(A))                             by gen ^ with x
+  p1. proj1(Δ(A)) = A                                       by proj1_diag
+  proj2(Δ(A)) = A                                           by proj2_diag
+  p2. proj2(Δ(A)) ⊂ A                                       by eq_subset ^
+  _                                                         by taut g u p1 p2
+}
+
+theorem ap_diag {A T : term} (h : T ∈ A) : ap(Δ(A), T) = T {
+  Ͻ(T, T) ∈ Δ(A) ⇔ (T ∈ A ∧ T = T)                          by mem_diag
+  T = T                                                     by T1
+  Ͻ(T, T) ∈ Δ(A)                                            by taut h 1 2
+  m. Map(Δ(A), A, A)                                        by diag_map
+  Ͻ(T, T) ∈ Δ(A) ⇔ (T ∈ A ∧ T = ap(Δ(A), T))                by map_mem m
+  T = ap(Δ(A), T)                                           by taut 3 ^
+  _                                                         by T2 ^
+}
+
+-- n° 5 (стр. 92). Сужение f/A: если F отображение C в B и A ⊂ C, то сужение есть
+-- отображение A в B с теми же значениями.
+theorem restr_coll {F A : term} : Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ (x ∈ A ∧ Ͻ(x, y) ∈ F))) {
+  (x ∈ A ∧ Ͻ(x, y) ∈ F) ⇒ Ͻ(x, y) ∈ F                       by C21'
+  (∀y)((x ∈ A ∧ Ͻ(x, y) ∈ F) ⇒ Ͻ(x, y) ∈ F)                 by gen ^ with y
+  (∀x)(∀y)((x ∈ A ∧ Ͻ(x, y) ∈ F) ⇒ Ͻ(x, y) ∈ F)             by gen ^ with x
+  _                                                         by graph_coll ^
+}
+
+theorem restr_eq_fn {F A B C : term} (hm : Map(F, C, B)) (h : A ⊂ C) : restr(F, A) = fn_x(A, ap(F, x)) {
+  Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ (x ∈ A ∧ Ͻ(x, y) ∈ F)))      by restr_coll
+  g1. Graph(restr(F, A))                                    by pairs_graph ^
+  Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ (x ∈ A ∧ y = ap(F, x))))    by fn_coll
+  g2. Graph(fn_x(A, ap(F, x)))                              by pairs_graph ^
+  a. Ͻ(x, y) ∈ restr(F, A) ⇔ (x ∈ A ∧ Ͻ(x, y) ∈ F)          by pairs_mem 1
+  b. Ͻ(x, y) ∈ F ⇔ (x ∈ C ∧ y = ap(F, x))                   by map_mem hm
+  c. x ∈ A ⇒ x ∈ C                                          by inst h
+  d. Ͻ(x, y) ∈ fn_x(A, ap(F, x)) ⇔ (x ∈ A ∧ y = ap(F, x))   by mem_fn
+  Ͻ(x, y) ∈ restr(F, A) ⇔ Ͻ(x, y) ∈ fn_x(A, ap(F, x))       by taut a b c d
+  (∀y)(Ͻ(x, y) ∈ restr(F, A) ⇔ Ͻ(x, y) ∈ fn_x(A, ap(F, x)))     by gen ^ with y
+  (∀x)(∀y)(Ͻ(x, y) ∈ restr(F, A) ⇔ Ͻ(x, y) ∈ fn_x(A, ap(F, x)))   by gen ^ with x
+  _                                                         by graph_eq g1 g2 ^
+}
+
+theorem restr_map {F A B C : term} (hm : Map(F, C, B)) (h : A ⊂ C) : Map(restr(F, A), A, B) {
+  e. restr(F, A) = fn_x(A, ap(F, x))                        by restr_eq_fn hm h
+  x ∈ A ⇒ ap(F, x) ∈ B by assume a {
+    x ∈ A ⇒ x ∈ C                                           by inst h
+    x ∈ C                                                   by mp a ^
+    ap(F, x) ∈ B                                            by ap_mem hm ^
+  }
+  (∀x)(x ∈ A ⇒ ap(F, x) ∈ B)                                by gen ^ with x
+  m. Map(fn_x(A, ap(F, x)), A, B)                           by fn_map_into ^
+  Map(restr(F, A), A, B) ⇔ Map(fn_x(A, ap(F, x)), A, B)     by rcong e
+  _                                                         by iff_mpr ^ m
+}
+
+theorem ap_restr {F A B C T : term} (hm : Map(F, C, B)) (h : A ⊂ C) (ht : T ∈ A) : ap(restr(F, A), T) = ap(F, T) {
+  restr(F, A) = fn_x(A, ap(F, x))                           by restr_eq_fn hm h
+  ap(restr(F, A), T) = ap(fn_x(A, ap(F, x)), T)             by cong ^
+  ap(fn_x(A, ap(F, x)), T) = ap(F, T)                       by ap_fn ht
+  _                                                         by T3 2 3
+}
+
+-- Продолжение (стр. 92): если F ⊂ G и G функционально, то G продолжает F.
+theorem ap_sub {F G T : term} (hg : FunGraph(G)) (h : F ⊂ G) (ht : T ∈ proj1(F)) : ap(F, T) = ap(G, T) {
+  Ͻ(T, ap(F, T)) ∈ F                                        by ap_spec ht
+  Ͻ(T, ap(F, T)) ∈ F ⇒ Ͻ(T, ap(F, T)) ∈ G                   by inst h
+  p. Ͻ(T, ap(F, T)) ∈ G                                     by mp 1 2
+  T ∈ proj1(G) ∧ ap(F, T) ∈ proj2(G)                        by pair_proj p
+  T ∈ proj1(G)                                              by taut ^
+  Ͻ(T, ap(F, T)) ∈ G ⇔ ap(F, T) = ap(G, T)                  by ap_eq hg ^
+  _                                                         by iff_mp ^ p
+}
+
+-- n° 7, предложение 6 (стр. 93): композиция отображений A → B → C есть отображение
+-- A → C, и (g ∘ f)(x) = g(f(x)).
+theorem comp_eq_fn {F G A B C : term} (hf : Map(F, A, B)) (hg : Map(G, B, C)) : G ∘ F = fn_x(A, ap(G, ap(F, x))) {
+  a. Ͻ(x, z) ∈ G ∘ F ⇔ (∃y)(Ͻ(x, y) ∈ F ∧ Ͻ(y, z) ∈ G)      by mem_comp
+  Ͻ(x, y) ∈ F ⇔ (x ∈ A ∧ y = ap(F, x))                      by map_mem hf
+  Ͻ(y, z) ∈ G ⇔ (y ∈ B ∧ z = ap(G, y))                      by map_mem hg
+  (Ͻ(x, y) ∈ F ∧ Ͻ(y, z) ∈ G) ⇔ (y = ap(F, x) ∧ (x ∈ A ∧ (y ∈ B ∧ z = ap(G, y))))   by taut 2 3
+  (∀y)((Ͻ(x, y) ∈ F ∧ Ͻ(y, z) ∈ G) ⇔ (y = ap(F, x) ∧ (x ∈ A ∧ (y ∈ B ∧ z = ap(G, y)))))   by gen ^ with y
+  b. (∃y)(Ͻ(x, y) ∈ F ∧ Ͻ(y, z) ∈ G) ⇔ (∃y)(y = ap(F, x) ∧ (x ∈ A ∧ (y ∈ B ∧ z = ap(G, y))))   by C31_exists_iff ^
+  c. (∃y)(y = ap(F, x) ∧ (x ∈ A ∧ (y ∈ B ∧ z = ap(G, y)))) ⇔ (x ∈ A ∧ (ap(F, x) ∈ B ∧ z = ap(G, ap(F, x))))   by exists_eq
+  d. x ∈ A ⇒ ap(F, x) ∈ B by assume m {
+    ap(F, x) ∈ B                                            by ap_mem hf m
+  }
+  f. Ͻ(x, z) ∈ fn_x(A, ap(G, ap(F, x))) ⇔ (x ∈ A ∧ z = ap(G, ap(F, x)))   by mem_fn
+  Ͻ(x, z) ∈ G ∘ F ⇔ Ͻ(x, z) ∈ fn_x(A, ap(G, ap(F, x)))     by taut a b c d f
+  (∀z)(Ͻ(x, z) ∈ G ∘ F ⇔ Ͻ(x, z) ∈ fn_x(A, ap(G, ap(F, x))))     by gen ^ with z
+  (∀x)(∀z)(Ͻ(x, z) ∈ G ∘ F ⇔ Ͻ(x, z) ∈ fn_x(A, ap(G, ap(F, x))))   by gen ^ with x
+  g1. Graph(G ∘ F)                                          by comp_graph
+  Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ (x ∈ A ∧ y = ap(G, ap(F, x)))))   by fn_coll
+  g2. Graph(fn_x(A, ap(G, ap(F, x))))                       by pairs_graph ^
+  _                                                         by graph_eq g1 g2 12
+}
+
+theorem comp_map {F G A B C : term} (hf : Map(F, A, B)) (hg : Map(G, B, C)) : Map(G ∘ F, A, C) {
+  e. G ∘ F = fn_x(A, ap(G, ap(F, x)))                       by comp_eq_fn hf hg
+  x ∈ A ⇒ ap(G, ap(F, x)) ∈ C by assume a {
+    ap(F, x) ∈ B                                            by ap_mem hf a
+    ap(G, ap(F, x)) ∈ C                                     by ap_mem hg ^
+  }
+  (∀x)(x ∈ A ⇒ ap(G, ap(F, x)) ∈ C)                         by gen ^ with x
+  m. Map(fn_x(A, ap(G, ap(F, x))), A, C)                    by fn_map_into ^
+  Map(G ∘ F, A, C) ⇔ Map(fn_x(A, ap(G, ap(F, x))), A, C)    by rcong e
+  _                                                         by iff_mpr ^ m
+}
+
+theorem ap_comp {F G A B C T : term} (hf : Map(F, A, B)) (hg : Map(G, B, C)) (ht : T ∈ A) : ap(G ∘ F, T) = ap(G, ap(F, T)) {
+  G ∘ F = fn_x(A, ap(G, ap(F, x)))                          by comp_eq_fn hf hg
+  ap(G ∘ F, T) = ap(fn_x(A, ap(G, ap(F, x))), T)            by cong ^
+  ap(fn_x(A, ap(G, ap(F, x))), T) = ap(G, ap(F, T))         by ap_fn ht
+  _                                                         by T3 2 3
+}
+
+
+-- Образы при отображении: y ∈ f⟨X⟩ ⇔ (∃x)(x ∈ X и y = f(x)) для X ⊂ A.
+theorem mem_img_map {F A B X U : term} (hm : Map(F, A, B)) (h : X ⊂ A) : U ∈ img(F, X) ⇔ (∃x)(x ∈ X ∧ U = ap(F, x)) {
+  a. U ∈ img(F, X) ⇔ (∃x)(x ∈ X ∧ Ͻ(x, U) ∈ F)              by mem_img
+  b. Ͻ(x, U) ∈ F ⇔ (x ∈ A ∧ U = ap(F, x))                   by map_mem hm
+  c. x ∈ X ⇒ x ∈ A                                          by inst h
+  (x ∈ X ∧ Ͻ(x, U) ∈ F) ⇔ (x ∈ X ∧ U = ap(F, x))            by taut b c
+  (∀x)((x ∈ X ∧ Ͻ(x, U) ∈ F) ⇔ (x ∈ X ∧ U = ap(F, x)))      by gen ^ with x
+  (∃x)(x ∈ X ∧ Ͻ(x, U) ∈ F) ⇔ (∃x)(x ∈ X ∧ U = ap(F, x))    by C31_exists_iff ^
+  _                                                         by C22' a ^
+}
+
+theorem ap_mem_img {F A B X T : term} (hm : Map(F, A, B)) (h : X ⊂ A) (ht : T ∈ X) : ap(F, T) ∈ img(F, X) {
+  ap(F, T) ∈ img(F, X) ⇔ (∃x)(x ∈ X ∧ ap(F, T) = ap(F, x))  by mem_img_map hm h
+  ap(F, T) = ap(F, T)                                       by T1
+  T ∈ X ∧ ap(F, T) = ap(F, T)                               by C20 ht ^
+  (∃x)(x ∈ X ∧ ap(F, T) = ap(F, x))                         by exists_intro ^
+  _                                                         by iff_mpr 1 ^
+}
+
+-- f⟨A⟩ = pr₂⟨F⟩ для отображения F множества A.
+theorem img_map_full {F A B : term} (hm : Map(F, A, B)) : img(F, A) = proj2(F) {
+  proj1(F) = A                    by taut hm
+  proj1(F) ⊂ A                    by eq_subset ^
+  _                               by img_full ^
+}
+
+-- Предложение 7 (стр. 94): f⁻¹ есть отображение B в A тогда и только тогда, когда f
+-- биективно.
+theorem inv_map_iff {F A B : term} (hm : Map(F, A, B)) : Map(inv(F), B, A) ⇔ Bij(F, A, B) {
+  ia. proj1(inv(F)) = proj2(F)                              by proj1_inv
+  ib. proj2(inv(F)) = proj1(F)                              by proj2_inv
+  pa. proj1(F) = A                                          by taut hm
+  im. img(F, A) = proj2(F)                                  by img_map_full hm
+  Map(inv(F), B, A) ⇒ Bij(F, A, B) by assume mi {
+    hi. FunGraph(inv(F))                                    by taut mi
+    (x ∈ A ∧ (y ∈ A ∧ ap(F, x) = ap(F, y))) ⇒ x = y by assume a {
+      x ∈ A                                                 by taut a
+      p. Ͻ(x, ap(F, x)) ∈ F                                 by map_pair hm ^
+      y ∈ A                                                 by taut a
+      q. Ͻ(y, ap(F, y)) ∈ F                                 by map_pair hm ^
+      ap(F, x) = ap(F, y)                                   by taut a
+      Ͻ(y, ap(F, x)) ∈ F ⇔ Ͻ(y, ap(F, y)) ∈ F               by rcong ^
+      q'. Ͻ(y, ap(F, x)) ∈ F                                by taut q ^
+      r. Ͻ(ap(F, x), x) ∈ inv(F) ⇔ Ͻ(x, ap(F, x)) ∈ F       by mem_inv
+      s. Ͻ(ap(F, x), y) ∈ inv(F) ⇔ Ͻ(y, ap(F, x)) ∈ F       by mem_inv
+      (∀x)Uniq_y(Ͻ(x, y) ∈ inv(F))                          by taut hi
+      Uniq_y(Ͻ(ap(F, x), y) ∈ inv(F))                       by inst ^
+      (Ͻ(ap(F, x), x) ∈ inv(F) ∧ Ͻ(ap(F, x), y) ∈ inv(F)) ⇒ x = y   by inst2 ^
+      x = y                                                 by taut p q' r s ^
+    }
+    (∀y)((x ∈ A ∧ (y ∈ A ∧ ap(F, x) = ap(F, y))) ⇒ x = y)       by gen ^ with y
+    inj. (∀x)(∀y)((x ∈ A ∧ (y ∈ A ∧ ap(F, x) = ap(F, y))) ⇒ x = y)   by gen ^ with x
+    proj1(inv(F)) = B                                       by taut mi
+    proj2(F) = proj1(inv(F))                                by T2 ia
+    proj2(F) = B                                            by T3 ^ ^^
+    sur. img(F, A) = B                                      by T3 im ^
+    Bij(F, A, B)                                            by taut hm inj sur
+  }
+  Bij(F, A, B) ⇒ Map(inv(F), B, A) by assume hb {
+    g. Graph(inv(F))                                        by inv_graph
+    (Ͻ(y, x) ∈ inv(F) ∧ Ͻ(y, x') ∈ inv(F)) ⇒ x = x' by assume a {
+      r. Ͻ(y, x) ∈ inv(F) ⇔ Ͻ(x, y) ∈ F                     by mem_inv
+      s. Ͻ(y, x') ∈ inv(F) ⇔ Ͻ(x', y) ∈ F                   by mem_inv
+      t. Ͻ(x, y) ∈ F ⇔ (x ∈ A ∧ y = ap(F, x))               by map_mem hm
+      u. Ͻ(x', y) ∈ F ⇔ (x' ∈ A ∧ y = ap(F, x'))            by map_mem hm
+      y = ap(F, x)                                          by taut a r t
+      ap(F, x) = y                                          by T2 ^
+      y = ap(F, x')                                         by taut a s u
+      e. ap(F, x) = ap(F, x')                               by T3 6 7
+      (∀x)(∀y)((x ∈ A ∧ (y ∈ A ∧ ap(F, x) = ap(F, y))) ⇒ x = y)   by taut hb
+      v. (x ∈ A ∧ (x' ∈ A ∧ ap(F, x) = ap(F, x'))) ⇒ x = x' by inst2 ^
+      x = x'                                                by taut a r s t u e v
+    }
+    (∀x')((Ͻ(y, x) ∈ inv(F) ∧ Ͻ(y, x') ∈ inv(F)) ⇒ x = x')   by gen ^ with x'
+    Uniq_x(Ͻ(y, x) ∈ inv(F))                                by gen ^ with x
+    u. (∀y)Uniq_x(Ͻ(y, x) ∈ inv(F))                         by gen ^ with y
+    img(F, A) = B                                           by taut hb
+    proj2(F) = img(F, A)                                    by T2 im
+    proj2(F) = B                                            by T3 ^ ^^
+    p1. proj1(inv(F)) = B                                   by T3 ia ^
+    proj2(inv(F)) = A                                       by T3 ib pa
+    p2. proj2(inv(F)) ⊂ A                                   by eq_subset ^
+    Map(inv(F), B, A)                                       by taut g u p1 p2
+  }
+  _                                                         by iff_intro 5 6
+}
+
+-- Для биекции: f⁻¹(f(x)) = x, f(f⁻¹(y)) = y, f⁻¹ ∘ f = I_A, f ∘ f⁻¹ = I_B (стр. 95).
+theorem ap_inv_ap {F A B T : term} (hb : Bij(F, A, B)) (ht : T ∈ A) : ap(inv(F), ap(F, T)) = T {
+  hm. Map(F, A, B)                                          by taut hb
+  Map(inv(F), B, A) ⇔ Bij(F, A, B)                          by inv_map_iff hm
+  mi. Map(inv(F), B, A)                                     by iff_mpr ^ hb
+  p. Ͻ(T, ap(F, T)) ∈ F                                     by map_pair hm ht
+  a. Ͻ(ap(F, T), T) ∈ inv(F) ⇔ Ͻ(T, ap(F, T)) ∈ F           by mem_inv
+  b. Ͻ(ap(F, T), T) ∈ inv(F) ⇔ (ap(F, T) ∈ B ∧ T = ap(inv(F), ap(F, T)))   by map_mem mi
+  T = ap(inv(F), ap(F, T))                                  by taut p a b
+  _                                                         by T2 ^
+}
+
+theorem ap_ap_inv {F A B U : term} (hb : Bij(F, A, B)) (hu : U ∈ B) : ap(F, ap(inv(F), U)) = U {
+  hm. Map(F, A, B)                                          by taut hb
+  Map(inv(F), B, A) ⇔ Bij(F, A, B)                          by inv_map_iff hm
+  mi. Map(inv(F), B, A)                                     by iff_mpr ^ hb
+  p. Ͻ(U, ap(inv(F), U)) ∈ inv(F)                           by map_pair mi hu
+  a. Ͻ(U, ap(inv(F), U)) ∈ inv(F) ⇔ Ͻ(ap(inv(F), U), U) ∈ F   by mem_inv
+  b. Ͻ(ap(inv(F), U), U) ∈ F ⇔ (ap(inv(F), U) ∈ A ∧ U = ap(F, ap(inv(F), U)))   by map_mem hm
+  U = ap(F, ap(inv(F), U))                                  by taut p a b
+  _                                                         by T2 ^
+}
+
+theorem inv_comp_self {F A B : term} (hb : Bij(F, A, B)) : inv(F) ∘ F = Δ(A) {
+  hm. Map(F, A, B)                                          by taut hb
+  Map(inv(F), B, A) ⇔ Bij(F, A, B)                          by inv_map_iff hm
+  mi. Map(inv(F), B, A)                                     by iff_mpr ^ hb
+  mc. Map(inv(F) ∘ F, A, A)                                 by comp_map hm mi
+  md. Map(Δ(A), A, A)                                       by diag_map
+  x ∈ A ⇒ ap(inv(F) ∘ F, x) = ap(Δ(A), x) by assume a {
+    ap(inv(F) ∘ F, x) = ap(inv(F), ap(F, x))                by ap_comp hm mi a
+    ap(inv(F), ap(F, x)) = x                                by ap_inv_ap hb a
+    ap(inv(F) ∘ F, x) = x                                   by T3 1 2
+    ap(Δ(A), x) = x                                         by ap_diag a
+    x = ap(Δ(A), x)                                         by T2 ^
+    ap(inv(F) ∘ F, x) = ap(Δ(A), x)                         by T3 3 5
+  }
+  (∀x)(x ∈ A ⇒ ap(inv(F) ∘ F, x) = ap(Δ(A), x))             by gen ^ with x
+  _                                                         by map_ext mc md ^
+}
+
+theorem self_comp_inv {F A B : term} (hb : Bij(F, A, B)) : F ∘ inv(F) = Δ(B) {
+  hm. Map(F, A, B)                                          by taut hb
+  Map(inv(F), B, A) ⇔ Bij(F, A, B)                          by inv_map_iff hm
+  mi. Map(inv(F), B, A)                                     by iff_mpr ^ hb
+  mc. Map(F ∘ inv(F), B, B)                                 by comp_map mi hm
+  md. Map(Δ(B), B, B)                                       by diag_map
+  y ∈ B ⇒ ap(F ∘ inv(F), y) = ap(Δ(B), y) by assume a {
+    ap(F ∘ inv(F), y) = ap(F, ap(inv(F), y))                by ap_comp mi hm a
+    ap(F, ap(inv(F), y)) = y                                by ap_ap_inv hb a
+    ap(F ∘ inv(F), y) = y                                   by T3 1 2
+    ap(Δ(B), y) = y                                         by ap_diag a
+    y = ap(Δ(B), y)                                         by T2 ^
+    ap(F ∘ inv(F), y) = ap(Δ(B), y)                         by T3 3 5
+  }
+  (∀y)(y ∈ B ⇒ ap(F ∘ inv(F), y) = ap(Δ(B), y))             by gen ^ with y
+  _                                                         by map_ext mc md ^
+}
+
+
+-- Обратное к биекции отображение биективно (стр. 95).
+theorem inv_bij {F A B : term} (hb : Bij(F, A, B)) : Bij(inv(F), B, A) {
+  hm. Map(F, A, B)                                          by taut hb
+  Map(inv(F), B, A) ⇔ Bij(F, A, B)                          by inv_map_iff hm
+  mi. Map(inv(F), B, A)                                     by iff_mpr ^ hb
+  (x ∈ B ∧ (y ∈ B ∧ ap(inv(F), x) = ap(inv(F), y))) ⇒ x = y by assume a {
+    x ∈ B                                                   by taut a
+    ap(F, ap(inv(F), x)) = x                                by ap_ap_inv hb ^
+    p. x = ap(F, ap(inv(F), x))                             by T2 ^
+    y ∈ B                                                   by taut a
+    q. ap(F, ap(inv(F), y)) = y                             by ap_ap_inv hb ^
+    ap(inv(F), x) = ap(inv(F), y)                           by taut a
+    r. ap(F, ap(inv(F), x)) = ap(F, ap(inv(F), y))          by cong ^
+    x = ap(F, ap(inv(F), y))                                by T3 p r
+    x = y                                                   by T3 ^ q
+  }
+  (∀y)((x ∈ B ∧ (y ∈ B ∧ ap(inv(F), x) = ap(inv(F), y))) ⇒ x = y)       by gen ^ with y
+  inj. (∀x)(∀y)((x ∈ B ∧ (y ∈ B ∧ ap(inv(F), x) = ap(inv(F), y))) ⇒ x = y)   by gen ^ with x
+  img(inv(F), B) = proj2(inv(F))                            by img_map_full mi
+  proj2(inv(F)) = proj1(F)                                  by proj2_inv
+  img(inv(F), B) = proj1(F)                                 by T3 ^^ ^
+  proj1(F) = A                                              by taut hm
+  sur. img(inv(F), B) = A                                   by T3 ^^ ^
+  _                                                         by taut mi inj sur
+}
+
+-- Замечание (стр. 95): f⟨f⁻¹⟨Y⟩⟩ ⊂ Y; для сюръекции и Y ⊂ B равенство; для инъекции
+-- и X ⊂ A f⁻¹⟨f⟨X⟩⟩ = X.
+theorem img_preimg_sub {F A B Y : term} (hm : Map(F, A, B)) : img(F, img(inv(F), Y)) ⊂ Y {
+  hf. FunGraph(F)                                           by taut hm
+  y ∈ img(F, img(inv(F), Y)) ⇒ y ∈ Y by assume m {
+    y ∈ img(F, img(inv(F), Y)) ⇔ (∃x)(x ∈ img(inv(F), Y) ∧ Ͻ(x, y) ∈ F)   by mem_img
+    e. (∃x)(x ∈ img(inv(F), Y) ∧ Ͻ(x, y) ∈ F)               by iff_mp ^ m
+    (x ∈ img(inv(F), Y) ∧ Ͻ(x, y) ∈ F) ⇒ y ∈ Y by assume a {
+      x ∈ img(inv(F), Y) ⇔ (∃z)(z ∈ Y ∧ Ͻ(x, z) ∈ F)        by mem_preimg
+      f. (∃z)(z ∈ Y ∧ Ͻ(x, z) ∈ F)                          by taut a ^
+      (z ∈ Y ∧ Ͻ(x, z) ∈ F) ⇒ y ∈ Y by assume b {
+        (∀x)Uniq_y(Ͻ(x, y) ∈ F)                             by taut hf
+        Uniq_y(Ͻ(x, y) ∈ F)                                 by inst ^
+        (Ͻ(x, y) ∈ F ∧ Ͻ(x, z) ∈ F) ⇒ y = z                 by inst2 ^
+        y = z                                               by taut a b ^
+        y ∈ Y ⇔ z ∈ Y                                       by rcong ^
+        y ∈ Y                                               by taut b ^
+      }
+      (∀z)((z ∈ Y ∧ Ͻ(x, z) ∈ F) ⇒ y ∈ Y)                   by gen ^ with z
+      y ∈ Y                                                 by obtain f ^
+    }
+    (∀x)((x ∈ img(inv(F), Y) ∧ Ͻ(x, y) ∈ F) ⇒ y ∈ Y)        by gen ^ with x
+    y ∈ Y                                                   by obtain e ^
+  }
+  _                                                         by gen ^ with y
+}
+
+theorem img_preimg_surj {F A B Y : term} (hs : Surj(F, A, B)) (hy : Y ⊂ B) : img(F, img(inv(F), Y)) = Y {
+  hm. Map(F, A, B)                                          by taut hs
+  l. img(F, img(inv(F), Y)) ⊂ Y                             by img_preimg_sub hm
+  y ∈ Y ⇒ y ∈ img(F, img(inv(F), Y)) by assume m {
+    y ∈ Y ⇒ y ∈ B                                           by inst hy
+    yb. y ∈ B                                               by mp m ^
+    img(F, A) = B                                           by taut hs
+    y ∈ img(F, A) ⇔ y ∈ B                                   by eq_mem ^
+    y ∈ img(F, A)                                           by taut yb ^
+    y ∈ img(F, A) ⇔ (∃x)(x ∈ A ∧ Ͻ(x, y) ∈ F)               by mem_img
+    e. (∃x)(x ∈ A ∧ Ͻ(x, y) ∈ F)                            by iff_mp ^ ^^
+    (x ∈ A ∧ Ͻ(x, y) ∈ F) ⇒ y ∈ img(F, img(inv(F), Y)) by assume a {
+      y ∈ Y ∧ Ͻ(x, y) ∈ F                                   by taut m a
+      (∃y)(y ∈ Y ∧ Ͻ(x, y) ∈ F)                             by exists_intro ^
+      x ∈ img(inv(F), Y) ⇔ (∃y)(y ∈ Y ∧ Ͻ(x, y) ∈ F)        by mem_preimg
+      x ∈ img(inv(F), Y)                                    by iff_mpr ^ ^^
+      x ∈ img(inv(F), Y) ∧ Ͻ(x, y) ∈ F                      by taut ^ a
+      (∃x)(x ∈ img(inv(F), Y) ∧ Ͻ(x, y) ∈ F)                by exists_intro ^
+      y ∈ img(F, img(inv(F), Y)) ⇔ (∃x)(x ∈ img(inv(F), Y) ∧ Ͻ(x, y) ∈ F)   by mem_img
+      y ∈ img(F, img(inv(F), Y))                            by iff_mpr ^ ^^
+    }
+    (∀x)((x ∈ A ∧ Ͻ(x, y) ∈ F) ⇒ y ∈ img(F, img(inv(F), Y)))   by gen ^ with x
+    y ∈ img(F, img(inv(F), Y))                              by obtain e ^
+  }
+  r. Y ⊂ img(F, img(inv(F), Y))                             by gen ^ with y
+  _                                                         by ext l r
+}
+
+theorem preimg_img_inj {F A B X : term} (hi : Inj(F, A, B)) (hx : X ⊂ A) : img(inv(F), img(F, X)) = X {
+  hm. Map(F, A, B)                                          by taut hi
+  x ∈ img(inv(F), img(F, X)) ⇒ x ∈ X by assume m {
+    x ∈ img(inv(F), img(F, X)) ⇔ (∃y)(y ∈ img(F, X) ∧ Ͻ(x, y) ∈ F)   by mem_preimg
+    e. (∃y)(y ∈ img(F, X) ∧ Ͻ(x, y) ∈ F)                    by iff_mp ^ m
+    (y ∈ img(F, X) ∧ Ͻ(x, y) ∈ F) ⇒ x ∈ X by assume a {
+      y ∈ img(F, X) ⇔ (∃z)(z ∈ X ∧ y = ap(F, z))            by mem_img_map hm hx
+      f. (∃z)(z ∈ X ∧ y = ap(F, z))                         by taut a ^
+      (z ∈ X ∧ y = ap(F, z)) ⇒ x ∈ X by assume b {
+        Ͻ(x, y) ∈ F ⇔ (x ∈ A ∧ y = ap(F, x))                by map_mem hm
+        xa. x ∈ A                                           by taut a ^
+        y = ap(F, x)                                        by taut a 1
+        ap(F, x) = y                                        by T2 ^
+        y = ap(F, z)                                        by taut b
+        q. ap(F, x) = ap(F, z)                              by T3 4 5
+        z ∈ X ⇒ z ∈ A                                       by inst hx
+        za. z ∈ A                                           by taut b ^
+        (∀x)(∀y)((x ∈ A ∧ (y ∈ A ∧ ap(F, x) = ap(F, y))) ⇒ x = y)   by taut hi
+        (x ∈ A ∧ (z ∈ A ∧ ap(F, x) = ap(F, z))) ⇒ x = z     by inst2 ^
+        x = z                                               by taut xa za q ^
+        x ∈ X ⇔ z ∈ X                                       by rcong ^
+        x ∈ X                                               by taut b ^
+      }
+      (∀z)((z ∈ X ∧ y = ap(F, z)) ⇒ x ∈ X)                  by gen ^ with z
+      x ∈ X                                                 by obtain f ^
+    }
+    (∀y)((y ∈ img(F, X) ∧ Ͻ(x, y) ∈ F) ⇒ x ∈ X)             by gen ^ with y
+    x ∈ X                                                   by obtain e ^
+  }
+  l. img(inv(F), img(F, X)) ⊂ X                             by gen ^ with x
+  proj1(F) = A                                              by taut hm
+  A = proj1(F)                                              by T2 ^
+  A ⊂ proj1(F)                                              by eq_subset ^
+  X ⊂ proj1(F)                                              by subset_trans hx ^
+  r. X ⊂ img(inv(F), img(F, X))                             by sub_preimg_img ^
+  _                                                         by ext l r
+}
+
+
+-- n° 8. Значения ретракции и сечения: r(f(x)) = x, f(s(y)) = y; и обратно.
+theorem retr_ap {F R A B T : term} (hm : Map(F, A, B)) (hr : Retr(R, F, A, B)) (ht : T ∈ A) : ap(R, ap(F, T)) = T {
+  mr. Map(R, B, A)                                 by taut hr
+  R ∘ F = Δ(A)                                     by taut hr
+  a. ap(R ∘ F, T) = ap(Δ(A), T)                    by cong ^
+  b. ap(R ∘ F, T) = ap(R, ap(F, T))                by ap_comp hm mr ht
+  c. ap(Δ(A), T) = T                               by ap_diag ht
+  ap(R, ap(F, T)) = ap(R ∘ F, T)                   by T2 b
+  ap(R, ap(F, T)) = ap(Δ(A), T)                    by T3 ^ a
+  _                                                by T3 ^ c
+}
+
+theorem sect_ap {F S A B U : term} (hm : Map(F, A, B)) (hs : Sect(S, F, A, B)) (hu : U ∈ B) : ap(F, ap(S, U)) = U {
+  ms. Map(S, B, A)                                 by taut hs
+  F ∘ S = Δ(B)                                     by taut hs
+  a. ap(F ∘ S, U) = ap(Δ(B), U)                    by cong ^
+  b. ap(F ∘ S, U) = ap(F, ap(S, U))                by ap_comp ms hm hu
+  c. ap(Δ(B), U) = U                               by ap_diag hu
+  ap(F, ap(S, U)) = ap(F ∘ S, U)                   by T2 b
+  ap(F, ap(S, U)) = ap(Δ(B), U)                    by T3 ^ a
+  _                                                by T3 ^ c
+}
+
+theorem retr_of_ap {F R A B : term} (hm : Map(F, A, B)) (hr : Map(R, B, A)) (h : (∀x)(x ∈ A ⇒ ap(R, ap(F, x)) = x)) : Retr(R, F, A, B) {
+  mc. Map(R ∘ F, A, A)                             by comp_map hm hr
+  md. Map(Δ(A), A, A)                              by diag_map
+  x ∈ A ⇒ ap(R ∘ F, x) = ap(Δ(A), x) by assume a {
+    ap(R ∘ F, x) = ap(R, ap(F, x))                 by ap_comp hm hr a
+    x ∈ A ⇒ ap(R, ap(F, x)) = x                    by inst h
+    ap(R, ap(F, x)) = x                            by mp a ^
+    ap(R ∘ F, x) = x                               by T3 1 3
+    ap(Δ(A), x) = x                                by ap_diag a
+    x = ap(Δ(A), x)                                by T2 ^
+    ap(R ∘ F, x) = ap(Δ(A), x)                     by T3 4 6
+  }
+  (∀x)(x ∈ A ⇒ ap(R ∘ F, x) = ap(Δ(A), x))         by gen ^ with x
+  R ∘ F = Δ(A)                                     by map_ext mc md ^
+  _                                                by C20 hr ^
+}
+
+theorem sect_of_ap {F S A B : term} (hm : Map(F, A, B)) (hs : Map(S, B, A)) (h : (∀y)(y ∈ B ⇒ ap(F, ap(S, y)) = y)) : Sect(S, F, A, B) {
+  mc. Map(F ∘ S, B, B)                             by comp_map hs hm
+  md. Map(Δ(B), B, B)                              by diag_map
+  y ∈ B ⇒ ap(F ∘ S, y) = ap(Δ(B), y) by assume a {
+    ap(F ∘ S, y) = ap(F, ap(S, y))                 by ap_comp hs hm a
+    y ∈ B ⇒ ap(F, ap(S, y)) = y                    by inst h
+    ap(F, ap(S, y)) = y                            by mp a ^
+    ap(F ∘ S, y) = y                               by T3 1 3
+    ap(Δ(B), y) = y                                by ap_diag a
+    y = ap(Δ(B), y)                                by T2 ^
+    ap(F ∘ S, y) = ap(Δ(B), y)                     by T3 4 6
+  }
+  (∀y)(y ∈ B ⇒ ap(F ∘ S, y) = ap(Δ(B), y))         by gen ^ with y
+  F ∘ S = Δ(B)                                     by map_ext mc md ^
+  _                                                by C20 hs ^
+}
+
+-- Предложение 8 (стр. 95): если у f есть ретракция, то f инъективно; если есть сечение,
+-- то f сюръективно.
+theorem retr_inj {F R A B : term} (hm : Map(F, A, B)) (hr : Retr(R, F, A, B)) : Inj(F, A, B) {
+  (x ∈ A ∧ (y ∈ A ∧ ap(F, x) = ap(F, y))) ⇒ x = y by assume a {
+    x ∈ A                                          by taut a
+    p. ap(R, ap(F, x)) = x                         by retr_ap hm hr ^
+    y ∈ A                                          by taut a
+    q. ap(R, ap(F, y)) = y                         by retr_ap hm hr ^
+    ap(F, x) = ap(F, y)                            by taut a
+    r. ap(R, ap(F, x)) = ap(R, ap(F, y))           by cong ^
+    x = ap(R, ap(F, x))                            by T2 p
+    x = ap(R, ap(F, y))                            by T3 ^ r
+    x = y                                          by T3 ^ q
+  }
+  (∀y)((x ∈ A ∧ (y ∈ A ∧ ap(F, x) = ap(F, y))) ⇒ x = y)       by gen ^ with y
+  (∀x)(∀y)((x ∈ A ∧ (y ∈ A ∧ ap(F, x) = ap(F, y))) ⇒ x = y)   by gen ^ with x
+  _                                                by C20 hm ^
+}
+
+theorem sect_surj {F S A B : term} (hm : Map(F, A, B)) (hs : Sect(S, F, A, B)) : Surj(F, A, B) {
+  ms. Map(S, B, A)                                 by taut hs
+  img(F, A) ⊂ proj2(F)                             by img_sub_proj2
+  proj2(F) ⊂ B                                     by taut hm
+  l. img(F, A) ⊂ B                                 by subset_trans ^^ ^
+  y ∈ B ⇒ y ∈ img(F, A) by assume a {
+    ap(S, y) ∈ A                                   by ap_mem ms a
+    A ⊂ A                                          by subset_refl
+    ap(F, ap(S, y)) ∈ img(F, A)                    by ap_mem_img hm ^ ^^
+    ap(F, ap(S, y)) = y                            by sect_ap hm hs a
+    ap(F, ap(S, y)) ∈ img(F, A) ⇔ y ∈ img(F, A)    by rcong ^
+    y ∈ img(F, A)                                  by taut 3 ^
+  }
+  r. B ⊂ img(F, A)                                 by gen ^ with y
+  img(F, A) = B                                    by ext l r
+  _                                                by C20 hm ^
+}
+
+-- Обратно (стр. 95): у сюръекции есть сечение s(y) = τx(x ∈ A и f(x) = y).
+theorem surj_sect {F A B : term} (hs : Surj(F, A, B)) : (∃S)Sect(S, F, A, B) {
+  hm. Map(F, A, B)                                                   by taut hs
+  img(F, A) = B                                                      by taut hs
+  ib. y ∈ img(F, A) ⇔ y ∈ B                                          by eq_mem ^
+  A ⊂ A                                                              by subset_refl
+  mi. y ∈ img(F, A) ⇔ (∃x)(x ∈ A ∧ y = ap(F, x))                     by mem_img_map hm ^
+  -- (∃x)(x ∈ A и y = f(x)) буквально есть "τ-терм подходит"
+  t. y ∈ B ⇒ (∃x)(x ∈ A ∧ y = ap(F, x))                              by taut ib mi
+  y ∈ B ⇒ τx(x ∈ A ∧ y = ap(F, x)) ∈ A by assume a {
+    (∃x)(x ∈ A ∧ y = ap(F, x))                                       by mp a t
+    τx(x ∈ A ∧ y = ap(F, x)) ∈ A                                     by taut ^
+  }
+  (∀y)(y ∈ B ⇒ τx(x ∈ A ∧ y = ap(F, x)) ∈ A)                         by gen ^ with y
+  ms. Map(fn_y(B, τx(x ∈ A ∧ y = ap(F, x))), B, A)                   by fn_map_into ^
+  y ∈ B ⇒ ap(F, ap(fn_y(B, τx(x ∈ A ∧ y = ap(F, x))), y)) = y by assume a {
+    ap(fn_y(B, τx(x ∈ A ∧ y = ap(F, x))), y) = τx(x ∈ A ∧ y = ap(F, x))   by ap_fn a
+    ap(F, ap(fn_y(B, τx(x ∈ A ∧ y = ap(F, x))), y)) = ap(F, τx(x ∈ A ∧ y = ap(F, x)))   by cong ^
+    (∃x)(x ∈ A ∧ y = ap(F, x))                                       by mp a t
+    y = ap(F, τx(x ∈ A ∧ y = ap(F, x)))                              by taut ^
+    ap(F, τx(x ∈ A ∧ y = ap(F, x))) = y                              by T2 ^
+    ap(F, ap(fn_y(B, τx(x ∈ A ∧ y = ap(F, x))), y)) = y              by T3 2 ^
+  }
+  (∀y)(y ∈ B ⇒ ap(F, ap(fn_y(B, τx(x ∈ A ∧ y = ap(F, x))), y)) = y)  by gen ^ with y
+  Sect(fn_y(B, τx(x ∈ A ∧ y = ap(F, x))), F, A, B)                   by sect_of_ap hm ms ^
+  _                                                                  by exists_intro ^
+}
+
+-- У инъекции из непустого A есть ретракция: r(y) = τx(x ∈ A и (y ∈ f⟨A⟩ ⇒ y = f(x))).
+theorem inj_retr {F A B : term} (hi : Inj(F, A, B)) (hne : A ≠ ∅) : (∃R)Retr(R, F, A, B) {
+  hm. Map(F, A, B)                                                   by taut hi
+  A ≠ ∅ ⇔ (∃x)(x ∈ A)                                                by nonempty
+  ea. (∃x)(x ∈ A)                                                    by iff_mp ^ hne
+  A ⊂ A                                                              by subset_refl
+  mi. y ∈ img(F, A) ⇔ (∃x)(x ∈ A ∧ y = ap(F, x))                     by mem_img_map hm ^
+  -- такой x есть всегда: если y ∈ f⟨A⟩, то прообраз y, иначе любой элемент A
+  c1. y ∈ img(F, A) ⇒ (∃x)(x ∈ A ∧ (y ∈ img(F, A) ⇒ y = ap(F, x))) by assume a {
+    (∃x)(x ∈ A ∧ y = ap(F, x))                                       by iff_mp mi a
+    (x ∈ A ∧ y = ap(F, x)) ⇒ (x ∈ A ∧ (y ∈ img(F, A) ⇒ y = ap(F, x)))   by taut
+    (∀x)((x ∈ A ∧ y = ap(F, x)) ⇒ (x ∈ A ∧ (y ∈ img(F, A) ⇒ y = ap(F, x))))   by gen ^ with x
+    (∃x)(x ∈ A ∧ y = ap(F, x)) ⇒ (∃x)(x ∈ A ∧ (y ∈ img(F, A) ⇒ y = ap(F, x)))   by C31_exists ^
+    (∃x)(x ∈ A ∧ (y ∈ img(F, A) ⇒ y = ap(F, x)))                     by mp 1 ^
+  }
+  c2. y ∉ img(F, A) ⇒ (∃x)(x ∈ A ∧ (y ∈ img(F, A) ⇒ y = ap(F, x))) by assume a {
+    x ∈ A ⇒ (x ∈ A ∧ (y ∈ img(F, A) ⇒ y = ap(F, x)))                 by taut a
+    (∀x)(x ∈ A ⇒ (x ∈ A ∧ (y ∈ img(F, A) ⇒ y = ap(F, x))))           by gen ^ with x
+    (∃x)(x ∈ A) ⇒ (∃x)(x ∈ A ∧ (y ∈ img(F, A) ⇒ y = ap(F, x)))       by C31_exists ^
+    (∃x)(x ∈ A ∧ (y ∈ img(F, A) ⇒ y = ap(F, x)))                     by mp ea ^
+  }
+  t. (∃x)(x ∈ A ∧ (y ∈ img(F, A) ⇒ y = ap(F, x)))                    by taut c1 c2
+  τx(x ∈ A ∧ (y ∈ img(F, A) ⇒ y = ap(F, x))) ∈ A                     by taut t
+  y ∈ B ⇒ τx(x ∈ A ∧ (y ∈ img(F, A) ⇒ y = ap(F, x))) ∈ A            by taut ^
+  (∀y)(y ∈ B ⇒ τx(x ∈ A ∧ (y ∈ img(F, A) ⇒ y = ap(F, x))) ∈ A)      by gen ^ with y
+  mr. Map(fn_y(B, τx(x ∈ A ∧ (y ∈ img(F, A) ⇒ y = ap(F, x)))), B, A)   by fn_map_into ^
+  tt. (∀y)(∃x)(x ∈ A ∧ (y ∈ img(F, A) ⇒ y = ap(F, x)))              by gen t with y
+  z ∈ A ⇒ ap(fn_y(B, τx(x ∈ A ∧ (y ∈ img(F, A) ⇒ y = ap(F, x)))), ap(F, z)) = z by assume a {
+    fb. ap(F, z) ∈ B                                                 by ap_mem hm a
+    e1. ap(fn_y(B, τx(x ∈ A ∧ (y ∈ img(F, A) ⇒ y = ap(F, x)))), ap(F, z)) = τx(x ∈ A ∧ (ap(F, z) ∈ img(F, A) ⇒ ap(F, z) = ap(F, x)))   by ap_fn fb
+    A ⊂ A                                                            by subset_refl
+    fi. ap(F, z) ∈ img(F, A)                                         by ap_mem_img hm ^ a
+    w. (∃x)(x ∈ A ∧ (ap(F, z) ∈ img(F, A) ⇒ ap(F, z) = ap(F, x)))     by inst tt
+    wa. τx(x ∈ A ∧ (ap(F, z) ∈ img(F, A) ⇒ ap(F, z) = ap(F, x))) ∈ A   by taut w
+    we. ap(F, z) = ap(F, τx(x ∈ A ∧ (ap(F, z) ∈ img(F, A) ⇒ ap(F, z) = ap(F, x))))   by taut w fi
+    (∀x)(∀y)((x ∈ A ∧ (y ∈ A ∧ ap(F, x) = ap(F, y))) ⇒ x = y)        by taut hi
+    (z ∈ A ∧ (τx(x ∈ A ∧ (ap(F, z) ∈ img(F, A) ⇒ ap(F, z) = ap(F, x))) ∈ A ∧ ap(F, z) = ap(F, τx(x ∈ A ∧ (ap(F, z) ∈ img(F, A) ⇒ ap(F, z) = ap(F, x)))))) ⇒ z = τx(x ∈ A ∧ (ap(F, z) ∈ img(F, A) ⇒ ap(F, z) = ap(F, x)))   by inst2 ^
+    z = τx(x ∈ A ∧ (ap(F, z) ∈ img(F, A) ⇒ ap(F, z) = ap(F, x)))     by taut a wa we ^
+    τx(x ∈ A ∧ (ap(F, z) ∈ img(F, A) ⇒ ap(F, z) = ap(F, x))) = z     by T2 ^
+    ap(fn_y(B, τx(x ∈ A ∧ (y ∈ img(F, A) ⇒ y = ap(F, x)))), ap(F, z)) = z   by T3 e1 ^
+  }
+  (∀z)(z ∈ A ⇒ ap(fn_y(B, τx(x ∈ A ∧ (y ∈ img(F, A) ⇒ y = ap(F, x)))), ap(F, z)) = z)   by gen ^ with z
+  Retr(fn_y(B, τx(x ∈ A ∧ (y ∈ img(F, A) ⇒ y = ap(F, x)))), F, A, B)   by retr_of_ap hm mr ^
+  _                                                                  by exists_intro ^
+}
+
+-- Следствие (стр. 96): если g ∘ f = I_A и f ∘ g = I_B, то f биективно и g = f⁻¹.
+theorem bij_of_inverse {F G A B : term} (hf : Map(F, A, B)) (hg : Map(G, B, A)) (h1 : G ∘ F = Δ(A)) (h2 : F ∘ G = Δ(B)) : Bij(F, A, B) ∧ G = inv(F) {
+  hr. Retr(G, F, A, B)                                       by C20 hg h1
+  hs. Sect(G, F, A, B)                                       by C20 hg h2
+  Inj(F, A, B)                                               by retr_inj hf hr
+  Surj(F, A, B)                                              by sect_surj hf hs
+  hb. Bij(F, A, B)                                           by taut 3 4
+  Map(inv(F), B, A) ⇔ Bij(F, A, B)                           by inv_map_iff hf
+  mi. Map(inv(F), B, A)                                      by iff_mpr ^ hb
+  y ∈ B ⇒ ap(G, y) = ap(inv(F), y) by assume a {
+    ap(G, y) ∈ A                                             by ap_mem hg a
+    ap(inv(F), ap(F, ap(G, y))) = ap(G, y)                   by ap_inv_ap hb ^
+    ap(F, ap(G, y)) = y                                      by sect_ap hf hs a
+    ap(inv(F), ap(F, ap(G, y))) = ap(inv(F), y)              by cong ^
+    ap(G, y) = ap(inv(F), ap(F, ap(G, y)))                   by T2 2
+    ap(G, y) = ap(inv(F), y)                                 by T3 ^ 4
+  }
+  (∀y)(y ∈ B ⇒ ap(G, y) = ap(inv(F), y))                     by gen ^ with y
+  G = inv(F)                                                 by map_ext hg mi ^
+  _                                                          by C20 hb ^
+}
+
+
+-- Удобные формы определения 10.
+theorem inj_ap {F A B T U : term} (hi : Inj(F, A, B)) (ht : T ∈ A) (hu : U ∈ A) (h : ap(F, T) = ap(F, U)) : T = U {
+  (∀x)(∀y)((x ∈ A ∧ (y ∈ A ∧ ap(F, x) = ap(F, y))) ⇒ x = y)   by taut hi
+  (T ∈ A ∧ (U ∈ A ∧ ap(F, T) = ap(F, U))) ⇒ T = U             by inst2 ^
+  _                                                           by taut ht hu h ^
+}
+
+theorem surj_iff {F A B : term} (hm : Map(F, A, B)) : Surj(F, A, B) ⇔ (∀y)(y ∈ B ⇒ (∃x)(x ∈ A ∧ y = ap(F, x))) {
+  a. img(F, A) = B ⇔ (∀y)(y ∈ img(F, A) ⇔ y ∈ B)                    by eq_iff_mem
+  A ⊂ A                                                              by subset_refl
+  m. y ∈ img(F, A) ⇔ (∃x)(x ∈ A ∧ y = ap(F, x))                      by mem_img_map hm ^
+  img(F, A) ⊂ proj2(F)                                               by img_sub_proj2
+  proj2(F) ⊂ B                                                       by taut hm
+  img(F, A) ⊂ B                                                      by subset_trans ^^ ^
+  s. y ∈ img(F, A) ⇒ y ∈ B                                           by inst ^
+  (y ∈ img(F, A) ⇔ y ∈ B) ⇔ (y ∈ B ⇒ (∃x)(x ∈ A ∧ y = ap(F, x)))     by taut m s
+  (∀y)((y ∈ img(F, A) ⇔ y ∈ B) ⇔ (y ∈ B ⇒ (∃x)(x ∈ A ∧ y = ap(F, x))))   by gen ^ with y
+  b. (∀y)(y ∈ img(F, A) ⇔ y ∈ B) ⇔ (∀y)(y ∈ B ⇒ (∃x)(x ∈ A ∧ y = ap(F, x)))   by C31_iff ^
+  _                                                                  by taut hm a b
+}
+
+theorem surj_ap {F A B U : term} (hs : Surj(F, A, B)) (hu : U ∈ B) : (∃x)(x ∈ A ∧ U = ap(F, x)) {
+  Map(F, A, B)                                                       by taut hs
+  Surj(F, A, B) ⇔ (∀y)(y ∈ B ⇒ (∃x)(x ∈ A ∧ y = ap(F, x)))           by surj_iff ^
+  (∀y)(y ∈ B ⇒ (∃x)(x ∈ A ∧ y = ap(F, x)))                           by iff_mp ^ hs
+  U ∈ B ⇒ (∃x)(x ∈ A ∧ U = ap(F, x))                                 by inst ^
+  _                                                                  by mp hu ^
+}
+
+-- Теорема 1 (стр. 96-97). f: A → B, f': B → C, f'' = f' ∘ f.
+-- а) композиция инъекций есть инъекция; r ∘ r' ретракция для f''.
+theorem comp_inj {F G A B C : term} (hf : Inj(F, A, B)) (hg : Inj(G, B, C)) : Inj(G ∘ F, A, C) {
+  mf. Map(F, A, B)                                                   by taut hf
+  mg. Map(G, B, C)                                                   by taut hg
+  mc. Map(G ∘ F, A, C)                                               by comp_map mf mg
+  (x ∈ A ∧ (y ∈ A ∧ ap(G ∘ F, x) = ap(G ∘ F, y))) ⇒ x = y by assume a {
+    xa. x ∈ A                                                        by taut a
+    ya. y ∈ A                                                        by taut a
+    p. ap(G ∘ F, x) = ap(G, ap(F, x))                                by ap_comp mf mg xa
+    q. ap(G ∘ F, y) = ap(G, ap(F, y))                                by ap_comp mf mg ya
+    ap(G, ap(F, x)) = ap(G ∘ F, x)                                   by T2 p
+    ap(G ∘ F, x) = ap(G ∘ F, y)                                      by taut a
+    ap(G, ap(F, x)) = ap(G ∘ F, y)                                   by T3 5 6
+    e. ap(G, ap(F, x)) = ap(G, ap(F, y))                             by T3 ^ q
+    ap(F, x) ∈ B                                                     by ap_mem mf xa
+    ap(F, y) ∈ B                                                     by ap_mem mf ya
+    ap(F, x) = ap(F, y)                                              by inj_ap hg 9 10 e
+    x = y                                                            by inj_ap hf xa ya ^
+  }
+  (∀y)((x ∈ A ∧ (y ∈ A ∧ ap(G ∘ F, x) = ap(G ∘ F, y))) ⇒ x = y)       by gen ^ with y
+  (∀x)(∀y)((x ∈ A ∧ (y ∈ A ∧ ap(G ∘ F, x) = ap(G ∘ F, y))) ⇒ x = y)   by gen ^ with x
+  _                                                                  by C20 mc ^
+}
+
+theorem comp_retr {F G R R' A B C : term} (hf : Map(F, A, B)) (hg : Map(G, B, C)) (hr : Retr(R, F, A, B)) (hr' : Retr(R', G, B, C)) : Retr(R ∘ R', G ∘ F, A, C) {
+  mc. Map(G ∘ F, A, C)                                               by comp_map hf hg
+  mr. Map(R, B, A)                                                   by taut hr
+  mr'. Map(R', C, B)                                                 by taut hr'
+  mrr. Map(R ∘ R', C, A)                                             by comp_map mr' mr
+  x ∈ A ⇒ ap(R ∘ R', ap(G ∘ F, x)) = x by assume a {
+    fb. ap(F, x) ∈ B                                                 by ap_mem hf a
+    ap(G ∘ F, x) ∈ C                                                 by ap_mem mc a
+    ap(R ∘ R', ap(G ∘ F, x)) = ap(R, ap(R', ap(G ∘ F, x)))           by ap_comp mr' mr ^
+    ap(G ∘ F, x) = ap(G, ap(F, x))                                   by ap_comp hf hg a
+    ap(R', ap(G ∘ F, x)) = ap(R', ap(G, ap(F, x)))                   by cong ^
+    ap(R', ap(G, ap(F, x))) = ap(F, x)                               by retr_ap hg hr' fb
+    ap(R', ap(G ∘ F, x)) = ap(F, x)                                  by T3 5 6
+    ap(R, ap(R', ap(G ∘ F, x))) = ap(R, ap(F, x))                    by cong ^
+    ap(R, ap(F, x)) = x                                              by retr_ap hf hr a
+    ap(R ∘ R', ap(G ∘ F, x)) = ap(R, ap(F, x))                       by T3 3 8
+    ap(R ∘ R', ap(G ∘ F, x)) = x                                     by T3 ^ 9
+  }
+  (∀x)(x ∈ A ⇒ ap(R ∘ R', ap(G ∘ F, x)) = x)                         by gen ^ with x
+  _                                                                  by retr_of_ap mc mrr ^
+}
+
+-- б) композиция сюръекций есть сюръекция; s ∘ s' сечение для f''.
+theorem comp_surj {F G A B C : term} (hf : Surj(F, A, B)) (hg : Surj(G, B, C)) : Surj(G ∘ F, A, C) {
+  mf. Map(F, A, B)                                                   by taut hf
+  mg. Map(G, B, C)                                                   by taut hg
+  mc. Map(G ∘ F, A, C)                                               by comp_map mf mg
+  z ∈ C ⇒ (∃x)(x ∈ A ∧ z = ap(G ∘ F, x)) by assume a {
+    e. (∃y)(y ∈ B ∧ z = ap(G, y))                                    by surj_ap hg a
+    (y ∈ B ∧ z = ap(G, y)) ⇒ (∃x)(x ∈ A ∧ z = ap(G ∘ F, x)) by assume b {
+      y ∈ B                                                          by taut b
+      f. (∃x)(x ∈ A ∧ y = ap(F, x))                                  by surj_ap hf ^
+      (x ∈ A ∧ y = ap(F, x)) ⇒ (∃x)(x ∈ A ∧ z = ap(G ∘ F, x)) by assume c {
+        xa. x ∈ A                                                    by taut c
+        z = ap(G, y)                                                 by taut b
+        y = ap(F, x)                                                 by taut c
+        ap(G, y) = ap(G, ap(F, x))                                   by cong ^
+        z = ap(G, ap(F, x))                                          by T3 2 4
+        ap(G ∘ F, x) = ap(G, ap(F, x))                               by ap_comp mf mg xa
+        ap(G, ap(F, x)) = ap(G ∘ F, x)                               by T2 ^
+        z = ap(G ∘ F, x)                                             by T3 5 7
+        x ∈ A ∧ z = ap(G ∘ F, x)                                     by C20 xa ^
+        (∃x)(x ∈ A ∧ z = ap(G ∘ F, x))                               by exists_intro ^
+      }
+      (∀x)((x ∈ A ∧ y = ap(F, x)) ⇒ (∃x)(x ∈ A ∧ z = ap(G ∘ F, x)))  by gen ^ with x
+      (∃x)(x ∈ A ∧ z = ap(G ∘ F, x))                                 by obtain f ^
+    }
+    (∀y)((y ∈ B ∧ z = ap(G, y)) ⇒ (∃x)(x ∈ A ∧ z = ap(G ∘ F, x)))    by gen ^ with y
+    (∃x)(x ∈ A ∧ z = ap(G ∘ F, x))                                   by obtain e ^
+  }
+  (∀z)(z ∈ C ⇒ (∃x)(x ∈ A ∧ z = ap(G ∘ F, x)))                       by gen ^ with z
+  Surj(G ∘ F, A, C) ⇔ (∀z)(z ∈ C ⇒ (∃x)(x ∈ A ∧ z = ap(G ∘ F, x)))   by surj_iff mc
+  _                                                                  by iff_mpr ^ ^^
+}
+
+theorem comp_sect {F G S S' A B C : term} (hf : Map(F, A, B)) (hg : Map(G, B, C)) (hs : Sect(S, F, A, B)) (hs' : Sect(S', G, B, C)) : Sect(S ∘ S', G ∘ F, A, C) {
+  mc. Map(G ∘ F, A, C)                                               by comp_map hf hg
+  ms. Map(S, B, A)                                                   by taut hs
+  ms'. Map(S', C, B)                                                 by taut hs'
+  mss. Map(S ∘ S', C, A)                                             by comp_map ms' ms
+  z ∈ C ⇒ ap(G ∘ F, ap(S ∘ S', z)) = z by assume a {
+    sb. ap(S', z) ∈ B                                                by ap_mem ms' a
+    ap(S ∘ S', z) ∈ A                                                by ap_mem mss a
+    ap(G ∘ F, ap(S ∘ S', z)) = ap(G, ap(F, ap(S ∘ S', z)))           by ap_comp hf hg ^
+    ap(S ∘ S', z) = ap(S, ap(S', z))                                 by ap_comp ms' ms a
+    ap(F, ap(S ∘ S', z)) = ap(F, ap(S, ap(S', z)))                   by cong ^
+    ap(F, ap(S, ap(S', z))) = ap(S', z)                              by sect_ap hf hs sb
+    ap(F, ap(S ∘ S', z)) = ap(S', z)                                 by T3 5 6
+    ap(G, ap(F, ap(S ∘ S', z))) = ap(G, ap(S', z))                   by cong ^
+    ap(G, ap(S', z)) = z                                             by sect_ap hg hs' a
+    ap(G ∘ F, ap(S ∘ S', z)) = ap(G, ap(S', z))                      by T3 3 8
+    ap(G ∘ F, ap(S ∘ S', z)) = z                                     by T3 ^ 9
+  }
+  (∀z)(z ∈ C ⇒ ap(G ∘ F, ap(S ∘ S', z)) = z)                         by gen ^ with z
+  _                                                                  by sect_of_ap mc mss ^
+}
+
+-- в) если f'' инъекция, то f инъекция; r'' ∘ f' ретракция для f.
+theorem inj_of_comp {F G A B C : term} (hf : Map(F, A, B)) (hg : Map(G, B, C)) (h : Inj(G ∘ F, A, C)) : Inj(F, A, B) {
+  (x ∈ A ∧ (y ∈ A ∧ ap(F, x) = ap(F, y))) ⇒ x = y by assume a {
+    xa. x ∈ A                                                        by taut a
+    ya. y ∈ A                                                        by taut a
+    ap(F, x) = ap(F, y)                                              by taut a
+    e. ap(G, ap(F, x)) = ap(G, ap(F, y))                             by cong ^
+    p. ap(G ∘ F, x) = ap(G, ap(F, x))                                by ap_comp hf hg xa
+    q. ap(G ∘ F, y) = ap(G, ap(F, y))                                by ap_comp hf hg ya
+    ap(G ∘ F, x) = ap(G, ap(F, y))                                   by T3 p e
+    ap(G, ap(F, y)) = ap(G ∘ F, y)                                   by T2 q
+    ap(G ∘ F, x) = ap(G ∘ F, y)                                      by T3 7 8
+    x = y                                                            by inj_ap h xa ya ^
+  }
+  (∀y)((x ∈ A ∧ (y ∈ A ∧ ap(F, x) = ap(F, y))) ⇒ x = y)              by gen ^ with y
+  (∀x)(∀y)((x ∈ A ∧ (y ∈ A ∧ ap(F, x) = ap(F, y))) ⇒ x = y)          by gen ^ with x
+  _                                                                  by C20 hf ^
+}
+
+theorem retr_of_comp {F G R A B C : term} (hf : Map(F, A, B)) (hg : Map(G, B, C)) (hr : Retr(R, G ∘ F, A, C)) : Retr(R ∘ G, F, A, B) {
+  mc. Map(G ∘ F, A, C)                                               by comp_map hf hg
+  mr. Map(R, C, A)                                                   by taut hr
+  mrg. Map(R ∘ G, B, A)                                              by comp_map hg mr
+  x ∈ A ⇒ ap(R ∘ G, ap(F, x)) = x by assume a {
+    fb. ap(F, x) ∈ B                                                 by ap_mem hf a
+    ap(R ∘ G, ap(F, x)) = ap(R, ap(G, ap(F, x)))                     by ap_comp hg mr fb
+    ap(G ∘ F, x) = ap(G, ap(F, x))                                   by ap_comp hf hg a
+    ap(G, ap(F, x)) = ap(G ∘ F, x)                                   by T2 ^
+    ap(R, ap(G, ap(F, x))) = ap(R, ap(G ∘ F, x))                     by cong ^
+    ap(R, ap(G ∘ F, x)) = x                                          by retr_ap mc hr a
+    ap(R ∘ G, ap(F, x)) = ap(R, ap(G ∘ F, x))                        by T3 2 5
+    ap(R ∘ G, ap(F, x)) = x                                          by T3 ^ 6
+  }
+  (∀x)(x ∈ A ⇒ ap(R ∘ G, ap(F, x)) = x)                              by gen ^ with x
+  _                                                                  by retr_of_ap hf mrg ^
+}
+
+-- г) если f'' сюръекция, то f' сюръекция; f ∘ s'' сечение для f'.
+theorem surj_of_comp {F G A B C : term} (hf : Map(F, A, B)) (hg : Map(G, B, C)) (h : Surj(G ∘ F, A, C)) : Surj(G, B, C) {
+  z ∈ C ⇒ (∃y)(y ∈ B ∧ z = ap(G, y)) by assume a {
+    e. (∃x)(x ∈ A ∧ z = ap(G ∘ F, x))                                by surj_ap h a
+    (x ∈ A ∧ z = ap(G ∘ F, x)) ⇒ (∃y)(y ∈ B ∧ z = ap(G, y)) by assume b {
+      xa. x ∈ A                                                      by taut b
+      z = ap(G ∘ F, x)                                               by taut b
+      ap(G ∘ F, x) = ap(G, ap(F, x))                                 by ap_comp hf hg xa
+      z = ap(G, ap(F, x))                                            by T3 2 3
+      ap(F, x) ∈ B                                                   by ap_mem hf xa
+      ap(F, x) ∈ B ∧ z = ap(G, ap(F, x))                             by C20 ^ 4
+      (∃y)(y ∈ B ∧ z = ap(G, y))                                     by exists_intro ^
+    }
+    (∀x)((x ∈ A ∧ z = ap(G ∘ F, x)) ⇒ (∃y)(y ∈ B ∧ z = ap(G, y)))    by gen ^ with x
+    (∃y)(y ∈ B ∧ z = ap(G, y))                                       by obtain e ^
+  }
+  (∀z)(z ∈ C ⇒ (∃y)(y ∈ B ∧ z = ap(G, y)))                           by gen ^ with z
+  Surj(G, B, C) ⇔ (∀z)(z ∈ C ⇒ (∃y)(y ∈ B ∧ z = ap(G, y)))           by surj_iff hg
+  _                                                                  by iff_mpr ^ ^^
+}
+
+theorem sect_of_comp {F G S A B C : term} (hf : Map(F, A, B)) (hg : Map(G, B, C)) (hs : Sect(S, G ∘ F, A, C)) : Sect(F ∘ S, G, B, C) {
+  mc. Map(G ∘ F, A, C)                                               by comp_map hf hg
+  ms. Map(S, C, A)                                                   by taut hs
+  mfs. Map(F ∘ S, C, B)                                              by comp_map ms hf
+  z ∈ C ⇒ ap(G, ap(F ∘ S, z)) = z by assume a {
+    sa. ap(S, z) ∈ A                                                 by ap_mem ms a
+    ap(F ∘ S, z) = ap(F, ap(S, z))                                   by ap_comp ms hf a
+    ap(G, ap(F ∘ S, z)) = ap(G, ap(F, ap(S, z)))                     by cong ^
+    ap(G ∘ F, ap(S, z)) = ap(G, ap(F, ap(S, z)))                     by ap_comp hf hg sa
+    ap(G, ap(F, ap(S, z))) = ap(G ∘ F, ap(S, z))                     by T2 ^
+    ap(G ∘ F, ap(S, z)) = z                                          by sect_ap mc hs a
+    ap(G, ap(F ∘ S, z)) = ap(G ∘ F, ap(S, z))                        by T3 3 5
+    ap(G, ap(F ∘ S, z)) = z                                          by T3 ^ 6
+  }
+  (∀z)(z ∈ C ⇒ ap(G, ap(F ∘ S, z)) = z)                              by gen ^ with z
+  _                                                                  by sect_of_ap hg mfs ^
+}
+
+-- д) если f'' инъекция и f сюръекция, то f' инъекция; f ∘ r'' ретракция для f'.
+theorem inj_of_comp_surj {F G A B C : term} (hf : Surj(F, A, B)) (hg : Map(G, B, C)) (h : Inj(G ∘ F, A, C)) : Inj(G, B, C) {
+  mf. Map(F, A, B)                                                   by taut hf
+  (y ∈ B ∧ (y' ∈ B ∧ ap(G, y) = ap(G, y'))) ⇒ y = y' by assume a {
+    y ∈ B                                                            by taut a
+    e. (∃x)(x ∈ A ∧ y = ap(F, x))                                    by surj_ap hf ^
+    y' ∈ B                                                           by taut a
+    e'. (∃x)(x ∈ A ∧ y' = ap(F, x))                                  by surj_ap hf ^
+    (x ∈ A ∧ y = ap(F, x)) ⇒ y = y' by assume b {
+      (x' ∈ A ∧ y' = ap(F, x')) ⇒ y = y' by assume c {
+        xa. x ∈ A                                                    by taut b
+        xa'. x' ∈ A                                                  by taut c
+        p. y = ap(F, x)                                              by taut b
+        q. y' = ap(F, x')                                            by taut c
+        ap(G, y) = ap(G, ap(F, x))                                   by cong p
+        ap(G, y') = ap(G, ap(F, x'))                                 by cong q
+        ap(G ∘ F, x) = ap(G, ap(F, x))                               by ap_comp mf hg xa
+        ap(G ∘ F, x') = ap(G, ap(F, x'))                             by ap_comp mf hg xa'
+        ap(G, y) = ap(G, y')                                         by taut a
+        ap(G ∘ F, x) = ap(G ∘ F, x')                                 by chain 5 6 7 8 9
+        x = x'                                                       by inj_ap h xa xa' ^
+        ap(F, x) = ap(F, x')                                         by cong ^
+        y = y'                                                       by chain p ^ q
+      }
+      (∀x')((x' ∈ A ∧ y' = ap(F, x')) ⇒ y = y')                      by gen ^ with x'
+      y = y'                                                         by obtain e' ^
+    }
+    (∀x)((x ∈ A ∧ y = ap(F, x)) ⇒ y = y')                            by gen ^ with x
+    y = y'                                                           by obtain e ^
+  }
+  (∀y')((y ∈ B ∧ (y' ∈ B ∧ ap(G, y) = ap(G, y'))) ⇒ y = y')          by gen ^ with y'
+  (∀y)(∀y')((y ∈ B ∧ (y' ∈ B ∧ ap(G, y) = ap(G, y'))) ⇒ y = y')      by gen ^ with y
+  _                                                                  by C20 hg ^
+}
+
+theorem retr_of_comp_surj {F G R A B C : term} (hf : Surj(F, A, B)) (hg : Map(G, B, C)) (hr : Retr(R, G ∘ F, A, C)) : Retr(F ∘ R, G, B, C) {
+  mf. Map(F, A, B)                                                   by taut hf
+  mc. Map(G ∘ F, A, C)                                               by comp_map mf hg
+  mr. Map(R, C, A)                                                   by taut hr
+  mfr. Map(F ∘ R, C, B)                                              by comp_map mr mf
+  y ∈ B ⇒ ap(F ∘ R, ap(G, y)) = y by assume a {
+    e. (∃x)(x ∈ A ∧ y = ap(F, x))                                    by surj_ap hf a
+    (x ∈ A ∧ y = ap(F, x)) ⇒ ap(F ∘ R, ap(G, y)) = y by assume b {
+      xa. x ∈ A                                                      by taut b
+      p. y = ap(F, x)                                                by taut b
+      gc. ap(G, y) ∈ C                                               by ap_mem hg a
+      q. ap(F ∘ R, ap(G, y)) = ap(F, ap(R, ap(G, y)))                by ap_comp mr mf gc
+      r. ap(G, y) = ap(G, ap(F, x))                                  by cong p
+      s. ap(G ∘ F, x) = ap(G, ap(F, x))                              by ap_comp mf hg xa
+      ap(G, y) = ap(G ∘ F, x)                                        by chain r s
+      t. ap(R, ap(G, y)) = ap(R, ap(G ∘ F, x))                       by cong ^
+      u. ap(R, ap(G ∘ F, x)) = x                                     by retr_ap mc hr xa
+      ap(R, ap(G, y)) = x                                            by chain t u
+      v. ap(F, ap(R, ap(G, y))) = ap(F, x)                           by cong ^
+      ap(F ∘ R, ap(G, y)) = y                                        by chain q v p
+    }
+    (∀x)((x ∈ A ∧ y = ap(F, x)) ⇒ ap(F ∘ R, ap(G, y)) = y)           by gen ^ with x
+    ap(F ∘ R, ap(G, y)) = y                                          by obtain e ^
+  }
+  (∀y)(y ∈ B ⇒ ap(F ∘ R, ap(G, y)) = y)                              by gen ^ with y
+  _                                                                  by retr_of_ap hg mfr ^
+}
+
+-- е) если f'' сюръекция и f' инъекция, то f сюръекция; s'' ∘ f' сечение для f.
+theorem surj_of_comp_inj {F G A B C : term} (hf : Map(F, A, B)) (hg : Inj(G, B, C)) (h : Surj(G ∘ F, A, C)) : Surj(F, A, B) {
+  mg. Map(G, B, C)                                                   by taut hg
+  y ∈ B ⇒ (∃x)(x ∈ A ∧ y = ap(F, x)) by assume a {
+    ap(G, y) ∈ C                                                     by ap_mem mg a
+    e. (∃x)(x ∈ A ∧ ap(G, y) = ap(G ∘ F, x))                         by surj_ap h ^
+    (x ∈ A ∧ ap(G, y) = ap(G ∘ F, x)) ⇒ (∃x)(x ∈ A ∧ y = ap(F, x)) by assume b {
+      xa. x ∈ A                                                      by taut b
+      p. ap(G, y) = ap(G ∘ F, x)                                     by taut b
+      q. ap(G ∘ F, x) = ap(G, ap(F, x))                              by ap_comp hf mg xa
+      ap(G, y) = ap(G, ap(F, x))                                     by chain p q
+      fb. ap(F, x) ∈ B                                               by ap_mem hf xa
+      y = ap(F, x)                                                   by inj_ap hg a fb 4
+      x ∈ A ∧ y = ap(F, x)                                           by C20 xa ^
+      (∃x)(x ∈ A ∧ y = ap(F, x))                                     by exists_intro ^
+    }
+    (∀x)((x ∈ A ∧ ap(G, y) = ap(G ∘ F, x)) ⇒ (∃x)(x ∈ A ∧ y = ap(F, x)))   by gen ^ with x
+    (∃x)(x ∈ A ∧ y = ap(F, x))                                       by obtain e ^
+  }
+  (∀y)(y ∈ B ⇒ (∃x)(x ∈ A ∧ y = ap(F, x)))                           by gen ^ with y
+  Surj(F, A, B) ⇔ (∀y)(y ∈ B ⇒ (∃x)(x ∈ A ∧ y = ap(F, x)))           by surj_iff hf
+  _                                                                  by iff_mpr ^ ^^
+}
+
+theorem sect_of_comp_inj {F G S A B C : term} (hf : Map(F, A, B)) (hg : Inj(G, B, C)) (hs : Sect(S, G ∘ F, A, C)) : Sect(S ∘ G, F, A, B) {
+  mg. Map(G, B, C)                                                   by taut hg
+  mc. Map(G ∘ F, A, C)                                               by comp_map hf mg
+  ms. Map(S, C, A)                                                   by taut hs
+  msg. Map(S ∘ G, B, A)                                              by comp_map mg ms
+  y ∈ B ⇒ ap(F, ap(S ∘ G, y)) = y by assume a {
+    gc. ap(G, y) ∈ C                                                 by ap_mem mg a
+    sa. ap(S, ap(G, y)) ∈ A                                          by ap_mem ms gc
+    p. ap(S ∘ G, y) = ap(S, ap(G, y))                                by ap_comp mg ms a
+    q. ap(F, ap(S ∘ G, y)) = ap(F, ap(S, ap(G, y)))                  by cong p
+    r. ap(G ∘ F, ap(S, ap(G, y))) = ap(G, ap(F, ap(S, ap(G, y))))    by ap_comp hf mg sa
+    s. ap(G ∘ F, ap(S, ap(G, y))) = ap(G, y)                         by sect_ap mc hs gc
+    ap(G, ap(F, ap(S, ap(G, y)))) = ap(G, y)                         by chain r s
+    fb. ap(F, ap(S, ap(G, y))) ∈ B                                   by ap_mem hf sa
+    ap(F, ap(S, ap(G, y))) = y                                       by inj_ap hg fb a 7
+    ap(F, ap(S ∘ G, y)) = y                                          by chain q ^
+  }
+  (∀y)(y ∈ B ⇒ ap(F, ap(S ∘ G, y)) = y)                              by gen ^ with y
+  _                                                                  by sect_of_ap hf msg ^
+}
+
+
+-- Предложение 9 (стр. 98). а) G: A → B сюръекция, F: A → C. F пропускается через G
+-- (F = H ∘ G) тогда и только тогда, когда G(x) = G(y) влечёт F(x) = F(y).
+theorem factor_surj {F G A B C : term} (hf : Map(F, A, C)) (hg : Surj(G, A, B)) : (∃H)(Map(H, B, C) ∧ F = H ∘ G) ⇔ (∀x)(∀y)((x ∈ A ∧ (y ∈ A ∧ ap(G, x) = ap(G, y))) ⇒ ap(F, x) = ap(F, y)) {
+  mg. Map(G, A, B)                                                   by taut hg
+  (∃H)(Map(H, B, C) ∧ F = H ∘ G) ⇒ (∀x)(∀y)((x ∈ A ∧ (y ∈ A ∧ ap(G, x) = ap(G, y))) ⇒ ap(F, x) = ap(F, y)) by assume e {
+    (Map(H, B, C) ∧ F = H ∘ G) ⇒ (∀x)(∀y)((x ∈ A ∧ (y ∈ A ∧ ap(G, x) = ap(G, y))) ⇒ ap(F, x) = ap(F, y)) by assume a {
+      mh. Map(H, B, C)                                               by taut a
+      fe. F = H ∘ G                                                  by taut a
+      (x ∈ A ∧ (y ∈ A ∧ ap(G, x) = ap(G, y))) ⇒ ap(F, x) = ap(F, y) by assume b {
+        xa. x ∈ A                                                    by taut b
+        ya. y ∈ A                                                    by taut b
+        g. ap(G, x) = ap(G, y)                                       by taut b
+        p. ap(F, x) = ap(H ∘ G, x)                                   by cong fe
+        q. ap(F, y) = ap(H ∘ G, y)                                   by cong fe
+        r. ap(H ∘ G, x) = ap(H, ap(G, x))                            by ap_comp mg mh xa
+        s. ap(H ∘ G, y) = ap(H, ap(G, y))                            by ap_comp mg mh ya
+        t. ap(H, ap(G, x)) = ap(H, ap(G, y))                         by cong g
+        ap(F, x) = ap(F, y)                                          by chain p r t s q
+      }
+      (∀y)((x ∈ A ∧ (y ∈ A ∧ ap(G, x) = ap(G, y))) ⇒ ap(F, x) = ap(F, y))       by gen ^ with y
+      (∀x)(∀y)((x ∈ A ∧ (y ∈ A ∧ ap(G, x) = ap(G, y))) ⇒ ap(F, x) = ap(F, y))   by gen ^ with x
+    }
+    (∀H)((Map(H, B, C) ∧ F = H ∘ G) ⇒ (∀x)(∀y)((x ∈ A ∧ (y ∈ A ∧ ap(G, x) = ap(G, y))) ⇒ ap(F, x) = ap(F, y)))   by gen ^ with H
+    (∀x)(∀y)((x ∈ A ∧ (y ∈ A ∧ ap(G, x) = ap(G, y))) ⇒ ap(F, x) = ap(F, y))   by obtain e ^
+  }
+  (∀x)(∀y)((x ∈ A ∧ (y ∈ A ∧ ap(G, x) = ap(G, y))) ⇒ ap(F, x) = ap(F, y)) ⇒ (∃H)(Map(H, B, C) ∧ F = H ∘ G) by assume h {
+    es. (∃S)Sect(S, G, A, B)                                         by surj_sect hg
+    Sect(S, G, A, B) ⇒ (∃H)(Map(H, B, C) ∧ F = H ∘ G) by assume hs {
+      ms. Map(S, B, A)                                               by taut hs
+      mh. Map(F ∘ S, B, C)                                           by comp_map ms hf
+      mc. Map((F ∘ S) ∘ G, A, C)                                     by comp_map mg mh
+      x ∈ A ⇒ ap(F, x) = ap((F ∘ S) ∘ G, x) by assume a {
+        gb. ap(G, x) ∈ B                                             by ap_mem mg a
+        sa. ap(S, ap(G, x)) ∈ A                                      by ap_mem ms gb
+        p. ap((F ∘ S) ∘ G, x) = ap(F ∘ S, ap(G, x))                  by ap_comp mg mh a
+        q. ap(F ∘ S, ap(G, x)) = ap(F, ap(S, ap(G, x)))              by ap_comp ms hf gb
+        ap(G, ap(S, ap(G, x))) = ap(G, x)                            by sect_ap mg hs gb
+        (ap(S, ap(G, x)) ∈ A ∧ (x ∈ A ∧ ap(G, ap(S, ap(G, x))) = ap(G, x))) ⇒ ap(F, ap(S, ap(G, x))) = ap(F, x)   by inst2 h
+        r. ap(F, ap(S, ap(G, x))) = ap(F, x)                         by taut sa a 5 ^
+        ap(F, x) = ap((F ∘ S) ∘ G, x)                                by chain p q r
+      }
+      (∀x)(x ∈ A ⇒ ap(F, x) = ap((F ∘ S) ∘ G, x))                    by gen ^ with x
+      F = (F ∘ S) ∘ G                                                by map_ext hf mc ^
+      Map(F ∘ S, B, C) ∧ F = (F ∘ S) ∘ G                             by C20 mh ^
+      (∃H)(Map(H, B, C) ∧ F = H ∘ G)                                 by exists_intro ^
+    }
+    (∀S)(Sect(S, G, A, B) ⇒ (∃H)(Map(H, B, C) ∧ F = H ∘ G))         by gen ^ with S
+    (∃H)(Map(H, B, C) ∧ F = H ∘ G)                                   by obtain es ^
+  }
+  _                                                                  by iff_intro 2 3
+}
+
+-- Единственность H в а).
+theorem factor_surj_uniq {G H H' A B C : term} (hg : Surj(G, A, B)) (hh : Map(H, B, C)) (hh' : Map(H', B, C)) (e : H ∘ G = H' ∘ G) : H = H' {
+  mg. Map(G, A, B)                                                   by taut hg
+  y ∈ B ⇒ ap(H, y) = ap(H', y) by assume a {
+    ex. (∃x)(x ∈ A ∧ y = ap(G, x))                                   by surj_ap hg a
+    (x ∈ A ∧ y = ap(G, x)) ⇒ ap(H, y) = ap(H', y) by assume b {
+      xa. x ∈ A                                                      by taut b
+      yg. y = ap(G, x)                                               by taut b
+      p. ap(H, y) = ap(H, ap(G, x))                                  by cong yg
+      q. ap(H', y) = ap(H', ap(G, x))                                by cong yg
+      r. ap(H ∘ G, x) = ap(H, ap(G, x))                              by ap_comp mg hh xa
+      s. ap(H' ∘ G, x) = ap(H', ap(G, x))                            by ap_comp mg hh' xa
+      t. ap(H ∘ G, x) = ap(H' ∘ G, x)                                by cong e
+      ap(H, y) = ap(H', y)                                           by chain p r t s q
+    }
+    (∀x)((x ∈ A ∧ y = ap(G, x)) ⇒ ap(H, y) = ap(H', y))              by gen ^ with x
+    ap(H, y) = ap(H', y)                                             by obtain ex ^
+  }
+  (∀y)(y ∈ B ⇒ ap(H, y) = ap(H', y))                                 by gen ^ with y
+  _                                                                  by map_ext hh hh' ^
+}
+
+-- б) G: B → A инъекция, F: C → A. F = G ∘ H для некоторого H: C → B тогда и только
+-- тогда, когда F⟨C⟩ ⊂ G⟨B⟩.
+theorem factor_inj {F G A B C : term} (hf : Map(F, C, A)) (hg : Inj(G, B, A)) : (∃H)(Map(H, C, B) ∧ F = G ∘ H) ⇔ img(F, C) ⊂ img(G, B) {
+  mg. Map(G, B, A)                                                   by taut hg
+  cc. C ⊂ C                                                          by subset_refl
+  bb. B ⊂ B                                                          by subset_refl
+  (∃H)(Map(H, C, B) ∧ F = G ∘ H) ⇒ img(F, C) ⊂ img(G, B) by assume e {
+    (Map(H, C, B) ∧ F = G ∘ H) ⇒ img(F, C) ⊂ img(G, B) by assume a {
+      mh. Map(H, C, B)                                               by taut a
+      fe. F = G ∘ H                                                  by taut a
+      w ∈ img(F, C) ⇒ w ∈ img(G, B) by assume m {
+        w ∈ img(F, C) ⇔ (∃z)(z ∈ C ∧ w = ap(F, z))                   by mem_img_map hf cc
+        ez. (∃z)(z ∈ C ∧ w = ap(F, z))                               by iff_mp ^ m
+        (z ∈ C ∧ w = ap(F, z)) ⇒ w ∈ img(G, B) by assume b {
+          za. z ∈ C                                                  by taut b
+          p. w = ap(F, z)                                            by taut b
+          q. ap(F, z) = ap(G ∘ H, z)                                 by cong fe
+          r. ap(G ∘ H, z) = ap(G, ap(H, z))                          by ap_comp mh mg za
+          w = ap(G, ap(H, z))                                        by chain p q r
+          hb. ap(H, z) ∈ B                                           by ap_mem mh za
+          ap(H, z) ∈ B ∧ w = ap(G, ap(H, z))                         by C20 hb 5
+          (∃y)(y ∈ B ∧ w = ap(G, y))                                 by exists_intro ^
+          w ∈ img(G, B) ⇔ (∃y)(y ∈ B ∧ w = ap(G, y))                 by mem_img_map mg bb
+          w ∈ img(G, B)                                              by iff_mpr ^ ^^
+        }
+        (∀z)((z ∈ C ∧ w = ap(F, z)) ⇒ w ∈ img(G, B))                 by gen ^ with z
+        w ∈ img(G, B)                                                by obtain ez ^
+      }
+      img(F, C) ⊂ img(G, B)                                          by gen ^ with w
+    }
+    (∀H)((Map(H, C, B) ∧ F = G ∘ H) ⇒ img(F, C) ⊂ img(G, B))         by gen ^ with H
+    img(F, C) ⊂ img(G, B)                                            by obtain e ^
+  }
+  img(F, C) ⊂ img(G, B) ⇒ (∃H)(Map(H, C, B) ∧ F = G ∘ H) by assume h {
+    -- H(z) = τy(y ∈ B и F(z) = G(y))
+    ex. z ∈ C ⇒ (∃y)(y ∈ B ∧ ap(F, z) = ap(G, y)) by assume a {
+      ap(F, z) ∈ img(F, C)                                           by ap_mem_img hf cc a
+      ap(F, z) ∈ img(F, C) ⇒ ap(F, z) ∈ img(G, B)                    by inst h
+      ap(F, z) ∈ img(G, B)                                           by mp 1 2
+      ap(F, z) ∈ img(G, B) ⇔ (∃y)(y ∈ B ∧ ap(F, z) = ap(G, y))       by mem_img_map mg bb
+      (∃y)(y ∈ B ∧ ap(F, z) = ap(G, y))                              by iff_mp ^ ^^
+    }
+    z ∈ C ⇒ τy(y ∈ B ∧ ap(F, z) = ap(G, y)) ∈ B by assume a {
+      (∃y)(y ∈ B ∧ ap(F, z) = ap(G, y))                              by mp a ex
+      τy(y ∈ B ∧ ap(F, z) = ap(G, y)) ∈ B                            by taut ^
+    }
+    (∀z)(z ∈ C ⇒ τy(y ∈ B ∧ ap(F, z) = ap(G, y)) ∈ B)                by gen ^ with z
+    mh. Map(fn_z(C, τy(y ∈ B ∧ ap(F, z) = ap(G, y))), C, B)          by fn_map_into ^
+    mc. Map(G ∘ fn_z(C, τy(y ∈ B ∧ ap(F, z) = ap(G, y))), C, A)      by comp_map mh mg
+    z ∈ C ⇒ ap(F, z) = ap(G ∘ fn_z(C, τy(y ∈ B ∧ ap(F, z) = ap(G, y))), z) by assume a {
+      p. ap(G ∘ fn_z(C, τy(y ∈ B ∧ ap(F, z) = ap(G, y))), z) = ap(G, ap(fn_z(C, τy(y ∈ B ∧ ap(F, z) = ap(G, y))), z))   by ap_comp mh mg a
+      ap(fn_z(C, τy(y ∈ B ∧ ap(F, z) = ap(G, y))), z) = τy(y ∈ B ∧ ap(F, z) = ap(G, y))   by ap_fn a
+      q. ap(G, ap(fn_z(C, τy(y ∈ B ∧ ap(F, z) = ap(G, y))), z)) = ap(G, τy(y ∈ B ∧ ap(F, z) = ap(G, y)))   by cong ^
+      (∃y)(y ∈ B ∧ ap(F, z) = ap(G, y))                              by mp a ex
+      r. ap(F, z) = ap(G, τy(y ∈ B ∧ ap(F, z) = ap(G, y)))           by taut ^
+      ap(F, z) = ap(G ∘ fn_z(C, τy(y ∈ B ∧ ap(F, z) = ap(G, y))), z)   by chain r q p
+    }
+    (∀z)(z ∈ C ⇒ ap(F, z) = ap(G ∘ fn_z(C, τy(y ∈ B ∧ ap(F, z) = ap(G, y))), z))   by gen ^ with z
+    F = G ∘ fn_z(C, τy(y ∈ B ∧ ap(F, z) = ap(G, y)))                 by map_ext hf mc ^
+    Map(fn_z(C, τy(y ∈ B ∧ ap(F, z) = ap(G, y))), C, B) ∧ F = G ∘ fn_z(C, τy(y ∈ B ∧ ap(F, z) = ap(G, y)))   by C20 mh ^
+    (∃H)(Map(H, C, B) ∧ F = G ∘ H)                                   by exists_intro ^
+  }
+  _                                                                  by iff_intro 4 5
+}
+
+-- Единственность H в б).
+theorem factor_inj_uniq {G H H' A B C : term} (hg : Inj(G, B, A)) (hh : Map(H, C, B)) (hh' : Map(H', C, B)) (e : G ∘ H = G ∘ H') : H = H' {
+  mg. Map(G, B, A)                                                   by taut hg
+  z ∈ C ⇒ ap(H, z) = ap(H', z) by assume a {
+    p. ap(G ∘ H, z) = ap(G, ap(H, z))                                by ap_comp hh mg a
+    q. ap(G ∘ H', z) = ap(G, ap(H', z))                              by ap_comp hh' mg a
+    t. ap(G ∘ H, z) = ap(G ∘ H', z)                                  by cong e
+    ap(G, ap(H, z)) = ap(G, ap(H', z))                               by chain p t q
+    ap(H, z) ∈ B                                                     by ap_mem hh a
+    ap(H', z) ∈ B                                                    by ap_mem hh' a
+    ap(H, z) = ap(H', z)                                             by inj_ap hg 5 6 4
+  }
+  (∀z)(z ∈ C ⇒ ap(H, z) = ap(H', z))                                 by gen ^ with z
+  _                                                                  by map_ext hh hh' ^
+}
+
+
+-- n° 9 (стр. 98-99). Частные отображения: f(·, y)(x) = f(x, y), f(x, ·)(y) = f(x, y).
+theorem ap_part1 {F D T U : term} (h : Ͻ(T, U) ∈ D) : ap(part1(F, D, U), T) = ap(F, Ͻ(T, U)) {
+  T ∈ sect(inv(D), U) ⇔ Ͻ(U, T) ∈ inv(D)          by mem_sect
+  Ͻ(U, T) ∈ inv(D) ⇔ Ͻ(T, U) ∈ D                  by mem_inv
+  T ∈ sect(inv(D), U)                             by taut h 1 2
+  _                                               by ap_fn ^
+}
+
+theorem ap_part2 {F D T U : term} (h : Ͻ(T, U) ∈ D) : ap(part2(F, D, T), U) = ap(F, Ͻ(T, U)) {
+  U ∈ sect(D, T) ⇔ Ͻ(T, U) ∈ D                    by mem_sect
+  U ∈ sect(D, T)                                  by iff_mpr ^ h
+  _                                               by ap_fn ^
+}
+
+-- Произведение отображений u × v (стр. 99): отображение A × B в C × D,
+-- (u × v)(x, y) = (u(x), v(y)).
+theorem prodmap_map {U V A B C D : term} (hu : Map(U, A, C)) (hv : Map(V, B, D)) : Map(prodmap(U, V, A, B), A × B, C × D) {
+  z ∈ A × B ⇒ Ͻ(ap(U, pr1(z)), ap(V, pr2(z))) ∈ C × D by assume m {
+    z ∈ A × B ⇔ (IsPair(z) ∧ (pr1(z) ∈ A ∧ pr2(z) ∈ B))        by mem_prod
+    pr1(z) ∈ A                                                  by taut m ^
+    ap(U, pr1(z)) ∈ C                                           by ap_mem hu ^
+    pr2(z) ∈ B                                                  by taut m 1
+    ap(V, pr2(z)) ∈ D                                           by ap_mem hv ^
+    Ͻ(ap(U, pr1(z)), ap(V, pr2(z))) ∈ C × D ⇔ (ap(U, pr1(z)) ∈ C ∧ ap(V, pr2(z)) ∈ D)   by pair_mem_prod
+    Ͻ(ap(U, pr1(z)), ap(V, pr2(z))) ∈ C × D                     by taut 3 5 ^
+  }
+  (∀z)(z ∈ A × B ⇒ Ͻ(ap(U, pr1(z)), ap(V, pr2(z))) ∈ C × D)     by gen ^ with z
+  _                                                             by fn_map_into ^
+}
+
+theorem ap_prodmap {U V A B T W : term} (ht : T ∈ A) (hw : W ∈ B) : ap(prodmap(U, V, A, B), Ͻ(T, W)) = Ͻ(ap(U, T), ap(V, W)) {
+  Ͻ(T, W) ∈ A × B ⇔ (T ∈ A ∧ W ∈ B)                            by pair_mem_prod
+  Ͻ(T, W) ∈ A × B                                              by taut ht hw ^
+  p. ap(prodmap(U, V, A, B), Ͻ(T, W)) = Ͻ(ap(U, pr1(Ͻ(T, W))), ap(V, pr2(Ͻ(T, W))))   by ap_fn ^
+  pr1(Ͻ(T, W)) = T                                             by pr1_pair
+  a. ap(U, pr1(Ͻ(T, W))) = ap(U, T)                            by cong ^
+  pr2(Ͻ(T, W)) = W                                             by pr2_pair
+  b. ap(V, pr2(Ͻ(T, W))) = ap(V, W)                            by cong ^
+  q. Ͻ(ap(U, pr1(Ͻ(T, W))), ap(V, pr2(Ͻ(T, W)))) = Ͻ(ap(U, T), ap(V, W))   by cong2 a b
+  _                                                            by chain p q
+}
+
+-- Элемент A × B есть пара своих координат.
+theorem prod_eta {Z A B : term} (h : Z ∈ A × B) : Z = Ͻ(pr1(Z), pr2(Z)) ∧ (pr1(Z) ∈ A ∧ pr2(Z) ∈ B) {
+  Z ∈ A × B ⇔ (IsPair(Z) ∧ (pr1(Z) ∈ A ∧ pr2(Z) ∈ B))          by mem_prod
+  IsPair(Z) ∧ (pr1(Z) ∈ A ∧ pr2(Z) ∈ B)                        by iff_mp ^ h
+  IsPair(Z)                                                    by taut ^
+  Z = Ͻ(pr1(Z), pr2(Z))                                        by pair_eta ^
+  _                                                            by taut 2 4
+}
+
+-- Если u и v инъективны, то и u × v.
+theorem prodmap_inj {U V A B C D : term} (hu : Inj(U, A, C)) (hv : Inj(V, B, D)) : Inj(prodmap(U, V, A, B), A × B, C × D) {
+  mu. Map(U, A, C)                                             by taut hu
+  mv. Map(V, B, D)                                             by taut hv
+  mp. Map(prodmap(U, V, A, B), A × B, C × D)                   by prodmap_map mu mv
+  (w ∈ A × B ∧ (w' ∈ A × B ∧ ap(prodmap(U, V, A, B), w) = ap(prodmap(U, V, A, B), w'))) ⇒ w = w' by assume a {
+    w ∈ A × B                                                  by taut a
+    e. w = Ͻ(pr1(w), pr2(w)) ∧ (pr1(w) ∈ A ∧ pr2(w) ∈ B)       by prod_eta ^
+    w' ∈ A × B                                                 by taut a
+    e'. w' = Ͻ(pr1(w'), pr2(w')) ∧ (pr1(w') ∈ A ∧ pr2(w') ∈ B)   by prod_eta ^
+    w1. pr1(w) ∈ A                                             by taut e
+    w2. pr2(w) ∈ B                                             by taut e
+    v1. pr1(w') ∈ A                                            by taut e'
+    v2. pr2(w') ∈ B                                            by taut e'
+    ew. w = Ͻ(pr1(w), pr2(w))                                  by taut e
+    ev. w' = Ͻ(pr1(w'), pr2(w'))                               by taut e'
+    p. ap(prodmap(U, V, A, B), w) = ap(prodmap(U, V, A, B), Ͻ(pr1(w), pr2(w)))     by cong ew
+    q. ap(prodmap(U, V, A, B), w') = ap(prodmap(U, V, A, B), Ͻ(pr1(w'), pr2(w')))  by cong ev
+    r. ap(prodmap(U, V, A, B), Ͻ(pr1(w), pr2(w))) = Ͻ(ap(U, pr1(w)), ap(V, pr2(w)))      by ap_prodmap w1 w2
+    s. ap(prodmap(U, V, A, B), Ͻ(pr1(w'), pr2(w'))) = Ͻ(ap(U, pr1(w')), ap(V, pr2(w')))  by ap_prodmap v1 v2
+    t. ap(prodmap(U, V, A, B), w) = ap(prodmap(U, V, A, B), w')   by taut a
+    Ͻ(ap(U, pr1(w)), ap(V, pr2(w))) = Ͻ(ap(U, pr1(w')), ap(V, pr2(w')))   by chain r p t q s
+    Ͻ(ap(U, pr1(w)), ap(V, pr2(w))) = Ͻ(ap(U, pr1(w')), ap(V, pr2(w'))) ⇒ (ap(U, pr1(w)) = ap(U, pr1(w')) ∧ ap(V, pr2(w)) = ap(V, pr2(w')))   by pair_inj
+    ap(U, pr1(w)) = ap(U, pr1(w')) ∧ ap(V, pr2(w)) = ap(V, pr2(w'))   by mp 16 ^
+    ap(U, pr1(w)) = ap(U, pr1(w'))                             by taut ^
+    x1. pr1(w) = pr1(w')                                       by inj_ap hu w1 v1 ^
+    ap(V, pr2(w)) = ap(V, pr2(w'))                             by taut 18
+    x2. pr2(w) = pr2(w')                                       by inj_ap hv w2 v2 ^
+    Ͻ(pr1(w), pr2(w)) = Ͻ(pr1(w'), pr2(w'))                    by cong2 x1 x2
+    w = w'                                                     by chain ew ^ ev
+  }
+  (∀w')((w ∈ A × B ∧ (w' ∈ A × B ∧ ap(prodmap(U, V, A, B), w) = ap(prodmap(U, V, A, B), w'))) ⇒ w = w')       by gen ^ with w'
+  (∀w)(∀w')((w ∈ A × B ∧ (w' ∈ A × B ∧ ap(prodmap(U, V, A, B), w) = ap(prodmap(U, V, A, B), w'))) ⇒ w = w')   by gen ^ with w
+  _                                                            by C20 mp ^
+}
+
+-- Область значений u × v есть u⟨A⟩ × v⟨B⟩.
+theorem img_prodmap {U V A B C D : term} (hu : Map(U, A, C)) (hv : Map(V, B, D)) : img(prodmap(U, V, A, B), A × B) = img(U, A) × img(V, B) {
+  mp. Map(prodmap(U, V, A, B), A × B, C × D)                   by prodmap_map hu hv
+  ab. A × B ⊂ A × B                                            by subset_refl
+  aa. A ⊂ A                                                    by subset_refl
+  bb. B ⊂ B                                                    by subset_refl
+  c ∈ img(prodmap(U, V, A, B), A × B) ⇒ c ∈ img(U, A) × img(V, B) by assume m {
+    c ∈ img(prodmap(U, V, A, B), A × B) ⇔ (∃w)(w ∈ A × B ∧ c = ap(prodmap(U, V, A, B), w))   by mem_img_map mp ab
+    ew. (∃w)(w ∈ A × B ∧ c = ap(prodmap(U, V, A, B), w))       by iff_mp ^ m
+    (w ∈ A × B ∧ c = ap(prodmap(U, V, A, B), w)) ⇒ c ∈ img(U, A) × img(V, B) by assume a {
+      w ∈ A × B                                                by taut a
+      e. w = Ͻ(pr1(w), pr2(w)) ∧ (pr1(w) ∈ A ∧ pr2(w) ∈ B)     by prod_eta ^
+      w1. pr1(w) ∈ A                                           by taut e
+      w2. pr2(w) ∈ B                                           by taut e
+      ew. w = Ͻ(pr1(w), pr2(w))                                by taut e
+      p. c = ap(prodmap(U, V, A, B), w)                        by taut a
+      q. ap(prodmap(U, V, A, B), w) = ap(prodmap(U, V, A, B), Ͻ(pr1(w), pr2(w)))   by cong ew
+      r. ap(prodmap(U, V, A, B), Ͻ(pr1(w), pr2(w))) = Ͻ(ap(U, pr1(w)), ap(V, pr2(w)))   by ap_prodmap w1 w2
+      ce. c = Ͻ(ap(U, pr1(w)), ap(V, pr2(w)))                  by chain p q r
+      i1. ap(U, pr1(w)) ∈ img(U, A)                            by ap_mem_img hu aa w1
+      i2. ap(V, pr2(w)) ∈ img(V, B)                            by ap_mem_img hv bb w2
+      Ͻ(ap(U, pr1(w)), ap(V, pr2(w))) ∈ img(U, A) × img(V, B) ⇔ (ap(U, pr1(w)) ∈ img(U, A) ∧ ap(V, pr2(w)) ∈ img(V, B))   by pair_mem_prod
+      Ͻ(ap(U, pr1(w)), ap(V, pr2(w))) ∈ img(U, A) × img(V, B)  by taut i1 i2 ^
+      c ∈ img(U, A) × img(V, B) ⇔ Ͻ(ap(U, pr1(w)), ap(V, pr2(w))) ∈ img(U, A) × img(V, B)   by rcong ce
+      c ∈ img(U, A) × img(V, B)                                by taut ^^ ^
+    }
+    (∀w)((w ∈ A × B ∧ c = ap(prodmap(U, V, A, B), w)) ⇒ c ∈ img(U, A) × img(V, B))   by gen ^ with w
+    c ∈ img(U, A) × img(V, B)                                  by obtain ew ^
+  }
+  l. img(prodmap(U, V, A, B), A × B) ⊂ img(U, A) × img(V, B)   by gen ^ with c
+  c ∈ img(U, A) × img(V, B) ⇒ c ∈ img(prodmap(U, V, A, B), A × B) by assume m {
+    e. c = Ͻ(pr1(c), pr2(c)) ∧ (pr1(c) ∈ img(U, A) ∧ pr2(c) ∈ img(V, B))   by prod_eta m
+    pr1(c) ∈ img(U, A) ⇔ (∃x)(x ∈ A ∧ pr1(c) = ap(U, x))       by mem_img_map hu aa
+    ex. (∃x)(x ∈ A ∧ pr1(c) = ap(U, x))                        by taut e ^
+    pr2(c) ∈ img(V, B) ⇔ (∃y)(y ∈ B ∧ pr2(c) = ap(V, y))       by mem_img_map hv bb
+    ey. (∃y)(y ∈ B ∧ pr2(c) = ap(V, y))                        by taut e ^
+    (x ∈ A ∧ pr1(c) = ap(U, x)) ⇒ c ∈ img(prodmap(U, V, A, B), A × B) by assume a {
+      (y ∈ B ∧ pr2(c) = ap(V, y)) ⇒ c ∈ img(prodmap(U, V, A, B), A × B) by assume b {
+        xa. x ∈ A                                              by taut a
+        yb. y ∈ B                                              by taut b
+        Ͻ(x, y) ∈ A × B ⇔ (x ∈ A ∧ y ∈ B)                      by pair_mem_prod
+        xy. Ͻ(x, y) ∈ A × B                                    by taut xa yb ^
+        p. ap(prodmap(U, V, A, B), Ͻ(x, y)) = Ͻ(ap(U, x), ap(V, y))   by ap_prodmap xa yb
+        c1. pr1(c) = ap(U, x)                                  by taut a
+        c2. pr2(c) = ap(V, y)                                  by taut b
+        q. Ͻ(pr1(c), pr2(c)) = Ͻ(ap(U, x), ap(V, y))           by cong2 c1 c2
+        ce. c = Ͻ(pr1(c), pr2(c))                              by taut e
+        c = ap(prodmap(U, V, A, B), Ͻ(x, y))                   by chain ce q p
+        Ͻ(x, y) ∈ A × B ∧ c = ap(prodmap(U, V, A, B), Ͻ(x, y)) by C20 xy ^
+        (∃w)(w ∈ A × B ∧ c = ap(prodmap(U, V, A, B), w))       by exists_intro ^
+        c ∈ img(prodmap(U, V, A, B), A × B) ⇔ (∃w)(w ∈ A × B ∧ c = ap(prodmap(U, V, A, B), w))   by mem_img_map mp ab
+        c ∈ img(prodmap(U, V, A, B), A × B)                    by iff_mpr ^ ^^
+      }
+      (∀y)((y ∈ B ∧ pr2(c) = ap(V, y)) ⇒ c ∈ img(prodmap(U, V, A, B), A × B))   by gen ^ with y
+      c ∈ img(prodmap(U, V, A, B), A × B)                      by obtain ey ^
+    }
+    (∀x)((x ∈ A ∧ pr1(c) = ap(U, x)) ⇒ c ∈ img(prodmap(U, V, A, B), A × B))   by gen ^ with x
+    c ∈ img(prodmap(U, V, A, B), A × B)                        by obtain ex ^
+  }
+  r. img(U, A) × img(V, B) ⊂ img(prodmap(U, V, A, B), A × B)   by gen ^ with c
+  _                                                            by ext l r
+}
+
+-- Если u и v сюръективны (биективны), то и u × v.
+theorem prodmap_surj {U V A B C D : term} (hu : Surj(U, A, C)) (hv : Surj(V, B, D)) : Surj(prodmap(U, V, A, B), A × B, C × D) {
+  mu. Map(U, A, C)                                             by taut hu
+  mv. Map(V, B, D)                                             by taut hv
+  mp. Map(prodmap(U, V, A, B), A × B, C × D)                   by prodmap_map mu mv
+  a. img(prodmap(U, V, A, B), A × B) = img(U, A) × img(V, B)   by img_prodmap mu mv
+  img(U, A) = C                                                by taut hu
+  img(V, B) = D                                                by taut hv
+  b. img(U, A) × img(V, B) = C × D                             by cong2 ^^ ^
+  img(prodmap(U, V, A, B), A × B) = C × D                      by chain a b
+  _                                                            by C20 mp ^
+}
+
+theorem prodmap_bij {U V A B C D : term} (hu : Bij(U, A, C)) (hv : Bij(V, B, D)) : Bij(prodmap(U, V, A, B), A × B, C × D) {
+  Inj(U, A, C)                                                 by taut hu
+  Inj(V, B, D)                                                 by taut hv
+  Inj(prodmap(U, V, A, B), A × B, C × D)                       by prodmap_inj ^^ ^
+  Surj(U, A, C)                                                by taut hu
+  Surj(V, B, D)                                                by taut hv
+  Surj(prodmap(U, V, A, B), A × B, C × D)                      by prodmap_surj ^^ ^
+  _                                                            by taut 3 ^
+}
+
+-- (u' × v') ∘ (u × v) = (u' ∘ u) × (v' ∘ v) (стр. 100).
+theorem prodmap_comp {U V U' V' A B C D E F : term} (hu : Map(U, A, C)) (hv : Map(V, B, D)) (hu' : Map(U', C, E)) (hv' : Map(V', D, F)) : prodmap(U', V', C, D) ∘ prodmap(U, V, A, B) = prodmap(U' ∘ U, V' ∘ V, A, B) {
+  mp. Map(prodmap(U, V, A, B), A × B, C × D)                   by prodmap_map hu hv
+  mp'. Map(prodmap(U', V', C, D), C × D, E × F)                by prodmap_map hu' hv'
+  ml. Map(prodmap(U', V', C, D) ∘ prodmap(U, V, A, B), A × B, E × F)   by comp_map mp mp'
+  muu. Map(U' ∘ U, A, E)                                       by comp_map hu hu'
+  mvv. Map(V' ∘ V, B, F)                                       by comp_map hv hv'
+  mr. Map(prodmap(U' ∘ U, V' ∘ V, A, B), A × B, E × F)         by prodmap_map muu mvv
+  w ∈ A × B ⇒ ap(prodmap(U', V', C, D) ∘ prodmap(U, V, A, B), w) = ap(prodmap(U' ∘ U, V' ∘ V, A, B), w) by assume m {
+    e. w = Ͻ(pr1(w), pr2(w)) ∧ (pr1(w) ∈ A ∧ pr2(w) ∈ B)       by prod_eta m
+    w1. pr1(w) ∈ A                                             by taut e
+    w2. pr2(w) ∈ B                                             by taut e
+    ew. w = Ͻ(pr1(w), pr2(w))                                  by taut e
+    c1. ap(U, pr1(w)) ∈ C                                      by ap_mem hu w1
+    c2. ap(V, pr2(w)) ∈ D                                      by ap_mem hv w2
+    a. ap(prodmap(U', V', C, D) ∘ prodmap(U, V, A, B), w) = ap(prodmap(U', V', C, D), ap(prodmap(U, V, A, B), w))   by ap_comp mp mp' m
+    b. ap(prodmap(U, V, A, B), w) = ap(prodmap(U, V, A, B), Ͻ(pr1(w), pr2(w)))     by cong ew
+    c. ap(prodmap(U, V, A, B), Ͻ(pr1(w), pr2(w))) = Ͻ(ap(U, pr1(w)), ap(V, pr2(w)))   by ap_prodmap w1 w2
+    ap(prodmap(U, V, A, B), w) = Ͻ(ap(U, pr1(w)), ap(V, pr2(w)))   by chain b c
+    d. ap(prodmap(U', V', C, D), ap(prodmap(U, V, A, B), w)) = ap(prodmap(U', V', C, D), Ͻ(ap(U, pr1(w)), ap(V, pr2(w))))   by cong ^
+    f. ap(prodmap(U', V', C, D), Ͻ(ap(U, pr1(w)), ap(V, pr2(w)))) = Ͻ(ap(U', ap(U, pr1(w))), ap(V', ap(V, pr2(w))))   by ap_prodmap c1 c2
+    g. ap(prodmap(U' ∘ U, V' ∘ V, A, B), w) = ap(prodmap(U' ∘ U, V' ∘ V, A, B), Ͻ(pr1(w), pr2(w)))   by cong ew
+    h. ap(prodmap(U' ∘ U, V' ∘ V, A, B), Ͻ(pr1(w), pr2(w))) = Ͻ(ap(U' ∘ U, pr1(w)), ap(V' ∘ V, pr2(w)))   by ap_prodmap w1 w2
+    i1. ap(U' ∘ U, pr1(w)) = ap(U', ap(U, pr1(w)))             by ap_comp hu hu' w1
+    i2. ap(V' ∘ V, pr2(w)) = ap(V', ap(V, pr2(w)))             by ap_comp hv hv' w2
+    k. Ͻ(ap(U' ∘ U, pr1(w)), ap(V' ∘ V, pr2(w))) = Ͻ(ap(U', ap(U, pr1(w))), ap(V', ap(V, pr2(w))))   by cong2 i1 i2
+    ap(prodmap(U', V', C, D) ∘ prodmap(U, V, A, B), w) = ap(prodmap(U' ∘ U, V' ∘ V, A, B), w)   by chain a d f k h g
+  }
+  (∀w)(w ∈ A × B ⇒ ap(prodmap(U', V', C, D) ∘ prodmap(U, V, A, B), w) = ap(prodmap(U' ∘ U, V' ∘ V, A, B), w))   by gen ^ with w
+  _                                                            by map_ext ml mr ^
+}
+
+
+-- Если u и v биективны, то (u × v)⁻¹ = u⁻¹ × v⁻¹.
+theorem inv_prodmap {U V A B C D : term} (hu : Bij(U, A, C)) (hv : Bij(V, B, D)) : inv(prodmap(U, V, A, B)) = prodmap(inv(U), inv(V), C, D) {
+  mu. Map(U, A, C)                                             by taut hu
+  mv. Map(V, B, D)                                             by taut hv
+  Map(inv(U), C, A) ⇔ Bij(U, A, C)                             by inv_map_iff mu
+  miu. Map(inv(U), C, A)                                       by iff_mpr ^ hu
+  Map(inv(V), D, B) ⇔ Bij(V, B, D)                             by inv_map_iff mv
+  miv. Map(inv(V), D, B)                                       by iff_mpr ^ hv
+  hb. Bij(prodmap(U, V, A, B), A × B, C × D)                   by prodmap_bij hu hv
+  mp. Map(prodmap(U, V, A, B), A × B, C × D)                   by prodmap_map mu mv
+  Map(inv(prodmap(U, V, A, B)), C × D, A × B) ⇔ Bij(prodmap(U, V, A, B), A × B, C × D)   by inv_map_iff mp
+  mi. Map(inv(prodmap(U, V, A, B)), C × D, A × B)              by iff_mpr ^ hb
+  mq. Map(prodmap(inv(U), inv(V), C, D), C × D, A × B)         by prodmap_map miu miv
+  c ∈ C × D ⇒ ap(inv(prodmap(U, V, A, B)), c) = ap(prodmap(inv(U), inv(V), C, D), c) by assume m {
+    e. c = Ͻ(pr1(c), pr2(c)) ∧ (pr1(c) ∈ C ∧ pr2(c) ∈ D)       by prod_eta m
+    c1. pr1(c) ∈ C                                             by taut e
+    c2. pr2(c) ∈ D                                             by taut e
+    ce. c = Ͻ(pr1(c), pr2(c))                                  by taut e
+    a1. ap(inv(U), pr1(c)) ∈ A                                 by ap_mem miu c1
+    a2. ap(inv(V), pr2(c)) ∈ B                                 by ap_mem miv c2
+    p. ap(prodmap(inv(U), inv(V), C, D), c) = ap(prodmap(inv(U), inv(V), C, D), Ͻ(pr1(c), pr2(c)))   by cong ce
+    q. ap(prodmap(inv(U), inv(V), C, D), Ͻ(pr1(c), pr2(c))) = Ͻ(ap(inv(U), pr1(c)), ap(inv(V), pr2(c)))   by ap_prodmap c1 c2
+    qc. ap(prodmap(inv(U), inv(V), C, D), c) = Ͻ(ap(inv(U), pr1(c)), ap(inv(V), pr2(c)))   by chain p q
+    r. ap(prodmap(U, V, A, B), Ͻ(ap(inv(U), pr1(c)), ap(inv(V), pr2(c)))) = Ͻ(ap(U, ap(inv(U), pr1(c))), ap(V, ap(inv(V), pr2(c))))   by ap_prodmap a1 a2
+    s1. ap(U, ap(inv(U), pr1(c))) = pr1(c)                     by ap_ap_inv hu c1
+    s2. ap(V, ap(inv(V), pr2(c))) = pr2(c)                     by ap_ap_inv hv c2
+    s. Ͻ(ap(U, ap(inv(U), pr1(c))), ap(V, ap(inv(V), pr2(c)))) = Ͻ(pr1(c), pr2(c))   by cong2 s1 s2
+    pq. ap(prodmap(U, V, A, B), Ͻ(ap(inv(U), pr1(c)), ap(inv(V), pr2(c)))) = c   by chain r s ce
+    Ͻ(ap(inv(U), pr1(c)), ap(inv(V), pr2(c))) ∈ A × B ⇔ (ap(inv(U), pr1(c)) ∈ A ∧ ap(inv(V), pr2(c)) ∈ B)   by pair_mem_prod
+    qa. Ͻ(ap(inv(U), pr1(c)), ap(inv(V), pr2(c))) ∈ A × B      by taut a1 a2 ^
+    t. ap(inv(prodmap(U, V, A, B)), ap(prodmap(U, V, A, B), Ͻ(ap(inv(U), pr1(c)), ap(inv(V), pr2(c))))) = Ͻ(ap(inv(U), pr1(c)), ap(inv(V), pr2(c)))   by ap_inv_ap hb qa
+    u. ap(inv(prodmap(U, V, A, B)), ap(prodmap(U, V, A, B), Ͻ(ap(inv(U), pr1(c)), ap(inv(V), pr2(c))))) = ap(inv(prodmap(U, V, A, B)), c)   by cong pq
+    ap(inv(prodmap(U, V, A, B)), c) = ap(prodmap(inv(U), inv(V), C, D), c)   by chain u t qc
+  }
+  (∀c)(c ∈ C × D ⇒ ap(inv(prodmap(U, V, A, B)), c) = ap(prodmap(inv(U), inv(V), C, D), c))   by gen ^ with c
+  _                                                            by map_ext mi mq ^
+}
+
+-- Примеры (стр. 94). 1) Если A ⊂ B, то тождественное отображение A в B инъективно
+-- (каноническая инъекция).
+theorem canon_inj {A B : term} (h : A ⊂ B) : Inj(Δ(A), A, B) {
+  Map(Δ(A), A, A)                                              by diag_map
+  m. Map(Δ(A), A, B)                                           by map_target ^ h
+  (x ∈ A ∧ (y ∈ A ∧ ap(Δ(A), x) = ap(Δ(A), y))) ⇒ x = y by assume a {
+    x ∈ A                                                      by taut a
+    p. ap(Δ(A), x) = x                                         by ap_diag ^
+    y ∈ A                                                      by taut a
+    q. ap(Δ(A), y) = y                                         by ap_diag ^
+    r. ap(Δ(A), x) = ap(Δ(A), y)                               by taut a
+    x = y                                                      by chain p r q
+  }
+  (∀y)((x ∈ A ∧ (y ∈ A ∧ ap(Δ(A), x) = ap(Δ(A), y))) ⇒ x = y)       by gen ^ with y
+  (∀x)(∀y)((x ∈ A ∧ (y ∈ A ∧ ap(Δ(A), x) = ap(Δ(A), y))) ⇒ x = y)   by gen ^ with x
+  _                                                            by C20 m ^
+}
+
+-- 5) x → (x, b) есть биекция A на A × {b}.
+theorem pair_right_bij {A T : term} : Bij(fn_x(A, Ͻ(x, T)), A, A × set1(T)) {
+  x ∈ A ⇒ Ͻ(x, T) ∈ A × set1(T) by assume a {
+    Ͻ(x, T) ∈ A × set1(T) ⇔ (x ∈ A ∧ T ∈ set1(T))              by pair_mem_prod
+    T ∈ set1(T) ⇔ T = T                                        by mem_set1
+    T = T                                                      by T1
+    Ͻ(x, T) ∈ A × set1(T)                                      by taut a 1 2 3
+  }
+  (∀x)(x ∈ A ⇒ Ͻ(x, T) ∈ A × set1(T))                          by gen ^ with x
+  m. Map(fn_x(A, Ͻ(x, T)), A, A × set1(T))                     by fn_map_into ^
+  (x ∈ A ∧ (y ∈ A ∧ ap(fn_x(A, Ͻ(x, T)), x) = ap(fn_x(A, Ͻ(x, T)), y))) ⇒ x = y by assume a {
+    x ∈ A                                                      by taut a
+    p. ap(fn_x(A, Ͻ(x, T)), x) = Ͻ(x, T)                       by ap_fn ^
+    y ∈ A                                                      by taut a
+    q. ap(fn_x(A, Ͻ(x, T)), y) = Ͻ(y, T)                       by ap_fn ^
+    r. ap(fn_x(A, Ͻ(x, T)), x) = ap(fn_x(A, Ͻ(x, T)), y)       by taut a
+    Ͻ(x, T) = Ͻ(y, T)                                          by chain p r q
+    Ͻ(x, T) = Ͻ(y, T) ⇒ (x = y ∧ T = T)                        by pair_inj
+    x = y ∧ T = T                                              by mp 6 ^
+    x = y                                                      by taut ^
+  }
+  (∀y)((x ∈ A ∧ (y ∈ A ∧ ap(fn_x(A, Ͻ(x, T)), x) = ap(fn_x(A, Ͻ(x, T)), y))) ⇒ x = y)       by gen ^ with y
+  inj. (∀x)(∀y)((x ∈ A ∧ (y ∈ A ∧ ap(fn_x(A, Ͻ(x, T)), x) = ap(fn_x(A, Ͻ(x, T)), y))) ⇒ x = y)   by gen ^ with x
+  z ∈ A × set1(T) ⇒ (∃x)(x ∈ A ∧ z = ap(fn_x(A, Ͻ(x, T)), x)) by assume a {
+    e. z = Ͻ(pr1(z), pr2(z)) ∧ (pr1(z) ∈ A ∧ pr2(z) ∈ set1(T))   by prod_eta a
+    za. pr1(z) ∈ A                                             by taut e
+    pr2(z) ∈ set1(T) ⇔ pr2(z) = T                              by mem_set1
+    zt. pr2(z) = T                                             by taut e ^
+    ze. z = Ͻ(pr1(z), pr2(z))                                  by taut e
+    pr1(z) = pr1(z)                                            by T1
+    Ͻ(pr1(z), pr2(z)) = Ͻ(pr1(z), T)                           by cong2 ^ zt
+    ap(fn_x(A, Ͻ(x, T)), pr1(z)) = Ͻ(pr1(z), T)                by ap_fn za
+    z = ap(fn_x(A, Ͻ(x, T)), pr1(z))                           by chain ze 7 8
+    pr1(z) ∈ A ∧ z = ap(fn_x(A, Ͻ(x, T)), pr1(z))              by C20 za ^
+    (∃x)(x ∈ A ∧ z = ap(fn_x(A, Ͻ(x, T)), x))                  by exists_intro ^
+  }
+  (∀z)(z ∈ A × set1(T) ⇒ (∃x)(x ∈ A ∧ z = ap(fn_x(A, Ͻ(x, T)), x)))   by gen ^ with z
+  Surj(fn_x(A, Ͻ(x, T)), A, A × set1(T)) ⇔ (∀z)(z ∈ A × set1(T) ⇒ (∃x)(x ∈ A ∧ z = ap(fn_x(A, Ͻ(x, T)), x)))   by surj_iff m
+  Surj(fn_x(A, Ͻ(x, T)), A, A × set1(T))                       by iff_mpr ^ ^^
+  _                                                            by taut m inj ^
+}
+
+
+-- 2) x → (x, x) есть биекция A на диагональ Δ_A.
+theorem diag_map_bij {A : term} : Bij(fn_x(A, Ͻ(x, x)), A, Δ(A)) {
+  x ∈ A ⇒ Ͻ(x, x) ∈ Δ(A) by assume a {
+    Ͻ(x, x) ∈ Δ(A) ⇔ (x ∈ A ∧ x = x)                           by mem_diag
+    x = x                                                      by T1
+    Ͻ(x, x) ∈ Δ(A)                                             by taut a 1 2
+  }
+  (∀x)(x ∈ A ⇒ Ͻ(x, x) ∈ Δ(A))                                 by gen ^ with x
+  m. Map(fn_x(A, Ͻ(x, x)), A, Δ(A))                            by fn_map_into ^
+  (x ∈ A ∧ (y ∈ A ∧ ap(fn_x(A, Ͻ(x, x)), x) = ap(fn_x(A, Ͻ(x, x)), y))) ⇒ x = y by assume a {
+    x ∈ A                                                      by taut a
+    p. ap(fn_x(A, Ͻ(x, x)), x) = Ͻ(x, x)                       by ap_fn ^
+    y ∈ A                                                      by taut a
+    q. ap(fn_x(A, Ͻ(x, x)), y) = Ͻ(y, y)                       by ap_fn ^
+    r. ap(fn_x(A, Ͻ(x, x)), x) = ap(fn_x(A, Ͻ(x, x)), y)       by taut a
+    Ͻ(x, x) = Ͻ(y, y)                                          by chain p r q
+    Ͻ(x, x) = Ͻ(y, y) ⇒ (x = y ∧ x = y)                        by pair_inj
+    x = y ∧ x = y                                              by mp 6 ^
+    x = y                                                      by taut ^
+  }
+  (∀y)((x ∈ A ∧ (y ∈ A ∧ ap(fn_x(A, Ͻ(x, x)), x) = ap(fn_x(A, Ͻ(x, x)), y))) ⇒ x = y)       by gen ^ with y
+  inj. (∀x)(∀y)((x ∈ A ∧ (y ∈ A ∧ ap(fn_x(A, Ͻ(x, x)), x) = ap(fn_x(A, Ͻ(x, x)), y))) ⇒ x = y)   by gen ^ with x
+  w ∈ Δ(A) ⇒ (∃x)(x ∈ A ∧ w = ap(fn_x(A, Ͻ(x, x)), x)) by assume a {
+    Graph(Δ(A))                                                by diag_graph
+    w ∈ Δ(A) ⇒ IsPair(w)                                       by inst ^
+    IsPair(w)                                                  by mp a ^
+    we. w = Ͻ(pr1(w), pr2(w))                                  by pair_eta ^
+    w ∈ Δ(A) ⇔ Ͻ(pr1(w), pr2(w)) ∈ Δ(A)                        by rcong we
+    Ͻ(pr1(w), pr2(w)) ∈ Δ(A) ⇔ (pr1(w) ∈ A ∧ pr1(w) = pr2(w))  by mem_diag
+    wa. pr1(w) ∈ A                                             by taut a 5 6
+    e. pr1(w) = pr2(w)                                         by taut a 5 6
+    pr1(w) = pr1(w)                                            by T1
+    f. Ͻ(pr1(w), pr1(w)) = Ͻ(pr1(w), pr2(w))                   by cong2 ^ e
+    g. ap(fn_x(A, Ͻ(x, x)), pr1(w)) = Ͻ(pr1(w), pr1(w))        by ap_fn wa
+    w = ap(fn_x(A, Ͻ(x, x)), pr1(w))                           by chain we f g
+    pr1(w) ∈ A ∧ w = ap(fn_x(A, Ͻ(x, x)), pr1(w))              by C20 wa ^
+    (∃x)(x ∈ A ∧ w = ap(fn_x(A, Ͻ(x, x)), x))                  by exists_intro ^
+  }
+  (∀w)(w ∈ Δ(A) ⇒ (∃x)(x ∈ A ∧ w = ap(fn_x(A, Ͻ(x, x)), x)))   by gen ^ with w
+  Surj(fn_x(A, Ͻ(x, x)), A, Δ(A)) ⇔ (∀w)(w ∈ Δ(A) ⇒ (∃x)(x ∈ A ∧ w = ap(fn_x(A, Ͻ(x, x)), x)))   by surj_iff m
+  Surj(fn_x(A, Ͻ(x, x)), A, Δ(A))                              by iff_mpr ^ ^^
+  _                                                            by taut m inj ^
+}
+
+-- 3) Для графика G отображение z → pr₁ z есть сюръекция G на pr₁⟨G⟩.
+theorem pr1_surj {G : term} (hg : Graph(G)) : Surj(fn_z(G, pr1(z)), G, proj1(G)) {
+  z ∈ G ⇒ pr1(z) ∈ proj1(G) by assume a {
+    z ∈ G ⇒ IsPair(z)                                          by inst hg
+    IsPair(z)                                                  by mp a ^
+    e. z = Ͻ(pr1(z), pr2(z))                                   by pair_eta ^
+    z ∈ G ⇔ Ͻ(pr1(z), pr2(z)) ∈ G                              by rcong e
+    Ͻ(pr1(z), pr2(z)) ∈ G                                      by taut a ^
+    pr1(z) ∈ proj1(G) ∧ pr2(z) ∈ proj2(G)                      by pair_proj ^
+    pr1(z) ∈ proj1(G)                                          by taut ^
+  }
+  (∀z)(z ∈ G ⇒ pr1(z) ∈ proj1(G))                              by gen ^ with z
+  m. Map(fn_z(G, pr1(z)), G, proj1(G))                         by fn_map_into ^
+  x ∈ proj1(G) ⇒ (∃z)(z ∈ G ∧ x = ap(fn_z(G, pr1(z)), z)) by assume a {
+    x ∈ proj1(G) ⇔ (∃y)(Ͻ(x, y) ∈ G)                           by mem_proj1
+    e. (∃y)(Ͻ(x, y) ∈ G)                                       by iff_mp ^ a
+    Ͻ(x, y) ∈ G ⇒ (∃z)(z ∈ G ∧ x = ap(fn_z(G, pr1(z)), z)) by assume p {
+      q. ap(fn_z(G, pr1(z)), Ͻ(x, y)) = pr1(Ͻ(x, y))           by ap_fn p
+      r. pr1(Ͻ(x, y)) = x                                      by pr1_pair
+      x = ap(fn_z(G, pr1(z)), Ͻ(x, y))                         by chain r q
+      Ͻ(x, y) ∈ G ∧ x = ap(fn_z(G, pr1(z)), Ͻ(x, y))           by C20 p ^
+      (∃z)(z ∈ G ∧ x = ap(fn_z(G, pr1(z)), z))                 by exists_intro ^
+    }
+    (∀y)(Ͻ(x, y) ∈ G ⇒ (∃z)(z ∈ G ∧ x = ap(fn_z(G, pr1(z)), z)))   by gen ^ with y
+    (∃z)(z ∈ G ∧ x = ap(fn_z(G, pr1(z)), z))                   by obtain e ^
+  }
+  (∀x)(x ∈ proj1(G) ⇒ (∃z)(z ∈ G ∧ x = ap(fn_z(G, pr1(z)), z)))   by gen ^ with x
+  Surj(fn_z(G, pr1(z)), G, proj1(G)) ⇔ (∀x)(x ∈ proj1(G) ⇒ (∃z)(z ∈ G ∧ x = ap(fn_z(G, pr1(z)), z)))   by surj_iff m
+  _                                                            by iff_mpr ^ ^^
+}
+
+end

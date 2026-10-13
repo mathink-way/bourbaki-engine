@@ -45,6 +45,25 @@ fn all_files_check() {
     }
 }
 
+/// Глава II (§§ 1-6): файлы импортируют друг друга, поэтому проверяются одним конспектом.
+/// Самый долгий файл 15_products.bk (ассоциативность произведения, предложение 7).
+#[test]
+fn chapter2_files_check() {
+    let mut k = Konspekt::with_prelude();
+    for f in [
+        "konspekt/11_pairs.bk",
+        "konspekt/12_graphs.bk",
+        "konspekt/13_functions.bk",
+        "konspekt/14_unions.bk",
+        "konspekt/15_products.bk",
+        "konspekt/16_equivalence.bk",
+    ] {
+        let r = k.check_file(Path::new(f));
+        assert!(r.is_ok(), "{r}");
+        assert!(r.sorry.is_empty(), "в {f} остались sorry: {:?}", r.sorry);
+    }
+}
+
 /// Раскрытие новых глав. Все теоремы раскрываются (это проверялось отдельно, некоторые
 /// дают сотни тысяч строк и минуты работы); в тесте только те, что раскрываются быстро.
 #[test]
@@ -432,7 +451,7 @@ fn theorems_can_be_built_as_data() {
     k.check_theorem(&decl).unwrap();
     let bad = TheoremDecl {
         name: "bad".into(),
-        proof: vec![Line::new("A ⇒ B", Just::Taut)],
+        proof: vec![Line::new("A ⇒ B", Just::Taut(vec![]))],
         ..decl
     };
     assert!(k.check_theorem(&bad).is_err());
@@ -536,10 +555,16 @@ fn bound_metavariables_are_inferred() {
         &mut k,
         "open ch1\nin Egalitarian\ntheorem a : z = y ⇒ (∃x)(z = x) by S5\ntheorem b : (∀x)(x = y) ⇒ z = y by C30",
     );
-    // в S6 R стоит только как R(T): подстановку надо написать
-    let e = first_error(
+    // в S6 R стоит только как R(T): R находится, если оно получается заменой всех
+    // вхождений T (или U) на букву
+    ok(
         &mut k,
         "in Egalitarian\ntheorem c {T U : term} : T = U ⇒ (T = T ⇔ U = T) by S6",
+    );
+    // а если нужно заменить только часть вхождений, подстановку надо написать
+    let e = first_error(
+        &mut k,
+        "in Egalitarian\ntheorem c2 {T U : term} : T = U ⇒ ((T = T ∨ U = T) ⇔ (U = T ∨ U = U)) by S6",
     );
     assert!(e.contains("R(x) := ..."), "{e}");
     // найденная подстановка проверяется буквально

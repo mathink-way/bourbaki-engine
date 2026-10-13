@@ -1,0 +1,1409 @@
+-- Глава II, § 4. Объединение и пересечение семейства множеств (стр. 100-111).
+--
+-- Задача: ⋃ и ⋂ семейства, их свойства, объединение и пересечение двух множеств,
+-- дополнения, покрытия, разбиения, сумма семейства.
+-- Проблема: семейство у Бурбаки это функция (X, I, 𝔊), X_ι её значение; объединение
+-- существует по S8, пересечение только при непустом I.
+-- Решение: семейство записывается термом с выделенной буквой: {X : term 1}, X_ι это X(i).
+-- Семейство-функция с графиком F получается подстановкой X(i) := ap(F, i), так что
+-- общий случай охвачен. ⋃_i(I, X(i)) и ⋂_i(I, X(i)) это сокращения со связанной буквой.
+-- Что осталось: упражнения.
+
+import "00_prelude.bk"
+open base
+import "13_functions.bk"
+open ch1
+open sets
+
+-- Определения 1-3 (стр. 101-102).
+abbrev ⋃ [\bigcup] (I : term) (X : term 1) := ℰ_x((∃i)(i ∈ I ∧ x ∈ X(i)))
+abbrev ⋂ [\bigcap] (I : term) (X : term 1) := ℰ_x((∀i)(i ∈ I ⇒ x ∈ X(i)))
+abbrev interE (E I : term) (X : term 1) := ℰ_x(x ∈ E ∧ (∀i)(i ∈ I ⇒ x ∈ X(i)))
+-- n° 5: объединение и пересечение двух множеств.
+abbrev ∪ [\cup] (A B : term) infix := ⋃_X(set2(A, B), X)
+abbrev ∩ [\cap] (A B : term) infix := ⋂_X(set2(A, B), X)
+-- n° 6: покрытия. Cover_i(I, E, X(i)): (X_ι) покрытие E; Finer_i(K, I, Y(i), X(i)):
+-- покрытие (Y_κ)_{κ∈K} мельче (X_ι)_{ι∈I}.
+abbrev Cover (I E : term) (X : term 1) := E ⊂ ⋃_i(I, X(i))
+abbrev Finer (K I : term) (Y X : term 1) := (∀k)(k ∈ K ⇒ (∃i)(i ∈ I ∧ Y(k) ⊂ X(i)))
+-- n° 7: попарно непересекающиеся множества и разбиения.
+abbrev Disj (I : term) (X : term 1) := (∀i)(∀j)((i ∈ I ∧ (j ∈ I ∧ i ≠ j)) ⇒ X(i) ∩ X(j) = ∅)
+abbrev Partition (I E : term) (X : term 1) := (∀i)(i ∈ I ⇒ (X(i) ≠ ∅ ∧ X(i) ⊂ E)) ∧ (Disj_i(I, X(i)) ∧ Cover_i(I, E, X(i)))
+-- n° 8: сумма семейства.
+abbrev Sum (I : term) (X : term 1) := ⋃_i(I, X(i) × set1(i))
+
+namespace ch2
+in Set
+
+-- n° 1 (стр. 101): (∃ι)(ι ∈ I и x ∈ X_ι) коллективизирующее по x (S8).
+theorem union_coll {I : term} {X : term 1} : Coll_x((∃i)(i ∈ I ∧ x ∈ X(i))) {
+  (i ∈ I ∧ x ∈ X(i)) ⇒ x ∈ X(i)                                   by C21'
+  (∀x)((i ∈ I ∧ x ∈ X(i)) ⇒ x ∈ X(i))                             by gen ^ with x
+  (∃Z)(∀x)((i ∈ I ∧ x ∈ X(i)) ⇒ x ∈ Z)                            by exists_intro ^
+  s8. (∀i)(∃Z)(∀x)((i ∈ I ∧ x ∈ X(i)) ⇒ x ∈ Z)                    by gen ^ with i
+  (∀i)(∃Z)(∀x)((i ∈ I ∧ x ∈ X(i)) ⇒ x ∈ Z) ⇒ (∀V)Coll_x((∃i)(i ∈ V ∧ (i ∈ I ∧ x ∈ X(i))))   by S8 with R(s, t) := t ∈ I ∧ s ∈ X(t)
+  (∀V)Coll_x((∃i)(i ∈ V ∧ (i ∈ I ∧ x ∈ X(i))))                    by mp s8 ^
+  c. Coll_x((∃i)(i ∈ I ∧ (i ∈ I ∧ x ∈ X(i))))                     by inst ^
+  (i ∈ I ∧ (i ∈ I ∧ x ∈ X(i))) ⇔ (i ∈ I ∧ x ∈ X(i))               by taut
+  (∀i)((i ∈ I ∧ (i ∈ I ∧ x ∈ X(i))) ⇔ (i ∈ I ∧ x ∈ X(i)))         by gen ^ with i
+  (∃i)(i ∈ I ∧ (i ∈ I ∧ x ∈ X(i))) ⇔ (∃i)(i ∈ I ∧ x ∈ X(i))       by C31_exists_iff ^
+  (∀x)((∃i)(i ∈ I ∧ (i ∈ I ∧ x ∈ X(i))) ⇔ (∃i)(i ∈ I ∧ x ∈ X(i)))   by gen ^ with x
+  Coll_x((∃i)(i ∈ I ∧ (i ∈ I ∧ x ∈ X(i)))) ⇔ Coll_x((∃i)(i ∈ I ∧ x ∈ X(i)))   by coll_iff ^
+  _                                                               by iff_mp ^ c
+}
+
+theorem mem_union {T I : term} {X : term 1} : T ∈ ⋃_i(I, X(i)) ⇔ (∃i)(i ∈ I ∧ T ∈ X(i)) {
+  Coll_x((∃i)(i ∈ I ∧ x ∈ X(i)))     by union_coll
+  _                                  by mem_E ^
+}
+
+-- Если I = ∅, то ⋃ X_ι = ∅.
+theorem union_empty_index {X : term 1} : ⋃_i(∅, X(i)) = ∅ {
+  x ∈ ⋃_i(∅, X(i)) ⇔ (∃i)(i ∈ ∅ ∧ x ∈ X(i))                       by mem_union
+  i ∉ ∅                                                           by not_mem_empty
+  ¬(i ∈ ∅ ∧ x ∈ X(i))                                             by taut ^
+  (∀i)¬(i ∈ ∅ ∧ x ∈ X(i))                                         by gen ^ with i
+  ¬(∃i)(i ∈ ∅ ∧ x ∈ X(i)) ⇔ (∀i)¬(i ∈ ∅ ∧ x ∈ X(i))               by C29
+  x ∉ ⋃_i(∅, X(i))                                                by taut 1 4 5
+  (∀x)(x ∉ ⋃_i(∅, X(i)))                                          by gen ^ with x
+  (∀x)(x ∉ ⋃_i(∅, X(i))) ⇔ ⋃_i(∅, X(i)) = ∅                       by empty_iff
+  _                                                               by iff_mp ^ ^^
+}
+
+-- Определение 2 (стр. 102): при I ≠ ∅ соотношение (∀ι)(ι ∈ I ⇒ x ∈ X_ι) коллективизирующее.
+theorem inter_coll {I : term} {X : term 1} (h : I ≠ ∅) : Coll_x((∀i)(i ∈ I ⇒ x ∈ X(i))) {
+  I ≠ ∅ ⇔ (∃x)(x ∈ I)                                             by nonempty
+  e. (∃i)(i ∈ I)                                                  by iff_mp ^ h
+  a ∈ I ⇒ Coll_x((∀i)(i ∈ I ⇒ x ∈ X(i))) by assume m {
+    (∀i)(i ∈ I ⇒ x ∈ X(i)) ⇒ x ∈ X(a) by assume p {
+      a ∈ I ⇒ x ∈ X(a)                                            by inst p
+      x ∈ X(a)                                                    by mp m ^
+    }
+    (∀x)((∀i)(i ∈ I ⇒ x ∈ X(i)) ⇒ x ∈ X(a))                       by gen ^ with x
+    Coll_x((∀i)(i ∈ I ⇒ x ∈ X(i)))                                by C52 ^
+  }
+  (∀a)(a ∈ I ⇒ Coll_x((∀i)(i ∈ I ⇒ x ∈ X(i))))                    by gen ^ with a
+  _                                                               by obtain e ^
+}
+
+theorem mem_inter {T I : term} {X : term 1} (h : I ≠ ∅) : T ∈ ⋂_i(I, X(i)) ⇔ (∀i)(i ∈ I ⇒ T ∈ X(i)) {
+  Coll_x((∀i)(i ∈ I ⇒ x ∈ X(i)))     by inter_coll h
+  _                                  by mem_E ^
+}
+
+-- Определение 3: пересечение семейства частей E (относительно E); при I = ∅ это E.
+theorem interE_coll {E I : term} {X : term 1} : Coll_x(x ∈ E ∧ (∀i)(i ∈ I ⇒ x ∈ X(i))) {
+  (x ∈ E ∧ (∀i)(i ∈ I ⇒ x ∈ X(i))) ⇒ x ∈ E                      by C21
+  (∀x)((x ∈ E ∧ (∀i)(i ∈ I ⇒ x ∈ X(i))) ⇒ x ∈ E)                  by gen ^ with x
+  _                                                               by C52 ^
+}
+
+theorem mem_interE {T E I : term} {X : term 1} : T ∈ interE_i(E, I, X(i)) ⇔ (T ∈ E ∧ (∀i)(i ∈ I ⇒ T ∈ X(i))) {
+  Coll_x(x ∈ E ∧ (∀i)(i ∈ I ⇒ x ∈ X(i)))   by interE_coll
+  _                                        by mem_E ^
+}
+
+-- Стр. 102: для пустого I пересечение частей E есть E; при I ≠ ∅ и X_ι ⊂ E оно равно ⋂ X_ι.
+theorem interE_empty {E : term} {X : term 1} : interE_i(E, ∅, X(i)) = E {
+  a. x ∈ interE_i(E, ∅, X(i)) ⇔ (x ∈ E ∧ (∀i)(i ∈ ∅ ⇒ x ∈ X(i)))   by mem_interE
+  b. (∀i)(i ∈ ∅ ⇒ x ∈ X(i))                                        by forall_empty
+  x ∈ interE_i(E, ∅, X(i)) ⇔ x ∈ E                                 by taut a b
+  (∀x)(x ∈ interE_i(E, ∅, X(i)) ⇔ x ∈ E)                           by gen ^ with x
+  _                                                                by ext_iff ^
+}
+
+theorem interE_eq_inter {E I : term} {X : term 1} (h : I ≠ ∅) (hx : (∀i)(i ∈ I ⇒ X(i) ⊂ E)) : interE_i(E, I, X(i)) = ⋂_i(I, X(i)) {
+  a. x ∈ interE_i(E, I, X(i)) ⇔ (x ∈ E ∧ (∀i)(i ∈ I ⇒ x ∈ X(i)))   by mem_interE
+  b. x ∈ ⋂_i(I, X(i)) ⇔ (∀i)(i ∈ I ⇒ x ∈ X(i))                     by mem_inter h
+  c. (∀i)(i ∈ I ⇒ x ∈ X(i)) ⇒ x ∈ E by assume p {
+    I ≠ ∅ ⇔ (∃x)(x ∈ I)                                            by nonempty
+    e. (∃i)(i ∈ I)                                                 by iff_mp ^ h
+    i ∈ I ⇒ x ∈ E by assume m {
+      i ∈ I ⇒ x ∈ X(i)                                             by inst p
+      i ∈ I ⇒ X(i) ⊂ E                                             by inst hx
+      X(i) ⊂ E                                                     by mp m ^
+      x ∈ X(i) ⇒ x ∈ E                                             by inst ^
+      x ∈ E                                                        by taut m 1 ^
+    }
+    (∀i)(i ∈ I ⇒ x ∈ E)                                            by gen ^ with i
+    x ∈ E                                                          by obtain e ^
+  }
+  x ∈ interE_i(E, I, X(i)) ⇔ x ∈ ⋂_i(I, X(i))                      by taut a b c
+  (∀x)(x ∈ interE_i(E, I, X(i)) ⇔ x ∈ ⋂_i(I, X(i)))                by gen ^ with x
+  _                                                                by ext_iff ^
+}
+
+-- Предложение 1 (стр. 103): если f отображение K на I, то ⋃_{κ∈K} X_{f(κ)} = ⋃_{ι∈I} X_ι,
+-- и при I ≠ ∅ то же для ⋂.
+theorem union_reindex {F K I : term} {X : term 1} (hs : Surj(F, K, I)) : ⋃_k(K, X(ap(F, k))) = ⋃_i(I, X(i)) {
+  hm. Map(F, K, I)                                                 by taut hs
+  a. x ∈ ⋃_k(K, X(ap(F, k))) ⇔ (∃k)(k ∈ K ∧ x ∈ X(ap(F, k)))       by mem_union
+  b. x ∈ ⋃_i(I, X(i)) ⇔ (∃i)(i ∈ I ∧ x ∈ X(i))                     by mem_union
+  (∃k)(k ∈ K ∧ x ∈ X(ap(F, k))) ⇒ (∃i)(i ∈ I ∧ x ∈ X(i)) by assume e {
+    (k ∈ K ∧ x ∈ X(ap(F, k))) ⇒ (∃i)(i ∈ I ∧ x ∈ X(i)) by assume m {
+      k ∈ K                                                        by taut m
+      ap(F, k) ∈ I                                                 by ap_mem hm ^
+      ap(F, k) ∈ I ∧ x ∈ X(ap(F, k))                               by taut m ^
+      (∃i)(i ∈ I ∧ x ∈ X(i))                                       by exists_intro ^
+    }
+    (∀k)((k ∈ K ∧ x ∈ X(ap(F, k))) ⇒ (∃i)(i ∈ I ∧ x ∈ X(i)))       by gen ^ with k
+    (∃i)(i ∈ I ∧ x ∈ X(i))                                         by obtain e ^
+  }
+  (∃i)(i ∈ I ∧ x ∈ X(i)) ⇒ (∃k)(k ∈ K ∧ x ∈ X(ap(F, k))) by assume e {
+    (i ∈ I ∧ x ∈ X(i)) ⇒ (∃k)(k ∈ K ∧ x ∈ X(ap(F, k))) by assume m {
+      i ∈ I                                                        by taut m
+      f. (∃k)(k ∈ K ∧ i = ap(F, k))                                by surj_ap hs ^
+      (k ∈ K ∧ i = ap(F, k)) ⇒ (∃k)(k ∈ K ∧ x ∈ X(ap(F, k))) by assume p {
+        i = ap(F, k)                                               by taut p
+        x ∈ X(i) ⇔ x ∈ X(ap(F, k))                                 by rcong ^
+        k ∈ K ∧ x ∈ X(ap(F, k))                                    by taut m p ^
+        (∃k)(k ∈ K ∧ x ∈ X(ap(F, k)))                              by exists_intro ^
+      }
+      (∀k)((k ∈ K ∧ i = ap(F, k)) ⇒ (∃k)(k ∈ K ∧ x ∈ X(ap(F, k))))   by gen ^ with k
+      (∃k)(k ∈ K ∧ x ∈ X(ap(F, k)))                                by obtain f ^
+    }
+    (∀i)((i ∈ I ∧ x ∈ X(i)) ⇒ (∃k)(k ∈ K ∧ x ∈ X(ap(F, k))))       by gen ^ with i
+    (∃k)(k ∈ K ∧ x ∈ X(ap(F, k)))                                  by obtain e ^
+  }
+  x ∈ ⋃_k(K, X(ap(F, k))) ⇔ x ∈ ⋃_i(I, X(i))                       by taut a b 4 5
+  (∀x)(x ∈ ⋃_k(K, X(ap(F, k))) ⇔ x ∈ ⋃_i(I, X(i)))                 by gen ^ with x
+  _                                                                by ext_iff ^
+}
+
+theorem inter_reindex {F K I : term} {X : term 1} (hs : Surj(F, K, I)) (h : I ≠ ∅) : ⋂_k(K, X(ap(F, k))) = ⋂_i(I, X(i)) {
+  hm. Map(F, K, I)                                                 by taut hs
+  -- K непусто: прообраз элемента I
+  I ≠ ∅ ⇔ (∃x)(x ∈ I)                                              by nonempty
+  ei. (∃i)(i ∈ I)                                                  by iff_mp ^ h
+  i ∈ I ⇒ (∃k)(k ∈ K) by assume m {
+    f. (∃k)(k ∈ K ∧ i = ap(F, k))                                  by surj_ap hs m
+    (k ∈ K ∧ i = ap(F, k)) ⇒ k ∈ K                                 by C21
+    (∀k)((k ∈ K ∧ i = ap(F, k)) ⇒ k ∈ K)                           by gen ^ with k
+    (∃k)(k ∈ K ∧ i = ap(F, k)) ⇒ (∃k)(k ∈ K)                       by C31_exists ^
+    (∃k)(k ∈ K)                                                    by mp f ^
+  }
+  (∀i)(i ∈ I ⇒ (∃k)(k ∈ K))                                        by gen ^ with i
+  (∃k)(k ∈ K)                                                      by obtain ei ^
+  K ≠ ∅ ⇔ (∃x)(x ∈ K)                                              by nonempty
+  hk. K ≠ ∅                                                        by iff_mpr ^ ^^
+  a. x ∈ ⋂_k(K, X(ap(F, k))) ⇔ (∀k)(k ∈ K ⇒ x ∈ X(ap(F, k)))       by mem_inter hk
+  b. x ∈ ⋂_i(I, X(i)) ⇔ (∀i)(i ∈ I ⇒ x ∈ X(i))                     by mem_inter h
+  (∀k)(k ∈ K ⇒ x ∈ X(ap(F, k))) ⇒ (∀i)(i ∈ I ⇒ x ∈ X(i)) by assume p {
+    i ∈ I ⇒ x ∈ X(i) by assume m {
+      f. (∃k)(k ∈ K ∧ i = ap(F, k))                                by surj_ap hs m
+      (k ∈ K ∧ i = ap(F, k)) ⇒ x ∈ X(i) by assume q {
+        k ∈ K ⇒ x ∈ X(ap(F, k))                                    by inst p
+        i = ap(F, k)                                               by taut q
+        x ∈ X(i) ⇔ x ∈ X(ap(F, k))                                 by rcong ^
+        x ∈ X(i)                                                   by taut q 1 3
+      }
+      (∀k)((k ∈ K ∧ i = ap(F, k)) ⇒ x ∈ X(i))                      by gen ^ with k
+      x ∈ X(i)                                                     by obtain f ^
+    }
+    (∀i)(i ∈ I ⇒ x ∈ X(i))                                         by gen ^ with i
+  }
+  (∀i)(i ∈ I ⇒ x ∈ X(i)) ⇒ (∀k)(k ∈ K ⇒ x ∈ X(ap(F, k))) by assume p {
+    k ∈ K ⇒ x ∈ X(ap(F, k)) by assume m {
+      ap(F, k) ∈ I                                                 by ap_mem hm m
+      ap(F, k) ∈ I ⇒ x ∈ X(ap(F, k))                               by inst p
+      x ∈ X(ap(F, k))                                              by mp 1 2
+    }
+    (∀k)(k ∈ K ⇒ x ∈ X(ap(F, k)))                                  by gen ^ with k
+  }
+  x ∈ ⋂_k(K, X(ap(F, k))) ⇔ x ∈ ⋂_i(I, X(i))                       by taut a b 11 12
+  (∀x)(x ∈ ⋂_k(K, X(ap(F, k))) ⇔ x ∈ ⋂_i(I, X(i)))                 by gen ^ with x
+  _                                                                by ext_iff ^
+}
+
+-- Следствие (стр. 103): для постоянного семейства (X_ι = X_κ) ⋃ X_ι = X_α и ⋂ X_ι = X_α.
+theorem union_const {I A : term} {X : term 1} (ha : A ∈ I) (h : (∀i)(∀j)((i ∈ I ∧ j ∈ I) ⇒ X(i) = X(j))) : ⋃_i(I, X(i)) = X(A) {
+  a. x ∈ ⋃_i(I, X(i)) ⇔ (∃i)(i ∈ I ∧ x ∈ X(i))                     by mem_union
+  (∃i)(i ∈ I ∧ x ∈ X(i)) ⇒ x ∈ X(A) by assume e {
+    (i ∈ I ∧ x ∈ X(i)) ⇒ x ∈ X(A) by assume m {
+      (i ∈ I ∧ A ∈ I) ⇒ X(i) = X(A)                                by inst2 h
+      X(i) = X(A)                                                  by taut m ha ^
+      x ∈ X(i) ⇔ x ∈ X(A)                                          by eq_mem ^
+      x ∈ X(A)                                                     by taut m ^
+    }
+    (∀i)((i ∈ I ∧ x ∈ X(i)) ⇒ x ∈ X(A))                            by gen ^ with i
+    x ∈ X(A)                                                       by obtain e ^
+  }
+  x ∈ X(A) ⇒ (∃i)(i ∈ I ∧ x ∈ X(i)) by assume m {
+    A ∈ I ∧ x ∈ X(A)                                               by C20 ha m
+    (∃i)(i ∈ I ∧ x ∈ X(i))                                         by exists_intro ^
+  }
+  x ∈ ⋃_i(I, X(i)) ⇔ x ∈ X(A)                                      by taut a 2 3
+  (∀x)(x ∈ ⋃_i(I, X(i)) ⇔ x ∈ X(A))                                by gen ^ with x
+  _                                                                by ext_iff ^
+}
+
+theorem inter_const {I A : term} {X : term 1} (ha : A ∈ I) (h : (∀i)(∀j)((i ∈ I ∧ j ∈ I) ⇒ X(i) = X(j))) : ⋂_i(I, X(i)) = X(A) {
+  (∃x)(x ∈ I)                                                      by exists_intro ha
+  I ≠ ∅ ⇔ (∃x)(x ∈ I)                                              by nonempty
+  hi. I ≠ ∅                                                        by iff_mpr ^ ^^
+  a. x ∈ ⋂_i(I, X(i)) ⇔ (∀i)(i ∈ I ⇒ x ∈ X(i))                     by mem_inter hi
+  (∀i)(i ∈ I ⇒ x ∈ X(i)) ⇒ x ∈ X(A) by assume p {
+    A ∈ I ⇒ x ∈ X(A)                                               by inst p
+    x ∈ X(A)                                                       by mp ha ^
+  }
+  x ∈ X(A) ⇒ (∀i)(i ∈ I ⇒ x ∈ X(i)) by assume m {
+    i ∈ I ⇒ x ∈ X(i) by assume q {
+      (A ∈ I ∧ i ∈ I) ⇒ X(A) = X(i)                                by inst2 h
+      X(A) = X(i)                                                  by taut ha q ^
+      x ∈ X(A) ⇔ x ∈ X(i)                                          by eq_mem ^
+      x ∈ X(i)                                                     by taut m ^
+    }
+    (∀i)(i ∈ I ⇒ x ∈ X(i))                                         by gen ^ with i
+  }
+  x ∈ ⋂_i(I, X(i)) ⇔ x ∈ X(A)                                      by taut a 5 6
+  (∀x)(x ∈ ⋂_i(I, X(i)) ⇔ x ∈ X(A))                                by gen ^ with x
+  _                                                                by ext_iff ^
+}
+
+-- n° 2 (стр. 104): монотонность. Если Y_ι ⊂ X_ι, то ⋃ Y_ι ⊂ ⋃ X_ι и (I ≠ ∅) ⋂ Y_ι ⊂ ⋂ X_ι.
+theorem union_mono {I : term} {X Y : term 1} (h : (∀i)(i ∈ I ⇒ Y(i) ⊂ X(i))) : ⋃_i(I, Y(i)) ⊂ ⋃_i(I, X(i)) {
+  x ∈ ⋃_i(I, Y(i)) ⇒ x ∈ ⋃_i(I, X(i)) by assume m {
+    x ∈ ⋃_i(I, Y(i)) ⇔ (∃i)(i ∈ I ∧ x ∈ Y(i))                     by mem_union
+    e. (∃i)(i ∈ I ∧ x ∈ Y(i))                                      by iff_mp ^ m
+    (i ∈ I ∧ x ∈ Y(i)) ⇒ (i ∈ I ∧ x ∈ X(i)) by assume p {
+      i ∈ I ⇒ Y(i) ⊂ X(i)                                          by inst h
+      Y(i) ⊂ X(i)                                                  by taut p ^
+      x ∈ Y(i) ⇒ x ∈ X(i)                                          by inst ^
+      i ∈ I ∧ x ∈ X(i)                                             by taut p ^
+    }
+    (∀i)((i ∈ I ∧ x ∈ Y(i)) ⇒ (i ∈ I ∧ x ∈ X(i)))                  by gen ^ with i
+    (∃i)(i ∈ I ∧ x ∈ Y(i)) ⇒ (∃i)(i ∈ I ∧ x ∈ X(i))                by C31_exists ^
+    (∃i)(i ∈ I ∧ x ∈ X(i))                                         by mp e ^
+    x ∈ ⋃_i(I, X(i)) ⇔ (∃i)(i ∈ I ∧ x ∈ X(i))                      by mem_union
+    x ∈ ⋃_i(I, X(i))                                               by iff_mpr ^ ^^
+  }
+  _                                                                by gen ^ with x
+}
+
+theorem inter_mono {I : term} {X Y : term 1} (hi : I ≠ ∅) (h : (∀i)(i ∈ I ⇒ Y(i) ⊂ X(i))) : ⋂_i(I, Y(i)) ⊂ ⋂_i(I, X(i)) {
+  x ∈ ⋂_i(I, Y(i)) ⇒ x ∈ ⋂_i(I, X(i)) by assume m {
+    x ∈ ⋂_i(I, Y(i)) ⇔ (∀i)(i ∈ I ⇒ x ∈ Y(i))                     by mem_inter hi
+    p. (∀i)(i ∈ I ⇒ x ∈ Y(i))                                      by iff_mp ^ m
+    i ∈ I ⇒ x ∈ X(i) by assume q {
+      i ∈ I ⇒ x ∈ Y(i)                                             by inst p
+      i ∈ I ⇒ Y(i) ⊂ X(i)                                          by inst h
+      Y(i) ⊂ X(i)                                                  by mp q ^
+      x ∈ Y(i) ⇒ x ∈ X(i)                                          by inst ^
+      x ∈ X(i)                                                     by taut q 1 ^
+    }
+    (∀i)(i ∈ I ⇒ x ∈ X(i))                                         by gen ^ with i
+    x ∈ ⋂_i(I, X(i)) ⇔ (∀i)(i ∈ I ⇒ x ∈ X(i))                      by mem_inter hi
+    x ∈ ⋂_i(I, X(i))                                               by iff_mpr ^ ^^
+  }
+  _                                                                by gen ^ with x
+}
+
+-- Стр. 104: если J ⊂ I, то ⋃_J X_ι ⊂ ⋃_I X_ι и (J ≠ ∅) ⋂_I X_ι ⊂ ⋂_J X_ι.
+theorem union_sub_index {I J : term} {X : term 1} (h : J ⊂ I) : ⋃_i(J, X(i)) ⊂ ⋃_i(I, X(i)) {
+  x ∈ ⋃_i(J, X(i)) ⇒ x ∈ ⋃_i(I, X(i)) by assume m {
+    x ∈ ⋃_i(J, X(i)) ⇔ (∃i)(i ∈ J ∧ x ∈ X(i))                     by mem_union
+    e. (∃i)(i ∈ J ∧ x ∈ X(i))                                      by iff_mp ^ m
+    (i ∈ J ∧ x ∈ X(i)) ⇒ (i ∈ I ∧ x ∈ X(i)) by assume p {
+      i ∈ J ⇒ i ∈ I                                                by inst h
+      i ∈ I ∧ x ∈ X(i)                                             by taut p ^
+    }
+    (∀i)((i ∈ J ∧ x ∈ X(i)) ⇒ (i ∈ I ∧ x ∈ X(i)))                  by gen ^ with i
+    (∃i)(i ∈ J ∧ x ∈ X(i)) ⇒ (∃i)(i ∈ I ∧ x ∈ X(i))                by C31_exists ^
+    (∃i)(i ∈ I ∧ x ∈ X(i))                                         by mp e ^
+    x ∈ ⋃_i(I, X(i)) ⇔ (∃i)(i ∈ I ∧ x ∈ X(i))                      by mem_union
+    x ∈ ⋃_i(I, X(i))                                               by iff_mpr ^ ^^
+  }
+  _                                                                by gen ^ with x
+}
+
+theorem inter_sub_index {I J : term} {X : term 1} (h : J ⊂ I) (hj : J ≠ ∅) : ⋂_i(I, X(i)) ⊂ ⋂_i(J, X(i)) {
+  J ≠ ∅ ⇔ (∃x)(x ∈ J)                                              by nonempty
+  e. (∃i)(i ∈ J)                                                   by iff_mp ^ hj
+  i ∈ J ⇒ (∃i)(i ∈ I) by assume m {
+    i ∈ J ⇒ i ∈ I                                                  by inst h
+    i ∈ I                                                          by mp m ^
+    (∃i)(i ∈ I)                                                    by exists_intro ^
+  }
+  (∀i)(i ∈ J ⇒ (∃i)(i ∈ I))                                        by gen ^ with i
+  (∃i)(i ∈ I)                                                      by obtain e ^
+  I ≠ ∅ ⇔ (∃x)(x ∈ I)                                              by nonempty
+  hi. I ≠ ∅                                                        by iff_mpr ^ ^^
+  x ∈ ⋂_i(I, X(i)) ⇒ x ∈ ⋂_i(J, X(i)) by assume m {
+    x ∈ ⋂_i(I, X(i)) ⇔ (∀i)(i ∈ I ⇒ x ∈ X(i))                     by mem_inter hi
+    p. (∀i)(i ∈ I ⇒ x ∈ X(i))                                      by iff_mp ^ m
+    i ∈ J ⇒ x ∈ X(i) by assume q {
+      i ∈ J ⇒ i ∈ I                                                by inst h
+      i ∈ I ⇒ x ∈ X(i)                                             by inst p
+      x ∈ X(i)                                                     by taut q 1 2
+    }
+    (∀i)(i ∈ J ⇒ x ∈ X(i))                                         by gen ^ with i
+    x ∈ ⋂_i(J, X(i)) ⇔ (∀i)(i ∈ J ⇒ x ∈ X(i))                      by mem_inter hj
+    x ∈ ⋂_i(J, X(i))                                               by iff_mpr ^ ^^
+  }
+  _                                                                by gen ^ with x
+}
+
+-- Предложение 2 (стр. 104): "ассоциативность" объединения и пересечения.
+theorem union_assoc {I L : term} {J X : term 1} (h : I = ⋃_l(L, J(l))) : ⋃_i(I, X(i)) = ⋃_l(L, ⋃_i(J(l), X(i))) {
+  a. x ∈ ⋃_i(I, X(i)) ⇔ (∃i)(i ∈ I ∧ x ∈ X(i))                                     by mem_union
+  i ∈ I ⇔ i ∈ ⋃_l(L, J(l))                                                         by eq_mem h
+  i ∈ ⋃_l(L, J(l)) ⇔ (∃l)(l ∈ L ∧ i ∈ J(l))                                        by mem_union
+  (i ∈ I ∧ x ∈ X(i)) ⇔ ((∃l)(l ∈ L ∧ i ∈ J(l)) ∧ x ∈ X(i))                         by taut 2 3
+  (∀i)((i ∈ I ∧ x ∈ X(i)) ⇔ ((∃l)(l ∈ L ∧ i ∈ J(l)) ∧ x ∈ X(i)))                   by gen ^ with i
+  b. (∃i)(i ∈ I ∧ x ∈ X(i)) ⇔ (∃i)((∃l)(l ∈ L ∧ i ∈ J(l)) ∧ x ∈ X(i))              by C31_exists_iff ^
+  c. (∃l)(l ∈ L ∧ (∃i)(i ∈ J(l) ∧ x ∈ X(i))) ⇔ (∃i)((∃l)(l ∈ L ∧ i ∈ J(l)) ∧ x ∈ X(i))   by ex_assoc
+  d. x ∈ ⋃_l(L, ⋃_i(J(l), X(i))) ⇔ (∃l)(l ∈ L ∧ x ∈ ⋃_i(J(l), X(i)))               by mem_union
+  x ∈ ⋃_i(J(l), X(i)) ⇔ (∃i)(i ∈ J(l) ∧ x ∈ X(i))                                  by mem_union
+  (l ∈ L ∧ x ∈ ⋃_i(J(l), X(i))) ⇔ (l ∈ L ∧ (∃i)(i ∈ J(l) ∧ x ∈ X(i)))              by taut ^
+  (∀l)((l ∈ L ∧ x ∈ ⋃_i(J(l), X(i))) ⇔ (l ∈ L ∧ (∃i)(i ∈ J(l) ∧ x ∈ X(i))))        by gen ^ with l
+  f. (∃l)(l ∈ L ∧ x ∈ ⋃_i(J(l), X(i))) ⇔ (∃l)(l ∈ L ∧ (∃i)(i ∈ J(l) ∧ x ∈ X(i)))   by C31_exists_iff ^
+  x ∈ ⋃_i(I, X(i)) ⇔ x ∈ ⋃_l(L, ⋃_i(J(l), X(i)))                                   by taut a b c d f
+  (∀x)(x ∈ ⋃_i(I, X(i)) ⇔ x ∈ ⋃_l(L, ⋃_i(J(l), X(i))))                             by gen ^ with x
+  _                                                                                by ext_iff ^
+}
+
+theorem inter_assoc {I L : term} {J X : term 1} (h : I = ⋃_l(L, J(l))) (hl : L ≠ ∅) (hj : (∀l)(l ∈ L ⇒ J(l) ≠ ∅)) : ⋂_i(I, X(i)) = ⋂_l(L, ⋂_i(J(l), X(i))) {
+  a. i ∈ I ⇔ i ∈ ⋃_l(L, J(l))                                                      by eq_mem h
+  b. i ∈ ⋃_l(L, J(l)) ⇔ (∃l)(l ∈ L ∧ i ∈ J(l))                                     by mem_union
+  mi. i ∈ I ⇔ (∃l)(l ∈ L ∧ i ∈ J(l))                                               by taut a b
+  -- I ≠ ∅: возьмём l ∈ L и i ∈ J_l
+  L ≠ ∅ ⇔ (∃x)(x ∈ L)                                                              by nonempty
+  el. (∃l)(l ∈ L)                                                                  by iff_mp ^ hl
+  l ∈ L ⇒ (∃i)(i ∈ I) by assume m {
+    l ∈ L ⇒ J(l) ≠ ∅                                                               by inst hj
+    J(l) ≠ ∅                                                                       by mp m ^
+    J(l) ≠ ∅ ⇔ (∃x)(x ∈ J(l))                                                      by nonempty
+    ej. (∃i)(i ∈ J(l))                                                             by iff_mp ^ ^^
+    i ∈ J(l) ⇒ (∃i)(i ∈ I) by assume q {
+      l ∈ L ∧ i ∈ J(l)                                                             by C20 m q
+      (∃l)(l ∈ L ∧ i ∈ J(l))                                                       by exists_intro ^
+      i ∈ I                                                                        by taut mi ^
+      (∃i)(i ∈ I)                                                                  by exists_intro ^
+    }
+    (∀i)(i ∈ J(l) ⇒ (∃i)(i ∈ I))                                                   by gen ^ with i
+    (∃i)(i ∈ I)                                                                    by obtain ej ^
+  }
+  (∀l)(l ∈ L ⇒ (∃i)(i ∈ I))                                                        by gen ^ with l
+  (∃i)(i ∈ I)                                                                      by obtain el ^
+  I ≠ ∅ ⇔ (∃x)(x ∈ I)                                                              by nonempty
+  hi. I ≠ ∅                                                                        by iff_mpr ^ ^^
+  p. x ∈ ⋂_i(I, X(i)) ⇔ (∀i)(i ∈ I ⇒ x ∈ X(i))                                     by mem_inter hi
+  q. x ∈ ⋂_l(L, ⋂_i(J(l), X(i))) ⇔ (∀l)(l ∈ L ⇒ x ∈ ⋂_i(J(l), X(i)))               by mem_inter hl
+  l ∈ L ⇒ (x ∈ ⋂_i(J(l), X(i)) ⇔ (∀i)(i ∈ J(l) ⇒ x ∈ X(i))) by assume m {
+    l ∈ L ⇒ J(l) ≠ ∅                                                               by inst hj
+    J(l) ≠ ∅                                                                       by mp m ^
+    x ∈ ⋂_i(J(l), X(i)) ⇔ (∀i)(i ∈ J(l) ⇒ x ∈ X(i))                                by mem_inter ^
+  }
+  (l ∈ L ⇒ x ∈ ⋂_i(J(l), X(i))) ⇔ (l ∈ L ⇒ (∀i)(i ∈ J(l) ⇒ x ∈ X(i)))              by taut ^
+  (∀l)((l ∈ L ⇒ x ∈ ⋂_i(J(l), X(i))) ⇔ (l ∈ L ⇒ (∀i)(i ∈ J(l) ⇒ x ∈ X(i))))        by gen ^ with l
+  s. (∀l)(l ∈ L ⇒ x ∈ ⋂_i(J(l), X(i))) ⇔ (∀l)(l ∈ L ⇒ (∀i)(i ∈ J(l) ⇒ x ∈ X(i)))   by C31_iff ^
+  t. (∀i)((∃l)(l ∈ L ∧ i ∈ J(l)) ⇒ x ∈ X(i)) ⇔ (∀l)(l ∈ L ⇒ (∀i)(i ∈ J(l) ⇒ x ∈ X(i)))   by all_assoc
+  (i ∈ I ⇒ x ∈ X(i)) ⇔ ((∃l)(l ∈ L ∧ i ∈ J(l)) ⇒ x ∈ X(i))                         by taut mi
+  (∀i)((i ∈ I ⇒ x ∈ X(i)) ⇔ ((∃l)(l ∈ L ∧ i ∈ J(l)) ⇒ x ∈ X(i)))                   by gen ^ with i
+  u. (∀i)(i ∈ I ⇒ x ∈ X(i)) ⇔ (∀i)((∃l)(l ∈ L ∧ i ∈ J(l)) ⇒ x ∈ X(i))              by C31_iff ^
+  x ∈ ⋂_i(I, X(i)) ⇔ x ∈ ⋂_l(L, ⋂_i(J(l), X(i)))                                   by taut p q s t u
+  (∀x)(x ∈ ⋂_i(I, X(i)) ⇔ x ∈ ⋂_l(L, ⋂_i(J(l), X(i))))                             by gen ^ with x
+  _                                                                                by ext_iff ^
+}
+
+
+-- ⋂ X_ι лежит в каждом X_ι; общая часть всех X_ι лежит в ⋂ X_ι.
+theorem inter_sub_each {I T : term} {X : term 1} (hi : I ≠ ∅) (ht : T ∈ I) : ⋂_i(I, X(i)) ⊂ X(T) {
+  x ∈ ⋂_i(I, X(i)) ⇒ x ∈ X(T) by assume m {
+    x ∈ ⋂_i(I, X(i)) ⇔ (∀i)(i ∈ I ⇒ x ∈ X(i))                     by mem_inter hi
+    (∀i)(i ∈ I ⇒ x ∈ X(i))                                         by iff_mp ^ m
+    T ∈ I ⇒ x ∈ X(T)                                               by inst ^
+    x ∈ X(T)                                                       by mp ht ^
+  }
+  _                                                                by gen ^ with x
+}
+
+theorem sub_inter {I Z : term} {X : term 1} (hi : I ≠ ∅) (h : (∀i)(i ∈ I ⇒ Z ⊂ X(i))) : Z ⊂ ⋂_i(I, X(i)) {
+  x ∈ Z ⇒ x ∈ ⋂_i(I, X(i)) by assume m {
+    i ∈ I ⇒ x ∈ X(i) by assume q {
+      i ∈ I ⇒ Z ⊂ X(i)                                             by inst h
+      Z ⊂ X(i)                                                     by mp q ^
+      x ∈ Z ⇒ x ∈ X(i)                                             by inst ^
+      x ∈ X(i)                                                     by mp m ^
+    }
+    (∀i)(i ∈ I ⇒ x ∈ X(i))                                         by gen ^ with i
+    x ∈ ⋂_i(I, X(i)) ⇔ (∀i)(i ∈ I ⇒ x ∈ X(i))                      by mem_inter hi
+    x ∈ ⋂_i(I, X(i))                                               by iff_mpr ^ ^^
+  }
+  _                                                                by gen ^ with x
+}
+
+theorem sub_union {I T : term} {X : term 1} (ht : T ∈ I) : X(T) ⊂ ⋃_i(I, X(i)) {
+  x ∈ X(T) ⇒ x ∈ ⋃_i(I, X(i)) by assume m {
+    T ∈ I ∧ x ∈ X(T)                                               by C20 ht m
+    (∃i)(i ∈ I ∧ x ∈ X(i))                                         by exists_intro ^
+    x ∈ ⋃_i(I, X(i)) ⇔ (∃i)(i ∈ I ∧ x ∈ X(i))                      by mem_union
+    x ∈ ⋃_i(I, X(i))                                               by iff_mpr ^ ^^
+  }
+  _                                                                by gen ^ with x
+}
+
+-- n° 3, предложение 3 (стр. 105): Γ⟨⋃ X_ι⟩ = ⋃ Γ⟨X_ι⟩ и Γ⟨⋂ X_ι⟩ ⊂ ⋂ Γ⟨X_ι⟩.
+theorem img_union {G I : term} {X : term 1} : img(G, ⋃_i(I, X(i))) = ⋃_i(I, img(G, X(i))) {
+  a. y ∈ img(G, ⋃_i(I, X(i))) ⇔ (∃x)(x ∈ ⋃_i(I, X(i)) ∧ Ͻ(x, y) ∈ G)            by mem_img
+  x ∈ ⋃_i(I, X(i)) ⇔ (∃i)(i ∈ I ∧ x ∈ X(i))                                      by mem_union
+  (x ∈ ⋃_i(I, X(i)) ∧ Ͻ(x, y) ∈ G) ⇔ ((∃i)(i ∈ I ∧ x ∈ X(i)) ∧ Ͻ(x, y) ∈ G)       by taut ^
+  (∀x)((x ∈ ⋃_i(I, X(i)) ∧ Ͻ(x, y) ∈ G) ⇔ ((∃i)(i ∈ I ∧ x ∈ X(i)) ∧ Ͻ(x, y) ∈ G))   by gen ^ with x
+  b. (∃x)(x ∈ ⋃_i(I, X(i)) ∧ Ͻ(x, y) ∈ G) ⇔ (∃x)((∃i)(i ∈ I ∧ x ∈ X(i)) ∧ Ͻ(x, y) ∈ G)   by C31_exists_iff ^
+  c. (∃i)(i ∈ I ∧ (∃x)(x ∈ X(i) ∧ Ͻ(x, y) ∈ G)) ⇔ (∃x)((∃i)(i ∈ I ∧ x ∈ X(i)) ∧ Ͻ(x, y) ∈ G)   by ex_assoc
+  d. y ∈ ⋃_i(I, img(G, X(i))) ⇔ (∃i)(i ∈ I ∧ y ∈ img(G, X(i)))                   by mem_union
+  y ∈ img(G, X(i)) ⇔ (∃x)(x ∈ X(i) ∧ Ͻ(x, y) ∈ G)                                by mem_img
+  (i ∈ I ∧ y ∈ img(G, X(i))) ⇔ (i ∈ I ∧ (∃x)(x ∈ X(i) ∧ Ͻ(x, y) ∈ G))            by taut ^
+  (∀i)((i ∈ I ∧ y ∈ img(G, X(i))) ⇔ (i ∈ I ∧ (∃x)(x ∈ X(i) ∧ Ͻ(x, y) ∈ G)))      by gen ^ with i
+  f. (∃i)(i ∈ I ∧ y ∈ img(G, X(i))) ⇔ (∃i)(i ∈ I ∧ (∃x)(x ∈ X(i) ∧ Ͻ(x, y) ∈ G)) by C31_exists_iff ^
+  y ∈ img(G, ⋃_i(I, X(i))) ⇔ y ∈ ⋃_i(I, img(G, X(i)))                            by taut a b c d f
+  (∀y)(y ∈ img(G, ⋃_i(I, X(i))) ⇔ y ∈ ⋃_i(I, img(G, X(i))))                      by gen ^ with y
+  _                                                                              by ext_iff ^
+}
+
+theorem img_inter {G I : term} {X : term 1} (hi : I ≠ ∅) : img(G, ⋂_i(I, X(i))) ⊂ ⋂_i(I, img(G, X(i))) {
+  i ∈ I ⇒ img(G, ⋂_i(I, X(i))) ⊂ img(G, X(i)) by assume m {
+    ⋂_i(I, X(i)) ⊂ X(i)                                            by inter_sub_each hi m
+    img(G, ⋂_i(I, X(i))) ⊂ img(G, X(i))                            by img_mono ^
+  }
+  (∀i)(i ∈ I ⇒ img(G, ⋂_i(I, X(i))) ⊂ img(G, X(i)))                by gen ^ with i
+  _                                                                by sub_inter hi ^
+}
+
+-- Прообраз при отображении: x ∈ f⁻¹⟨Y⟩ ⇔ (x ∈ A и f(x) ∈ Y).
+theorem mem_preimg_map {F A B T Y : term} (hm : Map(F, A, B)) : T ∈ img(inv(F), Y) ⇔ (T ∈ A ∧ ap(F, T) ∈ Y) {
+  a. T ∈ img(inv(F), Y) ⇔ (∃y)(y ∈ Y ∧ Ͻ(T, y) ∈ F)                             by mem_preimg
+  Ͻ(T, y) ∈ F ⇔ (T ∈ A ∧ y = ap(F, T))                                          by map_mem hm
+  (y ∈ Y ∧ Ͻ(T, y) ∈ F) ⇔ (y = ap(F, T) ∧ (T ∈ A ∧ y ∈ Y))                      by taut ^
+  (∀y)((y ∈ Y ∧ Ͻ(T, y) ∈ F) ⇔ (y = ap(F, T) ∧ (T ∈ A ∧ y ∈ Y)))                by gen ^ with y
+  b. (∃y)(y ∈ Y ∧ Ͻ(T, y) ∈ F) ⇔ (∃y)(y = ap(F, T) ∧ (T ∈ A ∧ y ∈ Y))           by C31_exists_iff ^
+  c. (∃y)(y = ap(F, T) ∧ (T ∈ A ∧ y ∈ Y)) ⇔ (T ∈ A ∧ ap(F, T) ∈ Y)              by exists_eq
+  _                                                                             by taut a b c
+}
+
+-- Предложение 4 (стр. 105): для отображения f прообраз пересечения есть пересечение
+-- прообразов.
+theorem preimg_inter {F A B I : term} {Y : term 1} (hm : Map(F, A, B)) (hi : I ≠ ∅) : img(inv(F), ⋂_i(I, Y(i))) = ⋂_i(I, img(inv(F), Y(i))) {
+  I ≠ ∅ ⇔ (∃x)(x ∈ I)                                                           by nonempty
+  e. (∃i)(i ∈ I)                                                                by iff_mp ^ hi
+  a. x ∈ img(inv(F), ⋂_i(I, Y(i))) ⇔ (x ∈ A ∧ ap(F, x) ∈ ⋂_i(I, Y(i)))          by mem_preimg_map hm
+  b. ap(F, x) ∈ ⋂_i(I, Y(i)) ⇔ (∀i)(i ∈ I ⇒ ap(F, x) ∈ Y(i))                    by mem_inter hi
+  c. x ∈ ⋂_i(I, img(inv(F), Y(i))) ⇔ (∀i)(i ∈ I ⇒ x ∈ img(inv(F), Y(i)))        by mem_inter hi
+  x ∈ img(inv(F), Y(i)) ⇔ (x ∈ A ∧ ap(F, x) ∈ Y(i))                             by mem_preimg_map hm
+  (i ∈ I ⇒ x ∈ img(inv(F), Y(i))) ⇔ (i ∈ I ⇒ (x ∈ A ∧ ap(F, x) ∈ Y(i)))         by taut ^
+  (∀i)((i ∈ I ⇒ x ∈ img(inv(F), Y(i))) ⇔ (i ∈ I ⇒ (x ∈ A ∧ ap(F, x) ∈ Y(i))))   by gen ^ with i
+  d. (∀i)(i ∈ I ⇒ x ∈ img(inv(F), Y(i))) ⇔ (∀i)(i ∈ I ⇒ (x ∈ A ∧ ap(F, x) ∈ Y(i)))   by C31_iff ^
+  f. (∀i)(i ∈ I ⇒ (x ∈ A ∧ ap(F, x) ∈ Y(i))) ⇔ (x ∈ A ∧ (∀i)(i ∈ I ⇒ ap(F, x) ∈ Y(i)))   by forall_and_const e
+  x ∈ img(inv(F), ⋂_i(I, Y(i))) ⇔ x ∈ ⋂_i(I, img(inv(F), Y(i)))                 by taut a b c d f
+  (∀x)(x ∈ img(inv(F), ⋂_i(I, Y(i))) ⇔ x ∈ ⋂_i(I, img(inv(F), Y(i))))           by gen ^ with x
+  _                                                                             by ext_iff ^
+}
+
+-- Следствие (стр. 106): для инъекции f и семейства частей A с непустым I
+-- f⟨⋂ X_ι⟩ = ⋂ f⟨X_ι⟩.
+theorem img_inter_inj {F A B I : term} {X : term 1} (hf : Inj(F, A, B)) (hi : I ≠ ∅) (hx : (∀i)(i ∈ I ⇒ X(i) ⊂ A)) : img(F, ⋂_i(I, X(i))) = ⋂_i(I, img(F, X(i))) {
+  hm. Map(F, A, B)                                                              by taut hf
+  l. img(F, ⋂_i(I, X(i))) ⊂ ⋂_i(I, img(F, X(i)))                                by img_inter hi
+  I ≠ ∅ ⇔ (∃x)(x ∈ I)                                                           by nonempty
+  e. (∃i)(i ∈ I)                                                                by iff_mp ^ hi
+  y ∈ ⋂_i(I, img(F, X(i))) ⇒ y ∈ img(F, ⋂_i(I, X(i))) by assume m {
+    y ∈ ⋂_i(I, img(F, X(i))) ⇔ (∀i)(i ∈ I ⇒ y ∈ img(F, X(i)))                   by mem_inter hi
+    p. (∀i)(i ∈ I ⇒ y ∈ img(F, X(i)))                                           by iff_mp ^ m
+    -- y = f(x_i) с x_i ∈ X_i; по инъективности все x_i равны одному x_a
+    pi. i ∈ I ⇒ (∃x)(x ∈ X(i) ∧ y = ap(F, x)) by assume q {
+      i ∈ I ⇒ X(i) ⊂ A                                                          by inst hx
+      X(i) ⊂ A                                                                  by mp q ^
+      y ∈ img(F, X(i)) ⇔ (∃x)(x ∈ X(i) ∧ y = ap(F, x))                          by mem_img_map hm ^
+      i ∈ I ⇒ y ∈ img(F, X(i))                                                  by inst p
+      y ∈ img(F, X(i))                                                          by mp q ^
+      (∃x)(x ∈ X(i) ∧ y = ap(F, x))                                             by iff_mp 3 ^
+    }
+    pa. (∀i)(i ∈ I ⇒ (∃x)(x ∈ X(i) ∧ y = ap(F, x)))                             by gen pi with i
+    a ∈ I ⇒ y ∈ img(F, ⋂_i(I, X(i))) by assume ma {
+      a ∈ I ⇒ (∃x)(x ∈ X(a) ∧ y = ap(F, x))                                     by inst pa
+      ea. (∃x)(x ∈ X(a) ∧ y = ap(F, x))                                         by mp ma ^
+      (x ∈ X(a) ∧ y = ap(F, x)) ⇒ y ∈ img(F, ⋂_i(I, X(i))) by assume b {
+        a ∈ I ⇒ X(a) ⊂ A                                                        by inst hx
+        X(a) ⊂ A                                                                by mp ma ^
+        x ∈ X(a) ⇒ x ∈ A                                                        by inst ^
+        xa. x ∈ A                                                               by taut b ^
+        yx. y = ap(F, x)                                                        by taut b
+        i ∈ I ⇒ x ∈ X(i) by assume q {
+          i ∈ I ⇒ (∃x)(x ∈ X(i) ∧ y = ap(F, x))                                 by inst pa
+          ei. (∃x')(x' ∈ X(i) ∧ y = ap(F, x'))                                  by mp q ^
+          (x' ∈ X(i) ∧ y = ap(F, x')) ⇒ x ∈ X(i) by assume c {
+            i ∈ I ⇒ X(i) ⊂ A                                                    by inst hx
+            X(i) ⊂ A                                                            by mp q ^
+            x' ∈ X(i) ⇒ x' ∈ A                                                  by inst ^
+            xa'. x' ∈ A                                                         by taut c ^
+            yx'. y = ap(F, x')                                                  by taut c
+            ap(F, x) = ap(F, x')                                                by chain yx yx'
+            x = x'                                                              by inj_ap hf xa xa' ^
+            x ∈ X(i) ⇔ x' ∈ X(i)                                                by rcong ^
+            x ∈ X(i)                                                            by taut c ^
+          }
+          (∀x')((x' ∈ X(i) ∧ y = ap(F, x')) ⇒ x ∈ X(i))                         by gen ^ with x'
+          x ∈ X(i)                                                              by obtain ei ^
+        }
+        (∀i)(i ∈ I ⇒ x ∈ X(i))                                                  by gen ^ with i
+        x ∈ ⋂_i(I, X(i)) ⇔ (∀i)(i ∈ I ⇒ x ∈ X(i))                               by mem_inter hi
+        xi. x ∈ ⋂_i(I, X(i))                                                    by iff_mpr ^ ^^
+        Ͻ(x, y) ∈ F ⇔ (x ∈ A ∧ y = ap(F, x))                                    by map_mem hm
+        Ͻ(x, y) ∈ F                                                             by taut xa yx ^
+        x ∈ ⋂_i(I, X(i)) ∧ Ͻ(x, y) ∈ F                                          by C20 xi ^
+        (∃x)(x ∈ ⋂_i(I, X(i)) ∧ Ͻ(x, y) ∈ F)                                    by exists_intro ^
+        y ∈ img(F, ⋂_i(I, X(i))) ⇔ (∃x)(x ∈ ⋂_i(I, X(i)) ∧ Ͻ(x, y) ∈ F)         by mem_img
+        y ∈ img(F, ⋂_i(I, X(i)))                                                by iff_mpr ^ ^^
+      }
+      (∀x)((x ∈ X(a) ∧ y = ap(F, x)) ⇒ y ∈ img(F, ⋂_i(I, X(i))))                by gen ^ with x
+      y ∈ img(F, ⋂_i(I, X(i)))                                                  by obtain ea ^
+    }
+    (∀a)(a ∈ I ⇒ y ∈ img(F, ⋂_i(I, X(i))))                                      by gen ^ with a
+    y ∈ img(F, ⋂_i(I, X(i)))                                                    by obtain e ^
+  }
+  r. ⋂_i(I, img(F, X(i))) ⊂ img(F, ⋂_i(I, X(i)))                                by gen ^ with y
+  _                                                                             by ext l r
+}
+
+
+-- n° 4, предложение 5 (стр. 106): дополнение объединения и пересечения (в E).
+theorem compl_union {E I : term} {X : term 1} : ∁(E, ⋃_i(I, X(i))) = interE_i(E, I, ∁(E, X(i))) {
+  a. x ∈ ∁(E, ⋃_i(I, X(i))) ⇔ (x ∉ ⋃_i(I, X(i)) ∧ x ∈ E)                         by mem_compl
+  b. x ∈ ⋃_i(I, X(i)) ⇔ (∃i)(i ∈ I ∧ x ∈ X(i))                                    by mem_union
+  c. x ∈ interE_i(E, I, ∁(E, X(i))) ⇔ (x ∈ E ∧ (∀i)(i ∈ I ⇒ x ∈ ∁(E, X(i))))     by mem_interE
+  x ∈ ∁(E, X(i)) ⇔ (x ∉ X(i) ∧ x ∈ E)                                            by mem_compl
+  (i ∈ I ⇒ x ∈ ∁(E, X(i))) ⇔ ((i ∈ I ⇒ x ∉ X(i)) ∧ (i ∈ I ⇒ x ∈ E))              by taut ^
+  (∀i)((i ∈ I ⇒ x ∈ ∁(E, X(i))) ⇔ ((i ∈ I ⇒ x ∉ X(i)) ∧ (i ∈ I ⇒ x ∈ E)))        by gen ^ with i
+  d. (∀i)(i ∈ I ⇒ x ∈ ∁(E, X(i))) ⇔ (∀i)((i ∈ I ⇒ x ∉ X(i)) ∧ (i ∈ I ⇒ x ∈ E))   by C31_iff ^
+  f. (∀i)((i ∈ I ⇒ x ∉ X(i)) ∧ (i ∈ I ⇒ x ∈ E)) ⇔ ((∀i)(i ∈ I ⇒ x ∉ X(i)) ∧ (∀i)(i ∈ I ⇒ x ∈ E))   by C32
+  g. x ∈ E ⇒ (∀i)(i ∈ I ⇒ x ∈ E) by assume m {
+    i ∈ I ⇒ x ∈ E                                                                by taut m
+    (∀i)(i ∈ I ⇒ x ∈ E)                                                          by gen ^ with i
+  }
+  h. ¬(∃i)(i ∈ I ∧ x ∈ X(i)) ⇔ (∀i)¬(i ∈ I ∧ x ∈ X(i))                            by C29
+  ¬(i ∈ I ∧ x ∈ X(i)) ⇔ (i ∈ I ⇒ x ∉ X(i))                                       by taut
+  (∀i)(¬(i ∈ I ∧ x ∈ X(i)) ⇔ (i ∈ I ⇒ x ∉ X(i)))                                 by gen ^ with i
+  k. (∀i)¬(i ∈ I ∧ x ∈ X(i)) ⇔ (∀i)(i ∈ I ⇒ x ∉ X(i))                            by C31_iff ^
+  x ∈ ∁(E, ⋃_i(I, X(i))) ⇔ x ∈ interE_i(E, I, ∁(E, X(i)))                        by taut a b c d f g h k
+  (∀x)(x ∈ ∁(E, ⋃_i(I, X(i))) ⇔ x ∈ interE_i(E, I, ∁(E, X(i))))                  by gen ^ with x
+  _                                                                              by ext_iff ^
+}
+
+theorem compl_inter {E I : term} {X : term 1} : ∁(E, interE_i(E, I, X(i))) = ⋃_i(I, ∁(E, X(i))) {
+  a. x ∈ ∁(E, interE_i(E, I, X(i))) ⇔ (x ∉ interE_i(E, I, X(i)) ∧ x ∈ E)         by mem_compl
+  b. x ∈ interE_i(E, I, X(i)) ⇔ (x ∈ E ∧ (∀i)(i ∈ I ⇒ x ∈ X(i)))                 by mem_interE
+  c. x ∈ ⋃_i(I, ∁(E, X(i))) ⇔ (∃i)(i ∈ I ∧ x ∈ ∁(E, X(i)))                       by mem_union
+  x ∈ ∁(E, X(i)) ⇔ (x ∉ X(i) ∧ x ∈ E)                                            by mem_compl
+  (i ∈ I ∧ x ∈ ∁(E, X(i))) ⇔ ((i ∈ I ∧ x ∉ X(i)) ∧ x ∈ E)                        by taut ^
+  (∀i)((i ∈ I ∧ x ∈ ∁(E, X(i))) ⇔ ((i ∈ I ∧ x ∉ X(i)) ∧ x ∈ E))                  by gen ^ with i
+  d. (∃i)(i ∈ I ∧ x ∈ ∁(E, X(i))) ⇔ (∃i)((i ∈ I ∧ x ∉ X(i)) ∧ x ∈ E)             by C31_exists_iff ^
+  f. (∃i)((i ∈ I ∧ x ∉ X(i)) ∧ x ∈ E) ⇔ ((∃i)(i ∈ I ∧ x ∉ X(i)) ∧ x ∈ E)         by exists_and_right
+  g. ¬(∀i)(i ∈ I ⇒ x ∈ X(i)) ⇔ (∃i)¬(i ∈ I ⇒ x ∈ X(i))                           by C28
+  ¬(i ∈ I ⇒ x ∈ X(i)) ⇔ (i ∈ I ∧ x ∉ X(i))                                       by taut
+  (∀i)(¬(i ∈ I ⇒ x ∈ X(i)) ⇔ (i ∈ I ∧ x ∉ X(i)))                                 by gen ^ with i
+  h. (∃i)¬(i ∈ I ⇒ x ∈ X(i)) ⇔ (∃i)(i ∈ I ∧ x ∉ X(i))                            by C31_exists_iff ^
+  x ∈ ∁(E, interE_i(E, I, X(i))) ⇔ x ∈ ⋃_i(I, ∁(E, X(i)))                        by taut a b c d f g h
+  (∀x)(x ∈ ∁(E, interE_i(E, I, X(i))) ⇔ x ∈ ⋃_i(I, ∁(E, X(i))))                  by gen ^ with x
+  _                                                                              by ext_iff ^
+}
+
+-- n° 5. Объединение и пересечение двух множеств (стр. 106-107).
+theorem exists_set2 {R : rel 1} {X Y : term} : (∃z)(z ∈ set2(X, Y) ∧ R(z)) ⇔ (R(X) ∨ R(Y)) {
+  a. (∀z)(z ∈ set2(X, Y) ⇒ ¬R(z)) ⇔ (¬R(X) ∧ ¬R(Y))                    by forall_set2 with R(t) := ¬R(t); X := X; Y := Y
+  b. ¬(∃z)(z ∈ set2(X, Y) ∧ R(z)) ⇔ (∀z)¬(z ∈ set2(X, Y) ∧ R(z))       by C29
+  ¬(z ∈ set2(X, Y) ∧ R(z)) ⇔ (z ∈ set2(X, Y) ⇒ ¬R(z))                  by taut
+  (∀z)(¬(z ∈ set2(X, Y) ∧ R(z)) ⇔ (z ∈ set2(X, Y) ⇒ ¬R(z)))            by gen ^ with z
+  c. (∀z)¬(z ∈ set2(X, Y) ∧ R(z)) ⇔ (∀z)(z ∈ set2(X, Y) ⇒ ¬R(z))       by C31_iff ^
+  _                                                                    by taut a b c
+}
+
+theorem mem_cup {T A B : term} : T ∈ A ∪ B ⇔ (T ∈ A ∨ T ∈ B) {
+  a. T ∈ A ∪ B ⇔ (∃X)(X ∈ set2(A, B) ∧ T ∈ X)                          by mem_union
+  b. (∃X)(X ∈ set2(A, B) ∧ T ∈ X) ⇔ (T ∈ A ∨ T ∈ B)                    by exists_set2 with R(t) := T ∈ t; X := A; Y := B
+  _                                                                    by C22' a b
+}
+
+theorem set2_nonempty {A B : term} : set2(A, B) ≠ ∅ {
+  A ∈ set2(A, B) ⇔ (A = A ∨ A = B)                                     by mem_set2
+  A = A                                                                by T1
+  A ∈ set2(A, B)                                                       by taut 1 2
+  (∃x)(x ∈ set2(A, B))                                                 by exists_intro ^
+  set2(A, B) ≠ ∅ ⇔ (∃x)(x ∈ set2(A, B))                                by nonempty
+  _                                                                    by iff_mpr ^ ^^
+}
+
+theorem mem_cap {T A B : term} : T ∈ A ∩ B ⇔ (T ∈ A ∧ T ∈ B) {
+  set2(A, B) ≠ ∅                                                       by set2_nonempty
+  a. T ∈ A ∩ B ⇔ (∀X)(X ∈ set2(A, B) ⇒ T ∈ X)                          by mem_inter ^
+  b. (∀X)(X ∈ set2(A, B) ⇒ T ∈ X) ⇔ (T ∈ A ∧ T ∈ B)                    by forall_set2 with R(t) := T ∈ t; X := A; Y := B
+  _                                                                    by C22' a b
+}
+
+-- {x, y} = {x} ∪ {y}; {x, y, z} = {x, y} ∪ {z}.
+abbrev set3 (X Y Z : term) := set2(X, Y) ∪ set1(Z)
+
+theorem set2_cup {X Y : term} : set2(X, Y) = set1(X) ∪ set1(Y) {
+  a. z ∈ set2(X, Y) ⇔ (z = X ∨ z = Y)                                  by mem_set2
+  b. z ∈ set1(X) ∪ set1(Y) ⇔ (z ∈ set1(X) ∨ z ∈ set1(Y))              by mem_cup
+  c. z ∈ set1(X) ⇔ z = X                                               by mem_set1
+  d. z ∈ set1(Y) ⇔ z = Y                                               by mem_set1
+  z ∈ set2(X, Y) ⇔ z ∈ set1(X) ∪ set1(Y)                               by taut a b c d
+  (∀z)(z ∈ set2(X, Y) ⇔ z ∈ set1(X) ∪ set1(Y))                         by gen ^ with z
+  _                                                                    by ext_iff ^
+}
+
+theorem mem_set3 {T X Y Z : term} : T ∈ set3(X, Y, Z) ⇔ (T = X ∨ (T = Y ∨ T = Z)) {
+  a. T ∈ set3(X, Y, Z) ⇔ (T ∈ set2(X, Y) ∨ T ∈ set1(Z))                by mem_cup
+  b. T ∈ set2(X, Y) ⇔ (T = X ∨ T = Y)                                  by mem_set2
+  c. T ∈ set1(Z) ⇔ T = Z                                               by mem_set1
+  _                                                                    by taut a b c
+}
+
+-- Формулы (стр. 107): коммутативность, ассоциативность, дистрибутивность.
+theorem cup_comm {A B : term} : A ∪ B = B ∪ A {
+  a. x ∈ A ∪ B ⇔ (x ∈ A ∨ x ∈ B)                                       by mem_cup
+  b. x ∈ B ∪ A ⇔ (x ∈ B ∨ x ∈ A)                                       by mem_cup
+  x ∈ A ∪ B ⇔ x ∈ B ∪ A                                                by taut a b
+  (∀x)(x ∈ A ∪ B ⇔ x ∈ B ∪ A)                                          by gen ^ with x
+  _                                                                    by ext_iff ^
+}
+
+theorem cap_comm {A B : term} : A ∩ B = B ∩ A {
+  a. x ∈ A ∩ B ⇔ (x ∈ A ∧ x ∈ B)                                       by mem_cap
+  b. x ∈ B ∩ A ⇔ (x ∈ B ∧ x ∈ A)                                       by mem_cap
+  x ∈ A ∩ B ⇔ x ∈ B ∩ A                                                by taut a b
+  (∀x)(x ∈ A ∩ B ⇔ x ∈ B ∩ A)                                          by gen ^ with x
+  _                                                                    by ext_iff ^
+}
+
+theorem cup_assoc {A B C : term} : A ∪ (B ∪ C) = (A ∪ B) ∪ C {
+  a. x ∈ A ∪ (B ∪ C) ⇔ (x ∈ A ∨ x ∈ B ∪ C)                             by mem_cup
+  b. x ∈ B ∪ C ⇔ (x ∈ B ∨ x ∈ C)                                       by mem_cup
+  c. x ∈ (A ∪ B) ∪ C ⇔ (x ∈ A ∪ B ∨ x ∈ C)                             by mem_cup
+  d. x ∈ A ∪ B ⇔ (x ∈ A ∨ x ∈ B)                                       by mem_cup
+  x ∈ A ∪ (B ∪ C) ⇔ x ∈ (A ∪ B) ∪ C                                    by taut a b c d
+  (∀x)(x ∈ A ∪ (B ∪ C) ⇔ x ∈ (A ∪ B) ∪ C)                              by gen ^ with x
+  _                                                                    by ext_iff ^
+}
+
+theorem cap_assoc {A B C : term} : A ∩ (B ∩ C) = (A ∩ B) ∩ C {
+  a. x ∈ A ∩ (B ∩ C) ⇔ (x ∈ A ∧ x ∈ B ∩ C)                             by mem_cap
+  b. x ∈ B ∩ C ⇔ (x ∈ B ∧ x ∈ C)                                       by mem_cap
+  c. x ∈ (A ∩ B) ∩ C ⇔ (x ∈ A ∩ B ∧ x ∈ C)                             by mem_cap
+  d. x ∈ A ∩ B ⇔ (x ∈ A ∧ x ∈ B)                                       by mem_cap
+  x ∈ A ∩ (B ∩ C) ⇔ x ∈ (A ∩ B) ∩ C                                    by taut a b c d
+  (∀x)(x ∈ A ∩ (B ∩ C) ⇔ x ∈ (A ∩ B) ∩ C)                              by gen ^ with x
+  _                                                                    by ext_iff ^
+}
+
+theorem cup_cap_distrib {A B C : term} : A ∪ (B ∩ C) = (A ∪ B) ∩ (A ∪ C) {
+  a. x ∈ A ∪ (B ∩ C) ⇔ (x ∈ A ∨ x ∈ B ∩ C)                             by mem_cup
+  b. x ∈ B ∩ C ⇔ (x ∈ B ∧ x ∈ C)                                       by mem_cap
+  c. x ∈ (A ∪ B) ∩ (A ∪ C) ⇔ (x ∈ A ∪ B ∧ x ∈ A ∪ C)                   by mem_cap
+  d. x ∈ A ∪ B ⇔ (x ∈ A ∨ x ∈ B)                                       by mem_cup
+  f. x ∈ A ∪ C ⇔ (x ∈ A ∨ x ∈ C)                                       by mem_cup
+  x ∈ A ∪ (B ∩ C) ⇔ x ∈ (A ∪ B) ∩ (A ∪ C)                              by taut a b c d f
+  (∀x)(x ∈ A ∪ (B ∩ C) ⇔ x ∈ (A ∪ B) ∩ (A ∪ C))                        by gen ^ with x
+  _                                                                    by ext_iff ^
+}
+
+theorem cap_cup_distrib {A B C : term} : A ∩ (B ∪ C) = (A ∩ B) ∪ (A ∩ C) {
+  a. x ∈ A ∩ (B ∪ C) ⇔ (x ∈ A ∧ x ∈ B ∪ C)                             by mem_cap
+  b. x ∈ B ∪ C ⇔ (x ∈ B ∨ x ∈ C)                                       by mem_cup
+  c. x ∈ (A ∩ B) ∪ (A ∩ C) ⇔ (x ∈ A ∩ B ∨ x ∈ A ∩ C)                   by mem_cup
+  d. x ∈ A ∩ B ⇔ (x ∈ A ∧ x ∈ B)                                       by mem_cap
+  f. x ∈ A ∩ C ⇔ (x ∈ A ∧ x ∈ C)                                       by mem_cap
+  x ∈ A ∩ (B ∪ C) ⇔ x ∈ (A ∩ B) ∪ (A ∩ C)                              by taut a b c d f
+  (∀x)(x ∈ A ∩ (B ∪ C) ⇔ x ∈ (A ∩ B) ∪ (A ∩ C))                        by gen ^ with x
+  _                                                                    by ext_iff ^
+}
+
+-- A ⊂ B ⇔ A ∪ B = B ⇔ A ∩ B = A.
+theorem sub_iff_cup {A B : term} : A ⊂ B ⇔ A ∪ B = B {
+  a. A ∪ B = B ⇔ (∀x)(x ∈ A ∪ B ⇔ x ∈ B)                               by eq_iff_mem
+  b. x ∈ A ∪ B ⇔ (x ∈ A ∨ x ∈ B)                                       by mem_cup
+  (x ∈ A ⇒ x ∈ B) ⇔ (x ∈ A ∪ B ⇔ x ∈ B)                                by taut b
+  (∀x)((x ∈ A ⇒ x ∈ B) ⇔ (x ∈ A ∪ B ⇔ x ∈ B))                          by gen ^ with x
+  c. A ⊂ B ⇔ (∀x)(x ∈ A ∪ B ⇔ x ∈ B)                                   by C31_iff ^
+  _                                                                    by taut a c
+}
+
+theorem sub_iff_cap {A B : term} : A ⊂ B ⇔ A ∩ B = A {
+  a. A ∩ B = A ⇔ (∀x)(x ∈ A ∩ B ⇔ x ∈ A)                               by eq_iff_mem
+  b. x ∈ A ∩ B ⇔ (x ∈ A ∧ x ∈ B)                                       by mem_cap
+  (x ∈ A ⇒ x ∈ B) ⇔ (x ∈ A ∩ B ⇔ x ∈ A)                                by taut b
+  (∀x)((x ∈ A ⇒ x ∈ B) ⇔ (x ∈ A ∩ B ⇔ x ∈ A))                          by gen ^ with x
+  c. A ⊂ B ⇔ (∀x)(x ∈ A ∩ B ⇔ x ∈ A)                                   by C31_iff ^
+  _                                                                    by taut a c
+}
+
+-- Дополнения (стр. 107): ∁(A ∪ B) = ∁A ∩ ∁B, ∁(A ∩ B) = ∁A ∪ ∁B, A ∪ ∁A = E, A ∩ ∁A = ∅.
+theorem compl_cup {E A B : term} : ∁(E, A ∪ B) = ∁(E, A) ∩ ∁(E, B) {
+  a. x ∈ ∁(E, A ∪ B) ⇔ (x ∉ A ∪ B ∧ x ∈ E)                             by mem_compl
+  b. x ∈ A ∪ B ⇔ (x ∈ A ∨ x ∈ B)                                       by mem_cup
+  c. x ∈ ∁(E, A) ∩ ∁(E, B) ⇔ (x ∈ ∁(E, A) ∧ x ∈ ∁(E, B))               by mem_cap
+  d. x ∈ ∁(E, A) ⇔ (x ∉ A ∧ x ∈ E)                                     by mem_compl
+  f. x ∈ ∁(E, B) ⇔ (x ∉ B ∧ x ∈ E)                                     by mem_compl
+  x ∈ ∁(E, A ∪ B) ⇔ x ∈ ∁(E, A) ∩ ∁(E, B)                              by taut a b c d f
+  (∀x)(x ∈ ∁(E, A ∪ B) ⇔ x ∈ ∁(E, A) ∩ ∁(E, B))                        by gen ^ with x
+  _                                                                    by ext_iff ^
+}
+
+theorem compl_cap {E A B : term} : ∁(E, A ∩ B) = ∁(E, A) ∪ ∁(E, B) {
+  a. x ∈ ∁(E, A ∩ B) ⇔ (x ∉ A ∩ B ∧ x ∈ E)                             by mem_compl
+  b. x ∈ A ∩ B ⇔ (x ∈ A ∧ x ∈ B)                                       by mem_cap
+  c. x ∈ ∁(E, A) ∪ ∁(E, B) ⇔ (x ∈ ∁(E, A) ∨ x ∈ ∁(E, B))               by mem_cup
+  d. x ∈ ∁(E, A) ⇔ (x ∉ A ∧ x ∈ E)                                     by mem_compl
+  f. x ∈ ∁(E, B) ⇔ (x ∉ B ∧ x ∈ E)                                     by mem_compl
+  x ∈ ∁(E, A ∩ B) ⇔ x ∈ ∁(E, A) ∪ ∁(E, B)                              by taut a b c d f
+  (∀x)(x ∈ ∁(E, A ∩ B) ⇔ x ∈ ∁(E, A) ∪ ∁(E, B))                        by gen ^ with x
+  _                                                                    by ext_iff ^
+}
+
+theorem cup_compl {E A : term} (h : A ⊂ E) : A ∪ ∁(E, A) = E {
+  a. x ∈ A ∪ ∁(E, A) ⇔ (x ∈ A ∨ x ∈ ∁(E, A))                           by mem_cup
+  b. x ∈ ∁(E, A) ⇔ (x ∉ A ∧ x ∈ E)                                     by mem_compl
+  c. x ∈ A ⇒ x ∈ E                                                     by inst h
+  x ∈ A ∪ ∁(E, A) ⇔ x ∈ E                                              by taut a b c
+  (∀x)(x ∈ A ∪ ∁(E, A) ⇔ x ∈ E)                                        by gen ^ with x
+  _                                                                    by ext_iff ^
+}
+
+theorem cap_compl {E A : term} : A ∩ ∁(E, A) = ∅ {
+  a. x ∈ A ∩ ∁(E, A) ⇔ (x ∈ A ∧ x ∈ ∁(E, A))                           by mem_cap
+  b. x ∈ ∁(E, A) ⇔ (x ∉ A ∧ x ∈ E)                                     by mem_compl
+  x ∉ A ∩ ∁(E, A)                                                      by taut a b
+  (∀x)(x ∉ A ∩ ∁(E, A))                                                by gen ^ with x
+  (∀x)(x ∉ A ∩ ∁(E, A)) ⇔ A ∩ ∁(E, A) = ∅                              by empty_iff
+  _                                                                    by iff_mp ^ ^^
+}
+
+-- Образы (стр. 107): Γ⟨A ∪ B⟩ = Γ⟨A⟩ ∪ Γ⟨B⟩, Γ⟨A ∩ B⟩ ⊂ Γ⟨A⟩ ∩ Γ⟨B⟩,
+-- f⁻¹⟨A ∩ B⟩ = f⁻¹⟨A⟩ ∩ f⁻¹⟨B⟩.
+theorem img_cup {G A B : term} : img(G, A ∪ B) = img(G, A) ∪ img(G, B) {
+  a. y ∈ img(G, A ∪ B) ⇔ (∃x)(x ∈ A ∪ B ∧ Ͻ(x, y) ∈ G)                 by mem_img
+  x ∈ A ∪ B ⇔ (x ∈ A ∨ x ∈ B)                                          by mem_cup
+  (x ∈ A ∪ B ∧ Ͻ(x, y) ∈ G) ⇔ ((x ∈ A ∧ Ͻ(x, y) ∈ G) ∨ (x ∈ B ∧ Ͻ(x, y) ∈ G))   by taut ^
+  (∀x)((x ∈ A ∪ B ∧ Ͻ(x, y) ∈ G) ⇔ ((x ∈ A ∧ Ͻ(x, y) ∈ G) ∨ (x ∈ B ∧ Ͻ(x, y) ∈ G)))   by gen ^ with x
+  b. (∃x)(x ∈ A ∪ B ∧ Ͻ(x, y) ∈ G) ⇔ (∃x)((x ∈ A ∧ Ͻ(x, y) ∈ G) ∨ (x ∈ B ∧ Ͻ(x, y) ∈ G))   by C31_exists_iff ^
+  c. (∃x)((x ∈ A ∧ Ͻ(x, y) ∈ G) ∨ (x ∈ B ∧ Ͻ(x, y) ∈ G)) ⇔ ((∃x)(x ∈ A ∧ Ͻ(x, y) ∈ G) ∨ (∃x)(x ∈ B ∧ Ͻ(x, y) ∈ G))   by C32'
+  d. y ∈ img(G, A) ∪ img(G, B) ⇔ (y ∈ img(G, A) ∨ y ∈ img(G, B))       by mem_cup
+  f. y ∈ img(G, A) ⇔ (∃x)(x ∈ A ∧ Ͻ(x, y) ∈ G)                         by mem_img
+  g. y ∈ img(G, B) ⇔ (∃x)(x ∈ B ∧ Ͻ(x, y) ∈ G)                         by mem_img
+  y ∈ img(G, A ∪ B) ⇔ y ∈ img(G, A) ∪ img(G, B)                        by taut a b c d f g
+  (∀y)(y ∈ img(G, A ∪ B) ⇔ y ∈ img(G, A) ∪ img(G, B))                  by gen ^ with y
+  _                                                                    by ext_iff ^
+}
+
+theorem img_cap {G A B : term} : img(G, A ∩ B) ⊂ img(G, A) ∩ img(G, B) {
+  x ∈ A ∩ B ⇔ (x ∈ A ∧ x ∈ B)                                          by mem_cap
+  x ∈ A ∩ B ⇒ x ∈ A                                                    by taut ^
+  A ∩ B ⊂ A                                                            by gen ^ with x
+  l. img(G, A ∩ B) ⊂ img(G, A)                                         by img_mono ^
+  x ∈ A ∩ B ⇒ x ∈ B                                                    by taut 1
+  A ∩ B ⊂ B                                                            by gen ^ with x
+  r. img(G, A ∩ B) ⊂ img(G, B)                                         by img_mono ^
+  y ∈ img(G, A ∩ B) ⇒ y ∈ img(G, A) ∩ img(G, B) by assume m {
+    y ∈ img(G, A ∩ B) ⇒ y ∈ img(G, A)                                  by inst l
+    y ∈ img(G, A ∩ B) ⇒ y ∈ img(G, B)                                  by inst r
+    y ∈ img(G, A) ∩ img(G, B) ⇔ (y ∈ img(G, A) ∧ y ∈ img(G, B))        by mem_cap
+    y ∈ img(G, A) ∩ img(G, B)                                          by taut m 1 2 3
+  }
+  _                                                                    by gen ^ with y
+}
+
+theorem preimg_cap {F E B A A' : term} (hm : Map(F, E, B)) : img(inv(F), A ∩ A') = img(inv(F), A) ∩ img(inv(F), A') {
+  a. x ∈ img(inv(F), A ∩ A') ⇔ (x ∈ E ∧ ap(F, x) ∈ A ∩ A')             by mem_preimg_map hm
+  b. ap(F, x) ∈ A ∩ A' ⇔ (ap(F, x) ∈ A ∧ ap(F, x) ∈ A')                by mem_cap
+  c. x ∈ img(inv(F), A) ∩ img(inv(F), A') ⇔ (x ∈ img(inv(F), A) ∧ x ∈ img(inv(F), A'))   by mem_cap
+  d. x ∈ img(inv(F), A) ⇔ (x ∈ E ∧ ap(F, x) ∈ A)                       by mem_preimg_map hm
+  f. x ∈ img(inv(F), A') ⇔ (x ∈ E ∧ ap(F, x) ∈ A')                     by mem_preimg_map hm
+  x ∈ img(inv(F), A ∩ A') ⇔ x ∈ img(inv(F), A) ∩ img(inv(F), A')       by taut a b c d f
+  (∀x)(x ∈ img(inv(F), A ∩ A') ⇔ x ∈ img(inv(F), A) ∩ img(inv(F), A'))   by gen ^ with x
+  _                                                                    by ext_iff ^
+}
+
+-- Предложение 6 (стр. 108): f⁻¹⟨B − Y⟩ = f⁻¹⟨B⟩ − f⁻¹⟨Y⟩ (B − Y это ∁(B, Y)).
+theorem preimg_compl {F A B Y : term} (hm : Map(F, A, B)) : img(inv(F), ∁(B, Y)) = ∁(img(inv(F), B), img(inv(F), Y)) {
+  a. x ∈ img(inv(F), ∁(B, Y)) ⇔ (x ∈ A ∧ ap(F, x) ∈ ∁(B, Y))           by mem_preimg_map hm
+  b. ap(F, x) ∈ ∁(B, Y) ⇔ (ap(F, x) ∉ Y ∧ ap(F, x) ∈ B)                by mem_compl
+  c. x ∈ ∁(img(inv(F), B), img(inv(F), Y)) ⇔ (x ∉ img(inv(F), Y) ∧ x ∈ img(inv(F), B))   by mem_compl
+  d. x ∈ img(inv(F), B) ⇔ (x ∈ A ∧ ap(F, x) ∈ B)                       by mem_preimg_map hm
+  f. x ∈ img(inv(F), Y) ⇔ (x ∈ A ∧ ap(F, x) ∈ Y)                       by mem_preimg_map hm
+  x ∈ img(inv(F), ∁(B, Y)) ⇔ x ∈ ∁(img(inv(F), B), img(inv(F), Y))     by taut a b c d f
+  (∀x)(x ∈ img(inv(F), ∁(B, Y)) ⇔ x ∈ ∁(img(inv(F), B), img(inv(F), Y)))   by gen ^ with x
+  _                                                                    by ext_iff ^
+}
+
+-- Следствие (стр. 108): для инъекции f и X ⊂ A: f⟨A − X⟩ = f⟨A⟩ − f⟨X⟩.
+theorem img_compl_inj {F A B X : term} (hf : Inj(F, A, B)) (hx : X ⊂ A) : img(F, ∁(A, X)) = ∁(img(F, A), img(F, X)) {
+  hm. Map(F, A, B)                                                     by taut hf
+  aa. A ⊂ A                                                            by subset_refl
+  y ∈ ∁(A, X) ⇔ (y ∉ X ∧ y ∈ A)                                        by mem_compl
+  y ∈ ∁(A, X) ⇒ y ∈ A                                                  by taut ^
+  ca. ∁(A, X) ⊂ A                                                      by gen ^ with y
+  a. y ∈ img(F, ∁(A, X)) ⇔ (∃x)(x ∈ ∁(A, X) ∧ y = ap(F, x))            by mem_img_map hm ca
+  b. y ∈ ∁(img(F, A), img(F, X)) ⇔ (y ∉ img(F, X) ∧ y ∈ img(F, A))     by mem_compl
+  c. y ∈ img(F, A) ⇔ (∃x)(x ∈ A ∧ y = ap(F, x))                        by mem_img_map hm aa
+  d. y ∈ img(F, X) ⇔ (∃x)(x ∈ X ∧ y = ap(F, x))                        by mem_img_map hm hx
+  (∃x)(x ∈ ∁(A, X) ∧ y = ap(F, x)) ⇒ (y ∉ img(F, X) ∧ y ∈ img(F, A)) by assume e {
+    (x ∈ ∁(A, X) ∧ y = ap(F, x)) ⇒ (y ∉ img(F, X) ∧ y ∈ img(F, A)) by assume m {
+      x ∈ ∁(A, X) ⇔ (x ∉ X ∧ x ∈ A)                                    by mem_compl
+      xa. x ∈ A                                                        by taut m ^
+      nx. x ∉ X                                                        by taut m 1
+      yx. y = ap(F, x)                                                 by taut m
+      x ∈ A ∧ y = ap(F, x)                                             by C20 xa yx
+      (∃x)(x ∈ A ∧ y = ap(F, x))                                       by exists_intro ^
+      ia. y ∈ img(F, A)                                                by taut c ^
+      (∃x')(x' ∈ X ∧ y = ap(F, x')) ⇒ x ∈ X by assume e' {
+        (x' ∈ X ∧ y = ap(F, x')) ⇒ x ∈ X by assume m' {
+          x' ∈ X ⇒ x' ∈ A                                              by inst hx
+          xa'. x' ∈ A                                                  by taut m' ^
+          yx'. y = ap(F, x')                                           by taut m'
+          ap(F, x) = ap(F, x')                                         by chain yx yx'
+          x = x'                                                       by inj_ap hf xa xa' ^
+          x ∈ X ⇔ x' ∈ X                                               by rcong ^
+          x ∈ X                                                        by taut m' ^
+        }
+        (∀x')((x' ∈ X ∧ y = ap(F, x')) ⇒ x ∈ X)                        by gen ^ with x'
+        x ∈ X                                                          by obtain e' ^
+      }
+      y ∉ img(F, X)                                                    by taut d nx ^
+      y ∉ img(F, X) ∧ y ∈ img(F, A)                                    by C20 ^ ia
+    }
+    (∀x)((x ∈ ∁(A, X) ∧ y = ap(F, x)) ⇒ (y ∉ img(F, X) ∧ y ∈ img(F, A)))   by gen ^ with x
+    y ∉ img(F, X) ∧ y ∈ img(F, A)                                      by obtain e ^
+  }
+  (y ∉ img(F, X) ∧ y ∈ img(F, A)) ⇒ (∃x)(x ∈ ∁(A, X) ∧ y = ap(F, x)) by assume m {
+    ea. (∃x)(x ∈ A ∧ y = ap(F, x))                                     by taut c m
+    (x ∈ A ∧ y = ap(F, x)) ⇒ (∃x)(x ∈ ∁(A, X) ∧ y = ap(F, x)) by assume p {
+      x ∈ X ⇒ y ∈ img(F, X) by assume q {
+        x ∈ X ∧ y = ap(F, x)                                           by taut q p
+        (∃x)(x ∈ X ∧ y = ap(F, x))                                     by exists_intro ^
+        y ∈ img(F, X)                                                  by taut d ^
+      }
+      x ∈ ∁(A, X) ⇔ (x ∉ X ∧ x ∈ A)                                    by mem_compl
+      x ∈ ∁(A, X) ∧ y = ap(F, x)                                       by taut m p 1 2
+      (∃x)(x ∈ ∁(A, X) ∧ y = ap(F, x))                                 by exists_intro ^
+    }
+    (∀x)((x ∈ A ∧ y = ap(F, x)) ⇒ (∃x)(x ∈ ∁(A, X) ∧ y = ap(F, x)))    by gen ^ with x
+    (∃x)(x ∈ ∁(A, X) ∧ y = ap(F, x))                                   by obtain ea ^
+  }
+  y ∈ img(F, ∁(A, X)) ⇔ y ∈ ∁(img(F, A), img(F, X))                    by taut a b 10 11
+  (∀y)(y ∈ img(F, ∁(A, X)) ⇔ y ∈ ∁(img(F, A), img(F, X)))              by gen ^ with y
+  _                                                                    by ext_iff ^
+}
+
+
+-- n° 6 (стр. 108). Подсемейство покрытия, которое тоже покрытие, мельче его.
+theorem finer_sub_index {I J : term} {X : term 1} (h : J ⊂ I) : Finer_i(J, I, X(i), X(i)) {
+  k ∈ J ⇒ (∃i)(i ∈ I ∧ X(k) ⊂ X(i)) by assume m {
+    k ∈ J ⇒ k ∈ I                                                    by inst h
+    k ∈ I                                                            by mp m ^
+    X(k) ⊂ X(k)                                                      by subset_refl
+    k ∈ I ∧ X(k) ⊂ X(k)                                              by C20 2 3
+    (∃i)(i ∈ I ∧ X(k) ⊂ X(i))                                        by exists_intro ^
+  }
+  _                                                                  by gen ^ with k
+}
+
+-- "Мельче" транзитивно.
+theorem finer_trans {I K L : term} {X Y Z : term 1} (h1 : Finer_i(L, K, Z(i), Y(i))) (h2 : Finer_i(K, I, Y(i), X(i))) : Finer_i(L, I, Z(i), X(i)) {
+  l ∈ L ⇒ (∃i)(i ∈ I ∧ Z(l) ⊂ X(i)) by assume m {
+    l ∈ L ⇒ (∃k)(k ∈ K ∧ Z(l) ⊂ Y(k))                                by inst h1
+    e. (∃k)(k ∈ K ∧ Z(l) ⊂ Y(k))                                     by mp m ^
+    (k ∈ K ∧ Z(l) ⊂ Y(k)) ⇒ (∃i)(i ∈ I ∧ Z(l) ⊂ X(i)) by assume p {
+      k ∈ K ⇒ (∃i)(i ∈ I ∧ Y(k) ⊂ X(i))                              by inst h2
+      f. (∃i)(i ∈ I ∧ Y(k) ⊂ X(i))                                   by taut p ^
+      (i ∈ I ∧ Y(k) ⊂ X(i)) ⇒ (i ∈ I ∧ Z(l) ⊂ X(i)) by assume q {
+        Z(l) ⊂ Y(k)                                                  by taut p
+        Y(k) ⊂ X(i)                                                  by taut q
+        Z(l) ⊂ X(i)                                                  by subset_trans 1 2
+        i ∈ I ∧ Z(l) ⊂ X(i)                                          by taut q ^
+      }
+      (∀i)((i ∈ I ∧ Y(k) ⊂ X(i)) ⇒ (i ∈ I ∧ Z(l) ⊂ X(i)))            by gen ^ with i
+      (∃i)(i ∈ I ∧ Y(k) ⊂ X(i)) ⇒ (∃i)(i ∈ I ∧ Z(l) ⊂ X(i))          by C31_exists ^
+      (∃i)(i ∈ I ∧ Z(l) ⊂ X(i))                                      by mp f ^
+    }
+    (∀k)((k ∈ K ∧ Z(l) ⊂ Y(k)) ⇒ (∃i)(i ∈ I ∧ Z(l) ⊂ X(i)))          by gen ^ with k
+    (∃i)(i ∈ I ∧ Z(l) ⊂ X(i))                                        by obtain e ^
+  }
+  _                                                                  by gen ^ with l
+}
+
+-- Пересечение двух покрытий (X_ι ∩ Y_κ)_{(ι,κ) ∈ I×K} есть покрытие, мельче каждого.
+theorem cover_cap {E I K : term} {X Y : term 1} (hx : Cover_i(I, E, X(i))) (hy : Cover_i(K, E, Y(i))) : Cover_p(I × K, E, X(pr1(p)) ∩ Y(pr2(p))) {
+  x ∈ E ⇒ x ∈ ⋃_p(I × K, X(pr1(p)) ∩ Y(pr2(p))) by assume m {
+    x ∈ E ⇒ x ∈ ⋃_i(I, X(i))                                         by inst hx
+    x ∈ ⋃_i(I, X(i)) ⇔ (∃i)(i ∈ I ∧ x ∈ X(i))                        by mem_union
+    ei. (∃i)(i ∈ I ∧ x ∈ X(i))                                       by taut m 1 2
+    x ∈ E ⇒ x ∈ ⋃_i(K, Y(i))                                         by inst hy
+    x ∈ ⋃_i(K, Y(i)) ⇔ (∃k)(k ∈ K ∧ x ∈ Y(k))                        by mem_union
+    ek. (∃k)(k ∈ K ∧ x ∈ Y(k))                                       by taut m 4 5
+    (i ∈ I ∧ x ∈ X(i)) ⇒ x ∈ ⋃_p(I × K, X(pr1(p)) ∩ Y(pr2(p))) by assume a {
+      (k ∈ K ∧ x ∈ Y(k)) ⇒ x ∈ ⋃_p(I × K, X(pr1(p)) ∩ Y(pr2(p))) by assume b {
+        Ͻ(i, k) ∈ I × K ⇔ (i ∈ I ∧ k ∈ K)                            by pair_mem_prod
+        ik. Ͻ(i, k) ∈ I × K                                          by taut a b ^
+        pr1(Ͻ(i, k)) = i                                             by pr1_pair
+        p1. x ∈ X(pr1(Ͻ(i, k))) ⇔ x ∈ X(i)                           by rcong ^
+        pr2(Ͻ(i, k)) = k                                             by pr2_pair
+        p2. x ∈ Y(pr2(Ͻ(i, k))) ⇔ x ∈ Y(k)                           by rcong ^
+        c. x ∈ X(pr1(Ͻ(i, k))) ∩ Y(pr2(Ͻ(i, k))) ⇔ (x ∈ X(pr1(Ͻ(i, k))) ∧ x ∈ Y(pr2(Ͻ(i, k))))   by mem_cap
+        x ∈ X(pr1(Ͻ(i, k))) ∩ Y(pr2(Ͻ(i, k)))                        by taut a b p1 p2 c
+        Ͻ(i, k) ∈ I × K ∧ x ∈ X(pr1(Ͻ(i, k))) ∩ Y(pr2(Ͻ(i, k)))      by C20 ik ^
+        (∃p)(p ∈ I × K ∧ x ∈ X(pr1(p)) ∩ Y(pr2(p)))                  by exists_intro ^
+        x ∈ ⋃_p(I × K, X(pr1(p)) ∩ Y(pr2(p))) ⇔ (∃p)(p ∈ I × K ∧ x ∈ X(pr1(p)) ∩ Y(pr2(p)))   by mem_union
+        x ∈ ⋃_p(I × K, X(pr1(p)) ∩ Y(pr2(p)))                        by iff_mpr ^ ^^
+      }
+      (∀k)((k ∈ K ∧ x ∈ Y(k)) ⇒ x ∈ ⋃_p(I × K, X(pr1(p)) ∩ Y(pr2(p))))   by gen ^ with k
+      x ∈ ⋃_p(I × K, X(pr1(p)) ∩ Y(pr2(p)))                          by obtain ek ^
+    }
+    (∀i)((i ∈ I ∧ x ∈ X(i)) ⇒ x ∈ ⋃_p(I × K, X(pr1(p)) ∩ Y(pr2(p))))   by gen ^ with i
+    x ∈ ⋃_p(I × K, X(pr1(p)) ∩ Y(pr2(p)))                            by obtain ei ^
+  }
+  _                                                                  by gen ^ with x
+}
+
+theorem cover_cap_finer {I K : term} {X Y : term 1} : Finer_p(I × K, I, X(pr1(p)) ∩ Y(pr2(p)), X(p)) {
+  p ∈ I × K ⇒ (∃i)(i ∈ I ∧ X(pr1(p)) ∩ Y(pr2(p)) ⊂ X(i)) by assume m {
+    p = Ͻ(pr1(p), pr2(p)) ∧ (pr1(p) ∈ I ∧ pr2(p) ∈ K)                by prod_eta m
+    a. pr1(p) ∈ I                                                    by taut ^
+    x ∈ X(pr1(p)) ∩ Y(pr2(p)) ⇔ (x ∈ X(pr1(p)) ∧ x ∈ Y(pr2(p)))      by mem_cap
+    x ∈ X(pr1(p)) ∩ Y(pr2(p)) ⇒ x ∈ X(pr1(p))                        by taut ^
+    b. X(pr1(p)) ∩ Y(pr2(p)) ⊂ X(pr1(p))                             by gen ^ with x
+    pr1(p) ∈ I ∧ X(pr1(p)) ∩ Y(pr2(p)) ⊂ X(pr1(p))                   by C20 a b
+    (∃i)(i ∈ I ∧ X(pr1(p)) ∩ Y(pr2(p)) ⊂ X(i))                       by exists_intro ^
+  }
+  _                                                                  by gen ^ with p
+}
+
+-- Образ покрытия при отображении A на B есть покрытие B; полный прообраз покрытия при
+-- отображении C в A есть покрытие C (стр. 109).
+theorem cover_img {F A B I : term} {X : term 1} (hs : Surj(F, A, B)) (hc : Cover_i(I, A, X(i))) : Cover_i(I, B, img(F, X(i))) {
+  hm. Map(F, A, B)                                                   by taut hs
+  y ∈ B ⇒ y ∈ ⋃_i(I, img(F, X(i))) by assume m {
+    e. (∃x)(x ∈ A ∧ y = ap(F, x))                                    by surj_ap hs m
+    (x ∈ A ∧ y = ap(F, x)) ⇒ y ∈ ⋃_i(I, img(F, X(i))) by assume a {
+      x ∈ A ⇒ x ∈ ⋃_i(I, X(i))                                       by inst hc
+      x ∈ ⋃_i(I, X(i)) ⇔ (∃i)(i ∈ I ∧ x ∈ X(i))                      by mem_union
+      f. (∃i)(i ∈ I ∧ x ∈ X(i))                                      by taut a 1 2
+      (i ∈ I ∧ x ∈ X(i)) ⇒ (i ∈ I ∧ y ∈ img(F, X(i))) by assume b {
+        Ͻ(x, y) ∈ F ⇔ (x ∈ A ∧ y = ap(F, x))                         by map_mem hm
+        x ∈ X(i) ∧ Ͻ(x, y) ∈ F                                       by taut a b ^
+        (∃x)(x ∈ X(i) ∧ Ͻ(x, y) ∈ F)                                 by exists_intro ^
+        y ∈ img(F, X(i)) ⇔ (∃x)(x ∈ X(i) ∧ Ͻ(x, y) ∈ F)              by mem_img
+        y ∈ img(F, X(i))                                             by iff_mpr ^ ^^
+        i ∈ I ∧ y ∈ img(F, X(i))                                     by taut b ^
+      }
+      (∀i)((i ∈ I ∧ x ∈ X(i)) ⇒ (i ∈ I ∧ y ∈ img(F, X(i))))          by gen ^ with i
+      (∃i)(i ∈ I ∧ x ∈ X(i)) ⇒ (∃i)(i ∈ I ∧ y ∈ img(F, X(i)))        by C31_exists ^
+      (∃i)(i ∈ I ∧ y ∈ img(F, X(i)))                                 by mp f ^
+      y ∈ ⋃_i(I, img(F, X(i))) ⇔ (∃i)(i ∈ I ∧ y ∈ img(F, X(i)))      by mem_union
+      y ∈ ⋃_i(I, img(F, X(i)))                                       by iff_mpr ^ ^^
+    }
+    (∀x)((x ∈ A ∧ y = ap(F, x)) ⇒ y ∈ ⋃_i(I, img(F, X(i))))          by gen ^ with x
+    y ∈ ⋃_i(I, img(F, X(i)))                                         by obtain e ^
+  }
+  _                                                                  by gen ^ with y
+}
+
+theorem cover_preimg {G A C I : term} {X : term 1} (hm : Map(G, C, A)) (hc : Cover_i(I, A, X(i))) : Cover_i(I, C, img(inv(G), X(i))) {
+  z ∈ C ⇒ z ∈ ⋃_i(I, img(inv(G), X(i))) by assume m {
+    ga. ap(G, z) ∈ A                                                 by ap_mem hm m
+    ap(G, z) ∈ A ⇒ ap(G, z) ∈ ⋃_i(I, X(i))                           by inst hc
+    ap(G, z) ∈ ⋃_i(I, X(i)) ⇔ (∃i)(i ∈ I ∧ ap(G, z) ∈ X(i))          by mem_union
+    f. (∃i)(i ∈ I ∧ ap(G, z) ∈ X(i))                                 by taut ga 2 3
+    (i ∈ I ∧ ap(G, z) ∈ X(i)) ⇒ (i ∈ I ∧ z ∈ img(inv(G), X(i))) by assume b {
+      z ∈ img(inv(G), X(i)) ⇔ (z ∈ C ∧ ap(G, z) ∈ X(i))              by mem_preimg_map hm
+      i ∈ I ∧ z ∈ img(inv(G), X(i))                                  by taut m b ^
+    }
+    (∀i)((i ∈ I ∧ ap(G, z) ∈ X(i)) ⇒ (i ∈ I ∧ z ∈ img(inv(G), X(i))))   by gen ^ with i
+    (∃i)(i ∈ I ∧ ap(G, z) ∈ X(i)) ⇒ (∃i)(i ∈ I ∧ z ∈ img(inv(G), X(i)))   by C31_exists ^
+    (∃i)(i ∈ I ∧ z ∈ img(inv(G), X(i)))                              by mp f ^
+    z ∈ ⋃_i(I, img(inv(G), X(i))) ⇔ (∃i)(i ∈ I ∧ z ∈ img(inv(G), X(i)))   by mem_union
+    z ∈ ⋃_i(I, img(inv(G), X(i)))                                    by iff_mpr ^ ^^
+  }
+  _                                                                  by gen ^ with z
+}
+
+-- Произведение покрытий (X_ι × Y_κ) есть покрытие E × F (стр. 109).
+theorem cover_prod {E F I K : term} {X Y : term 1} (hx : Cover_i(I, E, X(i))) (hy : Cover_i(K, F, Y(i))) : Cover_p(I × K, E × F, X(pr1(p)) × Y(pr2(p))) {
+  w ∈ E × F ⇒ w ∈ ⋃_p(I × K, X(pr1(p)) × Y(pr2(p))) by assume m {
+    e. w = Ͻ(pr1(w), pr2(w)) ∧ (pr1(w) ∈ E ∧ pr2(w) ∈ F)             by prod_eta m
+    pr1(w) ∈ E ⇒ pr1(w) ∈ ⋃_i(I, X(i))                               by inst hx
+    pr1(w) ∈ ⋃_i(I, X(i)) ⇔ (∃i)(i ∈ I ∧ pr1(w) ∈ X(i))              by mem_union
+    ei. (∃i)(i ∈ I ∧ pr1(w) ∈ X(i))                                  by taut e 2 3
+    pr2(w) ∈ F ⇒ pr2(w) ∈ ⋃_i(K, Y(i))                               by inst hy
+    pr2(w) ∈ ⋃_i(K, Y(i)) ⇔ (∃k)(k ∈ K ∧ pr2(w) ∈ Y(k))              by mem_union
+    ek. (∃k)(k ∈ K ∧ pr2(w) ∈ Y(k))                                  by taut e 5 6
+    (i ∈ I ∧ pr1(w) ∈ X(i)) ⇒ w ∈ ⋃_p(I × K, X(pr1(p)) × Y(pr2(p))) by assume a {
+      (k ∈ K ∧ pr2(w) ∈ Y(k)) ⇒ w ∈ ⋃_p(I × K, X(pr1(p)) × Y(pr2(p))) by assume b {
+        Ͻ(i, k) ∈ I × K ⇔ (i ∈ I ∧ k ∈ K)                            by pair_mem_prod
+        ik. Ͻ(i, k) ∈ I × K                                          by taut a b ^
+        pr1(Ͻ(i, k)) = i                                             by pr1_pair
+        q1. X(pr1(Ͻ(i, k))) = X(i)                                   by cong ^
+        pr2(Ͻ(i, k)) = k                                             by pr2_pair
+        q2. Y(pr2(Ͻ(i, k))) = Y(k)                                   by cong ^
+        X(pr1(Ͻ(i, k))) × Y(pr2(Ͻ(i, k))) = X(i) × Y(k)              by cong2 q1 q2
+        r. w ∈ X(pr1(Ͻ(i, k))) × Y(pr2(Ͻ(i, k))) ⇔ w ∈ X(i) × Y(k)   by eq_mem ^
+        s. w ∈ X(i) × Y(k) ⇔ (IsPair(w) ∧ (pr1(w) ∈ X(i) ∧ pr2(w) ∈ Y(k)))   by mem_prod
+        we. w = Ͻ(pr1(w), pr2(w))                                    by taut e
+        (∃y)(w = Ͻ(pr1(w), y))                                       by exists_intro we
+        ip. IsPair(w)                                                by exists_intro ^
+        w ∈ X(pr1(Ͻ(i, k))) × Y(pr2(Ͻ(i, k)))                        by taut a b r s ip
+        Ͻ(i, k) ∈ I × K ∧ w ∈ X(pr1(Ͻ(i, k))) × Y(pr2(Ͻ(i, k)))      by C20 ik ^
+        (∃p)(p ∈ I × K ∧ w ∈ X(pr1(p)) × Y(pr2(p)))                  by exists_intro ^
+        w ∈ ⋃_p(I × K, X(pr1(p)) × Y(pr2(p))) ⇔ (∃p)(p ∈ I × K ∧ w ∈ X(pr1(p)) × Y(pr2(p)))   by mem_union
+        w ∈ ⋃_p(I × K, X(pr1(p)) × Y(pr2(p)))                        by iff_mpr ^ ^^
+      }
+      (∀k)((k ∈ K ∧ pr2(w) ∈ Y(k)) ⇒ w ∈ ⋃_p(I × K, X(pr1(p)) × Y(pr2(p))))   by gen ^ with k
+      w ∈ ⋃_p(I × K, X(pr1(p)) × Y(pr2(p)))                          by obtain ek ^
+    }
+    (∀i)((i ∈ I ∧ pr1(w) ∈ X(i)) ⇒ w ∈ ⋃_p(I × K, X(pr1(p)) × Y(pr2(p))))   by gen ^ with i
+    w ∈ ⋃_p(I × K, X(pr1(p)) × Y(pr2(p)))                            by obtain ei ^
+  }
+  _                                                                  by gen ^ with w
+}
+
+-- Предложение 7 (стр. 109). 1° Функции, совпадающие на каждом E ∩ X_ι, совпадают на E.
+theorem agree_on_cover {E I : term} {X : term 1} {F G : term} (hc : Cover_i(I, E, X(i))) (h : (∀i)(i ∈ I ⇒ (∀x)((x ∈ E ∧ x ∈ X(i)) ⇒ ap(F, x) = ap(G, x)))) : (∀x)(x ∈ E ⇒ ap(F, x) = ap(G, x)) {
+  x ∈ E ⇒ ap(F, x) = ap(G, x) by assume m {
+    x ∈ E ⇒ x ∈ ⋃_i(I, X(i))                                         by inst hc
+    x ∈ ⋃_i(I, X(i)) ⇔ (∃i)(i ∈ I ∧ x ∈ X(i))                        by mem_union
+    e. (∃i)(i ∈ I ∧ x ∈ X(i))                                        by taut m 1 2
+    (i ∈ I ∧ x ∈ X(i)) ⇒ ap(F, x) = ap(G, x) by assume a {
+      i ∈ I ⇒ (∀x)((x ∈ E ∧ x ∈ X(i)) ⇒ ap(F, x) = ap(G, x))         by inst h
+      (∀x)((x ∈ E ∧ x ∈ X(i)) ⇒ ap(F, x) = ap(G, x))                 by taut a ^
+      (x ∈ E ∧ x ∈ X(i)) ⇒ ap(F, x) = ap(G, x)                       by inst ^
+      ap(F, x) = ap(G, x)                                            by taut m a ^
+    }
+    (∀i)((i ∈ I ∧ x ∈ X(i)) ⇒ ap(F, x) = ap(G, x))                   by gen ^ with i
+    ap(F, x) = ap(G, x)                                              by obtain e ^
+  }
+  _                                                                  by gen ^ with x
+}
+
+
+-- 2° Склейка (стр. 109): функции f_ι: X_ι → B, совпадающие на X_ι ∩ X_κ, продолжаются
+-- до единственной функции на ⋃ X_ι; её график ⋃ F_ι.
+theorem glue_mem {I B T U : term} {X F : term 1} (hm : (∀i)(i ∈ I ⇒ Map(F(i), X(i), B))) : Ͻ(T, U) ∈ ⋃_i(I, F(i)) ⇔ (∃i)(i ∈ I ∧ (T ∈ X(i) ∧ U = ap(F(i), T))) {
+  a. Ͻ(T, U) ∈ ⋃_i(I, F(i)) ⇔ (∃i)(i ∈ I ∧ Ͻ(T, U) ∈ F(i))                    by mem_union
+  i ∈ I ⇒ (Ͻ(T, U) ∈ F(i) ⇔ (T ∈ X(i) ∧ U = ap(F(i), T))) by assume m {
+    i ∈ I ⇒ Map(F(i), X(i), B)                                               by inst hm
+    Map(F(i), X(i), B)                                                       by mp m ^
+    Ͻ(T, U) ∈ F(i) ⇔ (T ∈ X(i) ∧ U = ap(F(i), T))                            by map_mem ^
+  }
+  (i ∈ I ∧ Ͻ(T, U) ∈ F(i)) ⇔ (i ∈ I ∧ (T ∈ X(i) ∧ U = ap(F(i), T)))          by taut ^
+  (∀i)((i ∈ I ∧ Ͻ(T, U) ∈ F(i)) ⇔ (i ∈ I ∧ (T ∈ X(i) ∧ U = ap(F(i), T))))    by gen ^ with i
+  b. (∃i)(i ∈ I ∧ Ͻ(T, U) ∈ F(i)) ⇔ (∃i)(i ∈ I ∧ (T ∈ X(i) ∧ U = ap(F(i), T)))   by C31_exists_iff ^
+  _                                                                          by C22' a b
+}
+
+theorem glue_map {I B : term} {X F : term 1} (hm : (∀i)(i ∈ I ⇒ Map(F(i), X(i), B))) (ha : (∀i)(∀j)((i ∈ I ∧ j ∈ I) ⇒ (∀x)((x ∈ X(i) ∧ x ∈ X(j)) ⇒ ap(F(i), x) = ap(F(j), x)))) : Map(⋃_i(I, F(i)), ⋃_i(I, X(i)), B) {
+  -- график
+  z ∈ ⋃_i(I, F(i)) ⇒ IsPair(z) by assume m {
+    z ∈ ⋃_i(I, F(i)) ⇔ (∃i)(i ∈ I ∧ z ∈ F(i))                                by mem_union
+    e. (∃i)(i ∈ I ∧ z ∈ F(i))                                                by iff_mp ^ m
+    (i ∈ I ∧ z ∈ F(i)) ⇒ IsPair(z) by assume a {
+      i ∈ I ⇒ Map(F(i), X(i), B)                                             by inst hm
+      Graph(F(i))                                                            by taut a ^
+      z ∈ F(i) ⇒ IsPair(z)                                                   by inst ^
+      IsPair(z)                                                              by taut a ^
+    }
+    (∀i)((i ∈ I ∧ z ∈ F(i)) ⇒ IsPair(z))                                     by gen ^ with i
+    IsPair(z)                                                                by obtain e ^
+  }
+  g. Graph(⋃_i(I, F(i)))                                                     by gen ^ with z
+  -- функциональность: значения двух f_ι в общей точке равны
+  (Ͻ(x, y) ∈ ⋃_i(I, F(i)) ∧ Ͻ(x, y') ∈ ⋃_i(I, F(i))) ⇒ y = y' by assume m {
+    Ͻ(x, y) ∈ ⋃_i(I, F(i)) ⇔ (∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y = ap(F(i), x)))      by glue_mem hm
+    e. (∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y = ap(F(i), x)))                            by taut m ^
+    Ͻ(x, y') ∈ ⋃_i(I, F(i)) ⇔ (∃j)(j ∈ I ∧ (x ∈ X(j) ∧ y' = ap(F(j), x)))    by glue_mem hm
+    e'. (∃j)(j ∈ I ∧ (x ∈ X(j) ∧ y' = ap(F(j), x)))                          by taut m ^
+    (i ∈ I ∧ (x ∈ X(i) ∧ y = ap(F(i), x))) ⇒ y = y' by assume a {
+      (j ∈ I ∧ (x ∈ X(j) ∧ y' = ap(F(j), x))) ⇒ y = y' by assume b {
+        (i ∈ I ∧ j ∈ I) ⇒ (∀x)((x ∈ X(i) ∧ x ∈ X(j)) ⇒ ap(F(i), x) = ap(F(j), x))   by inst2 ha
+        (∀x)((x ∈ X(i) ∧ x ∈ X(j)) ⇒ ap(F(i), x) = ap(F(j), x))              by taut a b ^
+        (x ∈ X(i) ∧ x ∈ X(j)) ⇒ ap(F(i), x) = ap(F(j), x)                    by inst ^
+        q. ap(F(i), x) = ap(F(j), x)                                         by taut a b ^
+        p. y = ap(F(i), x)                                                   by taut a
+        r. y' = ap(F(j), x)                                                  by taut b
+        y = y'                                                               by chain p q r
+      }
+      (∀j)((j ∈ I ∧ (x ∈ X(j) ∧ y' = ap(F(j), x))) ⇒ y = y')                 by gen ^ with j
+      y = y'                                                                 by obtain e' ^
+    }
+    (∀i)((i ∈ I ∧ (x ∈ X(i) ∧ y = ap(F(i), x))) ⇒ y = y')                    by gen ^ with i
+    y = y'                                                                   by obtain e ^
+  }
+  (∀y')((Ͻ(x, y) ∈ ⋃_i(I, F(i)) ∧ Ͻ(x, y') ∈ ⋃_i(I, F(i))) ⇒ y = y')         by gen ^ with y'
+  Uniq_y(Ͻ(x, y) ∈ ⋃_i(I, F(i)))                                             by gen ^ with y
+  u. (∀x)Uniq_y(Ͻ(x, y) ∈ ⋃_i(I, F(i)))                                      by gen ^ with x
+  -- первая проекция
+  x ∈ proj1(⋃_i(I, F(i))) ⇒ x ∈ ⋃_i(I, X(i)) by assume m {
+    x ∈ proj1(⋃_i(I, F(i))) ⇔ (∃y)(Ͻ(x, y) ∈ ⋃_i(I, F(i)))                   by mem_proj1
+    e. (∃y)(Ͻ(x, y) ∈ ⋃_i(I, F(i)))                                          by iff_mp ^ m
+    Ͻ(x, y) ∈ ⋃_i(I, F(i)) ⇒ x ∈ ⋃_i(I, X(i)) by assume p {
+      Ͻ(x, y) ∈ ⋃_i(I, F(i)) ⇔ (∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y = ap(F(i), x)))    by glue_mem hm
+      f. (∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y = ap(F(i), x)))                          by iff_mp ^ p
+      (i ∈ I ∧ (x ∈ X(i) ∧ y = ap(F(i), x))) ⇒ (i ∈ I ∧ x ∈ X(i))            by taut
+      (∀i)((i ∈ I ∧ (x ∈ X(i) ∧ y = ap(F(i), x))) ⇒ (i ∈ I ∧ x ∈ X(i)))      by gen ^ with i
+      (∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y = ap(F(i), x))) ⇒ (∃i)(i ∈ I ∧ x ∈ X(i))    by C31_exists ^
+      (∃i)(i ∈ I ∧ x ∈ X(i))                                                 by mp f ^
+      x ∈ ⋃_i(I, X(i)) ⇔ (∃i)(i ∈ I ∧ x ∈ X(i))                              by mem_union
+      x ∈ ⋃_i(I, X(i))                                                       by iff_mpr ^ ^^
+    }
+    (∀y)(Ͻ(x, y) ∈ ⋃_i(I, F(i)) ⇒ x ∈ ⋃_i(I, X(i)))                          by gen ^ with y
+    x ∈ ⋃_i(I, X(i))                                                         by obtain e ^
+  }
+  l. proj1(⋃_i(I, F(i))) ⊂ ⋃_i(I, X(i))                                      by gen ^ with x
+  x ∈ ⋃_i(I, X(i)) ⇒ x ∈ proj1(⋃_i(I, F(i))) by assume m {
+    x ∈ ⋃_i(I, X(i)) ⇔ (∃i)(i ∈ I ∧ x ∈ X(i))                                by mem_union
+    e. (∃i)(i ∈ I ∧ x ∈ X(i))                                                by iff_mp ^ m
+    (i ∈ I ∧ x ∈ X(i)) ⇒ x ∈ proj1(⋃_i(I, F(i))) by assume a {
+      ap(F(i), x) = ap(F(i), x)                                              by T1
+      i ∈ I ∧ (x ∈ X(i) ∧ ap(F(i), x) = ap(F(i), x))                         by taut a ^
+      (∃j)(j ∈ I ∧ (x ∈ X(j) ∧ ap(F(i), x) = ap(F(j), x)))                   by exists_intro ^
+      Ͻ(x, ap(F(i), x)) ∈ ⋃_i(I, F(i)) ⇔ (∃j)(j ∈ I ∧ (x ∈ X(j) ∧ ap(F(i), x) = ap(F(j), x)))   by glue_mem hm
+      Ͻ(x, ap(F(i), x)) ∈ ⋃_i(I, F(i))                                       by iff_mpr ^ ^^
+      (∃y)(Ͻ(x, y) ∈ ⋃_i(I, F(i)))                                           by exists_intro ^
+      x ∈ proj1(⋃_i(I, F(i))) ⇔ (∃y)(Ͻ(x, y) ∈ ⋃_i(I, F(i)))                 by mem_proj1
+      x ∈ proj1(⋃_i(I, F(i)))                                                by iff_mpr ^ ^^
+    }
+    (∀i)((i ∈ I ∧ x ∈ X(i)) ⇒ x ∈ proj1(⋃_i(I, F(i))))                       by gen ^ with i
+    x ∈ proj1(⋃_i(I, F(i)))                                                  by obtain e ^
+  }
+  r. ⋃_i(I, X(i)) ⊂ proj1(⋃_i(I, F(i)))                                      by gen ^ with x
+  p1. proj1(⋃_i(I, F(i))) = ⋃_i(I, X(i))                                     by ext l r
+  -- вторая проекция в B
+  y ∈ proj2(⋃_i(I, F(i))) ⇒ y ∈ B by assume m {
+    y ∈ proj2(⋃_i(I, F(i))) ⇔ (∃x)(Ͻ(x, y) ∈ ⋃_i(I, F(i)))                   by mem_proj2
+    e. (∃x)(Ͻ(x, y) ∈ ⋃_i(I, F(i)))                                          by iff_mp ^ m
+    Ͻ(x, y) ∈ ⋃_i(I, F(i)) ⇒ y ∈ B by assume p {
+      Ͻ(x, y) ∈ ⋃_i(I, F(i)) ⇔ (∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y = ap(F(i), x)))    by glue_mem hm
+      f. (∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y = ap(F(i), x)))                          by iff_mp ^ p
+      (i ∈ I ∧ (x ∈ X(i) ∧ y = ap(F(i), x))) ⇒ y ∈ B by assume a {
+        i ∈ I ⇒ Map(F(i), X(i), B)                                           by inst hm
+        mi. Map(F(i), X(i), B)                                               by taut a ^
+        x ∈ X(i)                                                             by taut a
+        ap(F(i), x) ∈ B                                                      by ap_mem mi ^
+        y = ap(F(i), x)                                                      by taut a
+        y ∈ B ⇔ ap(F(i), x) ∈ B                                              by rcong ^
+        y ∈ B                                                                by taut 4 ^
+      }
+      (∀i)((i ∈ I ∧ (x ∈ X(i) ∧ y = ap(F(i), x))) ⇒ y ∈ B)                   by gen ^ with i
+      y ∈ B                                                                  by obtain f ^
+    }
+    (∀x)(Ͻ(x, y) ∈ ⋃_i(I, F(i)) ⇒ y ∈ B)                                     by gen ^ with x
+    y ∈ B                                                                    by obtain e ^
+  }
+  p2. proj2(⋃_i(I, F(i))) ⊂ B                                                by gen ^ with y
+  _                                                                          by taut g u p1 p2
+}
+
+theorem ap_glue {I B T U : term} {X F : term 1} (hm : (∀i)(i ∈ I ⇒ Map(F(i), X(i), B))) (ha : (∀i)(∀j)((i ∈ I ∧ j ∈ I) ⇒ (∀x)((x ∈ X(i) ∧ x ∈ X(j)) ⇒ ap(F(i), x) = ap(F(j), x)))) (hu : U ∈ I) (ht : T ∈ X(U)) : ap(⋃_i(I, F(i)), T) = ap(F(U), T) {
+  mg. Map(⋃_i(I, F(i)), ⋃_i(I, X(i)), B)                                     by glue_map hm ha
+  ap(F(U), T) = ap(F(U), T)                                                  by T1
+  U ∈ I ∧ (T ∈ X(U) ∧ ap(F(U), T) = ap(F(U), T))                             by taut hu ht ^
+  (∃i)(i ∈ I ∧ (T ∈ X(i) ∧ ap(F(U), T) = ap(F(i), T)))                       by exists_intro ^
+  Ͻ(T, ap(F(U), T)) ∈ ⋃_i(I, F(i)) ⇔ (∃i)(i ∈ I ∧ (T ∈ X(i) ∧ ap(F(U), T) = ap(F(i), T)))   by glue_mem hm
+  p. Ͻ(T, ap(F(U), T)) ∈ ⋃_i(I, F(i))                                        by iff_mpr ^ ^^
+  Ͻ(T, ap(F(U), T)) ∈ ⋃_i(I, F(i)) ⇔ (T ∈ ⋃_i(I, X(i)) ∧ ap(F(U), T) = ap(⋃_i(I, F(i)), T))   by map_mem mg
+  ap(F(U), T) = ap(⋃_i(I, F(i)), T)                                          by taut p ^
+  _                                                                          by T2 ^
+}
+
+-- Предложение 8 (стр. 110): для попарно непересекающихся X_ι условие склейки выполнено.
+theorem disj_agree {I : term} {X F : term 1} (hd : Disj_i(I, X(i))) : (∀i)(∀j)((i ∈ I ∧ j ∈ I) ⇒ (∀x)((x ∈ X(i) ∧ x ∈ X(j)) ⇒ ap(F(i), x) = ap(F(j), x))) {
+  (i ∈ I ∧ j ∈ I) ⇒ (∀x)((x ∈ X(i) ∧ x ∈ X(j)) ⇒ ap(F(i), x) = ap(F(j), x)) by assume a {
+    (x ∈ X(i) ∧ x ∈ X(j)) ⇒ ap(F(i), x) = ap(F(j), x) by assume b {
+      i = j ⇒ ap(F(i), x) = ap(F(j), x) by assume e {
+        ap(F(i), x) = ap(F(j), x)                                            by cong e
+      }
+      i ≠ j ⇒ ap(F(i), x) = ap(F(j), x) by assume ne {
+        (i ∈ I ∧ (j ∈ I ∧ i ≠ j)) ⇒ X(i) ∩ X(j) = ∅                          by inst2 hd
+        X(i) ∩ X(j) = ∅                                                      by taut a ne ^
+        x ∈ X(i) ∩ X(j) ⇔ x ∈ ∅                                              by eq_mem ^
+        x ∈ X(i) ∩ X(j) ⇔ (x ∈ X(i) ∧ x ∈ X(j))                              by mem_cap
+        x ∉ ∅                                                                by not_mem_empty
+        ap(F(i), x) = ap(F(j), x)                                            by taut b 3 4 5
+      }
+      ap(F(i), x) = ap(F(j), x)                                              by taut 1 2
+    }
+    (∀x)((x ∈ X(i) ∧ x ∈ X(j)) ⇒ ap(F(i), x) = ap(F(j), x))                  by gen ^ with x
+  }
+  (∀j)((i ∈ I ∧ j ∈ I) ⇒ (∀x)((x ∈ X(i) ∧ x ∈ X(j)) ⇒ ap(F(i), x) = ap(F(j), x)))       by gen ^ with j
+  _                                                                          by gen ^ with i
+}
+
+-- Пример разбиения (стр. 110): ({x})_{x∈A} есть разбиение A.
+theorem singletons_partition {A : term} : Partition_x(A, A, set1(x)) {
+  x ∈ A ⇒ (set1(x) ≠ ∅ ∧ set1(x) ⊂ A) by assume m {
+    x ∈ set1(x) ⇔ x = x                                                      by mem_set1
+    x = x                                                                    by T1
+    xs. x ∈ set1(x)                                                          by taut 1 2
+    (∃y)(y ∈ set1(x))                                                        by exists_intro ^
+    set1(x) ≠ ∅ ⇔ (∃y)(y ∈ set1(x))                                          by nonempty
+    ne. set1(x) ≠ ∅                                                          by iff_mpr ^ ^^
+    x ∈ A ⇔ set1(x) ⊂ A                                                      by mem_iff_set1
+    set1(x) ⊂ A                                                              by iff_mp ^ m
+    set1(x) ≠ ∅ ∧ set1(x) ⊂ A                                                by C20 ne ^
+  }
+  a. (∀x)(x ∈ A ⇒ (set1(x) ≠ ∅ ∧ set1(x) ⊂ A))                               by gen ^ with x
+  (x ∈ A ∧ (y ∈ A ∧ x ≠ y)) ⇒ set1(x) ∩ set1(y) = ∅ by assume m {
+    z ∈ set1(x) ∩ set1(y) ⇔ (z ∈ set1(x) ∧ z ∈ set1(y))                      by mem_cap
+    z ∈ set1(x) ⇔ z = x                                                      by mem_set1
+    z ∈ set1(y) ⇔ z = y                                                      by mem_set1
+    (z = x ∧ z = y) ⇒ x = y by assume p {
+      z = x                                                                  by taut p
+      z = y                                                                  by taut p
+      x = y                                                                  by chain 1 2
+    }
+    z ∉ set1(x) ∩ set1(y)                                                    by taut m 1 2 3 4
+    (∀z)(z ∉ set1(x) ∩ set1(y))                                              by gen ^ with z
+    (∀z)(z ∉ set1(x) ∩ set1(y)) ⇔ set1(x) ∩ set1(y) = ∅                      by empty_iff
+    set1(x) ∩ set1(y) = ∅                                                    by iff_mp ^ ^^
+  }
+  (∀y)((x ∈ A ∧ (y ∈ A ∧ x ≠ y)) ⇒ set1(x) ∩ set1(y) = ∅)                    by gen ^ with y
+  d. (∀x)(∀y)((x ∈ A ∧ (y ∈ A ∧ x ≠ y)) ⇒ set1(x) ∩ set1(y) = ∅)             by gen ^ with x
+  x ∈ A ⇒ x ∈ ⋃_x(A, set1(x)) by assume m {
+    set1(x) ⊂ ⋃_y(A, set1(y))                                                by sub_union m
+    x ∈ set1(x) ⇒ x ∈ ⋃_y(A, set1(y))                                        by inst ^
+    x ∈ set1(x) ⇔ x = x                                                      by mem_set1
+    x = x                                                                    by T1
+    x ∈ ⋃_y(A, set1(y))                                                      by taut 2 3 4
+  }
+  c. A ⊂ ⋃_x(A, set1(x))                                                     by gen ^ with x
+  _                                                                          by taut a d c
+}
+
+
+-- n° 8, предложение 9 (стр. 110): множества X_ι × {ι} попарно не пересекаются, а
+-- x → (x, ι) есть биекция X_ι на X_ι × {ι} (это pair_right_bij).
+theorem sum_disj {I : term} {X : term 1} : Disj_i(I, X(i) × set1(i)) {
+  (i ∈ I ∧ (j ∈ I ∧ i ≠ j)) ⇒ (X(i) × set1(i)) ∩ (X(j) × set1(j)) = ∅ by assume m {
+    w ∈ (X(i) × set1(i)) ∩ (X(j) × set1(j)) ⇒ i = j by assume p {
+      w ∈ (X(i) × set1(i)) ∩ (X(j) × set1(j)) ⇔ (w ∈ X(i) × set1(i) ∧ w ∈ X(j) × set1(j))   by mem_cap
+      a. w ∈ X(i) × set1(i)                                                  by taut p ^
+      b. w ∈ X(j) × set1(j)                                                  by taut p 1
+      w = Ͻ(pr1(w), pr2(w)) ∧ (pr1(w) ∈ X(i) ∧ pr2(w) ∈ set1(i))             by prod_eta a
+      pr2(w) ∈ set1(i) ⇔ pr2(w) = i                                          by mem_set1
+      e1. pr2(w) = i                                                         by taut 4 5
+      w = Ͻ(pr1(w), pr2(w)) ∧ (pr1(w) ∈ X(j) ∧ pr2(w) ∈ set1(j))             by prod_eta b
+      pr2(w) ∈ set1(j) ⇔ pr2(w) = j                                          by mem_set1
+      e2. pr2(w) = j                                                         by taut 7 8
+      i = j                                                                  by chain e1 e2
+    }
+    w ∉ (X(i) × set1(i)) ∩ (X(j) × set1(j))                                  by taut m ^
+    (∀w)(w ∉ (X(i) × set1(i)) ∩ (X(j) × set1(j)))                            by gen ^ with w
+    (∀w)(w ∉ (X(i) × set1(i)) ∩ (X(j) × set1(j))) ⇔ (X(i) × set1(i)) ∩ (X(j) × set1(j)) = ∅   by empty_iff
+    (X(i) × set1(i)) ∩ (X(j) × set1(j)) = ∅                                  by iff_mp ^ ^^
+  }
+  (∀j)((i ∈ I ∧ (j ∈ I ∧ i ≠ j)) ⇒ (X(i) × set1(i)) ∩ (X(j) × set1(j)) = ∅)       by gen ^ with j
+  _                                                                          by gen ^ with i
+}
+
+-- Предложение 10 (стр. 111): если X_ι попарно не пересекаются, то склейка отображений
+-- x → (x, ι) есть биекция ⋃ X_ι на сумму S.
+theorem sum_bij {I : term} {X : term 1} (hd : Disj_i(I, X(i))) : Bij(⋃_i(I, fn_x(X(i), Ͻ(x, i))), ⋃_i(I, X(i)), Sum_i(I, X(i))) {
+  -- каждое x → (x, ι) есть отображение X_ι в S
+  i ∈ I ⇒ Map(fn_x(X(i), Ͻ(x, i)), X(i), Sum_i(I, X(i))) by assume m {
+    x ∈ X(i) ⇒ Ͻ(x, i) ∈ Sum_i(I, X(i)) by assume a {
+      Ͻ(x, i) ∈ X(i) × set1(i) ⇔ (x ∈ X(i) ∧ i ∈ set1(i))                    by pair_mem_prod
+      i ∈ set1(i) ⇔ i = i                                                    by mem_set1
+      i = i                                                                  by T1
+      Ͻ(x, i) ∈ X(i) × set1(i)                                               by taut a 1 2 3
+      X(i) × set1(i) ⊂ Sum_i(I, X(i))                                        by sub_union m
+      Ͻ(x, i) ∈ X(i) × set1(i) ⇒ Ͻ(x, i) ∈ Sum_i(I, X(i))                    by inst ^
+      Ͻ(x, i) ∈ Sum_i(I, X(i))                                               by mp 4 ^
+    }
+    (∀x)(x ∈ X(i) ⇒ Ͻ(x, i) ∈ Sum_i(I, X(i)))                                by gen ^ with x
+    Map(fn_x(X(i), Ͻ(x, i)), X(i), Sum_i(I, X(i)))                           by fn_map_into ^
+  }
+  hm. (∀i)(i ∈ I ⇒ Map(fn_x(X(i), Ͻ(x, i)), X(i), Sum_i(I, X(i))))          by gen ^ with i
+  ha. (∀i)(∀j)((i ∈ I ∧ j ∈ I) ⇒ (∀x)((x ∈ X(i) ∧ x ∈ X(j)) ⇒ ap(fn_x(X(i), Ͻ(x, i)), x) = ap(fn_x(X(j), Ͻ(x, j)), x)))   by disj_agree hd
+  mf. Map(⋃_i(I, fn_x(X(i), Ͻ(x, i))), ⋃_i(I, X(i)), Sum_i(I, X(i)))         by glue_map hm ha
+  -- значение: f(x) = (x, ι) при x ∈ X_ι
+  val. (i ∈ I ∧ x ∈ X(i)) ⇒ ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), x) = Ͻ(x, i) by assume a {
+    i ∈ I                                                                    by taut a
+    x ∈ X(i)                                                                 by taut a
+    ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), x) = ap(fn_x(X(i), Ͻ(x, i)), x)          by ap_glue hm ha 1 2
+    ap(fn_x(X(i), Ͻ(x, i)), x) = Ͻ(x, i)                                     by ap_fn 2
+    ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), x) = Ͻ(x, i)                             by chain 3 4
+  }
+  (∀x)((i ∈ I ∧ x ∈ X(i)) ⇒ ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), x) = Ͻ(x, i))           by gen val with x
+  vall. (∀i)(∀x)((i ∈ I ∧ x ∈ X(i)) ⇒ ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), x) = Ͻ(x, i))   by gen ^ with i
+  -- инъективность
+  (x ∈ ⋃_i(I, X(i)) ∧ (y ∈ ⋃_i(I, X(i)) ∧ ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), x) = ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), y))) ⇒ x = y by assume m {
+    x ∈ ⋃_i(I, X(i)) ⇔ (∃i)(i ∈ I ∧ x ∈ X(i))                                by mem_union
+    ex. (∃i)(i ∈ I ∧ x ∈ X(i))                                               by taut m ^
+    y ∈ ⋃_i(I, X(i)) ⇔ (∃j)(j ∈ I ∧ y ∈ X(j))                                by mem_union
+    ey. (∃j)(j ∈ I ∧ y ∈ X(j))                                               by taut m ^
+    (i ∈ I ∧ x ∈ X(i)) ⇒ x = y by assume a {
+      (j ∈ I ∧ y ∈ X(j)) ⇒ x = y by assume b {
+        (i ∈ I ∧ x ∈ X(i)) ⇒ ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), x) = Ͻ(x, i)  by inst2 vall
+        p. ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), x) = Ͻ(x, i)                      by mp a ^
+        (j ∈ I ∧ y ∈ X(j)) ⇒ ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), y) = Ͻ(y, j)  by inst2 vall
+        q. ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), y) = Ͻ(y, j)                      by mp b ^
+        r. ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), x) = ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), y)   by taut m
+        Ͻ(x, i) = Ͻ(y, j)                                                    by chain p r q
+        Ͻ(x, i) = Ͻ(y, j) ⇒ (x = y ∧ i = j)                                  by pair_inj
+        x = y ∧ i = j                                                        by mp 6 ^
+        x = y                                                                by taut ^
+      }
+      (∀j)((j ∈ I ∧ y ∈ X(j)) ⇒ x = y)                                       by gen ^ with j
+      x = y                                                                  by obtain ey ^
+    }
+    (∀i)((i ∈ I ∧ x ∈ X(i)) ⇒ x = y)                                         by gen ^ with i
+    x = y                                                                    by obtain ex ^
+  }
+  (∀y)((x ∈ ⋃_i(I, X(i)) ∧ (y ∈ ⋃_i(I, X(i)) ∧ ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), x) = ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), y))) ⇒ x = y)       by gen ^ with y
+  inj. (∀x)(∀y)((x ∈ ⋃_i(I, X(i)) ∧ (y ∈ ⋃_i(I, X(i)) ∧ ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), x) = ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), y))) ⇒ x = y)   by gen ^ with x
+  -- сюръективность
+  w ∈ Sum_i(I, X(i)) ⇒ (∃x)(x ∈ ⋃_i(I, X(i)) ∧ w = ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), x)) by assume m {
+    w ∈ Sum_i(I, X(i)) ⇔ (∃i)(i ∈ I ∧ w ∈ X(i) × set1(i))                    by mem_union
+    e. (∃i)(i ∈ I ∧ w ∈ X(i) × set1(i))                                      by iff_mp ^ m
+    (i ∈ I ∧ w ∈ X(i) × set1(i)) ⇒ (∃x)(x ∈ ⋃_i(I, X(i)) ∧ w = ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), x)) by assume a {
+      w ∈ X(i) × set1(i)                                                     by taut a
+      pe. w = Ͻ(pr1(w), pr2(w)) ∧ (pr1(w) ∈ X(i) ∧ pr2(w) ∈ set1(i))         by prod_eta ^
+      pr2(w) ∈ set1(i) ⇔ pr2(w) = i                                          by mem_set1
+      e2. pr2(w) = i                                                         by taut pe ^
+      we. w = Ͻ(pr1(w), pr2(w))                                              by taut pe
+      xi. pr1(w) ∈ X(i)                                                      by taut pe
+      ii. i ∈ I                                                              by taut a
+      X(i) ⊂ ⋃_i(I, X(i))                                                    by sub_union ii
+      pr1(w) ∈ X(i) ⇒ pr1(w) ∈ ⋃_i(I, X(i))                                  by inst ^
+      xu. pr1(w) ∈ ⋃_i(I, X(i))                                              by mp xi ^
+      (i ∈ I ∧ pr1(w) ∈ X(i)) ⇒ ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), pr1(w)) = Ͻ(pr1(w), i)   by inst2 vall
+      v. ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), pr1(w)) = Ͻ(pr1(w), i)              by taut ii xi ^
+      pr1(w) = pr1(w)                                                        by T1
+      c. Ͻ(pr1(w), pr2(w)) = Ͻ(pr1(w), i)                                    by cong2 ^ e2
+      w = ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), pr1(w))                            by chain we c v
+      pr1(w) ∈ ⋃_i(I, X(i)) ∧ w = ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), pr1(w))    by C20 xu ^
+      (∃x)(x ∈ ⋃_i(I, X(i)) ∧ w = ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), x))        by exists_intro ^
+    }
+    (∀i)((i ∈ I ∧ w ∈ X(i) × set1(i)) ⇒ (∃x)(x ∈ ⋃_i(I, X(i)) ∧ w = ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), x)))   by gen ^ with i
+    (∃x)(x ∈ ⋃_i(I, X(i)) ∧ w = ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), x))          by obtain e ^
+  }
+  (∀w)(w ∈ Sum_i(I, X(i)) ⇒ (∃x)(x ∈ ⋃_i(I, X(i)) ∧ w = ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), x)))   by gen ^ with w
+  Surj(⋃_i(I, fn_x(X(i), Ͻ(x, i))), ⋃_i(I, X(i)), Sum_i(I, X(i))) ⇔ (∀w)(w ∈ Sum_i(I, X(i)) ⇒ (∃x)(x ∈ ⋃_i(I, X(i)) ∧ w = ap(⋃_i(I, fn_x(X(i), Ͻ(x, i))), x)))   by surj_iff mf
+  sur. Surj(⋃_i(I, fn_x(X(i), Ͻ(x, i))), ⋃_i(I, X(i)), Sum_i(I, X(i)))       by iff_mpr ^ ^^
+  _                                                                          by taut mf inj sur
+}
+
+
+-- Стр. 110: прообразы попарно непересекающихся множеств попарно не пересекаются.
+theorem preimg_disj {F A B I : term} {Y : term 1} (hm : Map(F, A, B)) (hd : Disj_i(I, Y(i))) : Disj_i(I, img(inv(F), Y(i))) {
+  (i ∈ I ∧ (j ∈ I ∧ i ≠ j)) ⇒ img(inv(F), Y(i)) ∩ img(inv(F), Y(j)) = ∅ by assume m {
+    (i ∈ I ∧ (j ∈ I ∧ i ≠ j)) ⇒ Y(i) ∩ Y(j) = ∅                              by inst2 hd
+    Y(i) ∩ Y(j) = ∅                                                          by mp m ^
+    a. img(inv(F), Y(i) ∩ Y(j)) = img(inv(F), ∅)                             by cong ^
+    b. img(inv(F), Y(i) ∩ Y(j)) = img(inv(F), Y(i)) ∩ img(inv(F), Y(j))      by preimg_cap hm
+    c. img(inv(F), ∅) = ∅                                                    by img_empty
+    img(inv(F), Y(i)) ∩ img(inv(F), Y(j)) = ∅                                by chain b a c
+  }
+  (∀j)((i ∈ I ∧ (j ∈ I ∧ i ≠ j)) ⇒ img(inv(F), Y(i)) ∩ img(inv(F), Y(j)) = ∅)   by gen ^ with j
+  _                                                                          by gen ^ with i
+}
+
+end

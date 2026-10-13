@@ -1,0 +1,997 @@
+-- Глава II, § 6. Соотношения эквивалентности (стр. 124-135).
+--
+-- Задача: соотношения эквивалентности, классы и фактормножество, совместимые соотношения
+-- и отображения (C55-C57), насыщенные части, каноническое разложение отображения,
+-- индуцированное соотношение, произведение двух соотношений эквивалентности.
+-- Проблема: соотношение эквивалентности R{x, y} в общем случае может не иметь графика
+-- (x = y), а классы и фактормножество определены только для соотношений в множестве E.
+-- Решение: соотношение эквивалентности в E обладает графиком G ⊂ E × E (стр. 125), поэтому
+-- всё записано через график: R{x, y} это Ͻ(x, y) ∈ G, класс G(x) это sect(G, x),
+-- фактормножество E/R это образ E при x ↦ G(x), каноническое отображение fn_x(E, sect(G, x)).
+-- Что осталось: n° 9 (классы эквивалентных объектов для соотношений без графика);
+-- факторсоотношение R/S как эквивалентность на E/S (n° 7) заменено критерием "S мельче R";
+-- биекция E/R → f⟨E⟩ из канонического разложения и описание насыщенных частей через
+-- p⁻¹⟨p⟨A⟩⟩; упражнения.
+
+import "00_prelude.bk"
+open base
+import "14_unions.bk"
+open ch1
+open sets
+
+-- n° 1 (стр. 125): G есть график соотношения эквивалентности в E (эквивалентность на E):
+-- симметрия, транзитивность и рефлексивность в E (Ͻ(x, x) ∈ G ⇔ x ∈ E).
+abbrev Equiv (G E : term) := Graph(G) ∧ ((∀x)(∀y)(Ͻ(x, y) ∈ G ⇒ Ͻ(y, x) ∈ G) ∧ ((∀x)(∀y)(∀z)((Ͻ(x, y) ∈ G ∧ Ͻ(y, z) ∈ G) ⇒ Ͻ(x, z) ∈ G) ∧ (∀x)(Ͻ(x, x) ∈ G ⇔ x ∈ E)))
+-- n° 2 (стр. 127): каноническое отображение x ↦ G(x) и фактормножество E/R.
+abbrev canon (G E : term) := fn_x(E, sect(G, x))
+abbrev quot (G E : term) := img(canon(G, E), E)
+-- n° 4 (стр. 129): часть A насыщена для R, если вместе с x содержит его класс.
+abbrev Sat (G A : term) := (∀x)(x ∈ A ⇒ sect(G, x) ⊂ A)
+
+namespace ch2
+in Set
+
+theorem equiv_symm {G E T U : term} (h : Equiv(G, E)) (p : Ͻ(T, U) ∈ G) : Ͻ(U, T) ∈ G {
+  (∀x)(∀y)(Ͻ(x, y) ∈ G ⇒ Ͻ(y, x) ∈ G)                              by taut h
+  Ͻ(T, U) ∈ G ⇒ Ͻ(U, T) ∈ G                                         by inst2 ^
+  _                                                                 by mp p ^
+}
+
+theorem equiv_trans {G E T U V : term} (h : Equiv(G, E)) (p : Ͻ(T, U) ∈ G) (q : Ͻ(U, V) ∈ G) : Ͻ(T, V) ∈ G {
+  (∀x)(∀y)(∀z)((Ͻ(x, y) ∈ G ∧ Ͻ(y, z) ∈ G) ⇒ Ͻ(x, z) ∈ G)          by taut h
+  (∀y)(∀z)((Ͻ(T, y) ∈ G ∧ Ͻ(y, z) ∈ G) ⇒ Ͻ(T, z) ∈ G)               by inst ^
+  (Ͻ(T, U) ∈ G ∧ Ͻ(U, V) ∈ G) ⇒ Ͻ(T, V) ∈ G                         by inst2 ^
+  _                                                                 by taut p q ^
+}
+
+theorem equiv_refl_iff {G E T : term} (h : Equiv(G, E)) : Ͻ(T, T) ∈ G ⇔ T ∈ E {
+  (∀x)(Ͻ(x, x) ∈ G ⇔ x ∈ E)                                         by taut h
+  _                                                                 by inst ^
+}
+
+theorem equiv_refl {G E T : term} (h : Equiv(G, E)) (t : T ∈ E) : Ͻ(T, T) ∈ G {
+  Ͻ(T, T) ∈ G ⇔ T ∈ E                                               by equiv_refl_iff h
+  _                                                                 by taut t ^
+}
+
+-- R{x, y} влечёт x ∈ E и y ∈ E: Ͻ(x, y) ∈ G даёт Ͻ(y, x) ∈ G, а потом Ͻ(x, x) ∈ G и Ͻ(y, y) ∈ G.
+theorem equiv_mem {G E T U : term} (h : Equiv(G, E)) (p : Ͻ(T, U) ∈ G) : T ∈ E ∧ U ∈ E {
+  q. Ͻ(U, T) ∈ G                                                    by equiv_symm h p
+  a. Ͻ(T, T) ∈ G                                                    by equiv_trans h p q
+  b. Ͻ(U, U) ∈ G                                                    by equiv_trans h q p
+  Ͻ(T, T) ∈ G ⇔ T ∈ E                                               by equiv_refl_iff h
+  Ͻ(U, U) ∈ G ⇔ U ∈ E                                               by equiv_refl_iff h
+  _                                                                 by taut a b 4 5
+}
+
+-- Значит, график лежит в E × E (стр. 125).
+theorem equiv_sub {G E : term} (h : Equiv(G, E)) : G ⊂ E × E {
+  hg. Graph(G)                                                      by taut h
+  z ∈ G ⇒ z ∈ E × E by assume m {
+    z ∈ G ⇒ IsPair(z)                                               by inst hg
+    IsPair(z)                                                       by mp m ^
+    e. z = Ͻ(pr1(z), pr2(z))                                        by pair_eta ^
+    z ∈ G ⇔ Ͻ(pr1(z), pr2(z)) ∈ G                                   by rcong e
+    p. Ͻ(pr1(z), pr2(z)) ∈ G                                        by taut m ^
+    pr1(z) ∈ E ∧ pr2(z) ∈ E                                         by equiv_mem h p
+    Ͻ(pr1(z), pr2(z)) ∈ E × E ⇔ (pr1(z) ∈ E ∧ pr2(z) ∈ E)           by pair_mem_prod
+    Ͻ(pr1(z), pr2(z)) ∈ E × E                                       by taut ^^ ^
+    z ∈ E × E ⇔ Ͻ(pr1(z), pr2(z)) ∈ E × E                           by rcong e
+    z ∈ E × E                                                         by taut ^^ ^
+  }
+  _                                                                 by gen ^ with z
+}
+
+-- Предложение 1 (стр. 126): G есть эквивалентность на E тогда и только тогда, когда
+-- G график, pr1 G = E, G⁻¹ = G и G ∘ G = G.
+theorem equiv_iff {G E : term} : Equiv(G, E) ⇔ (Graph(G) ∧ (proj1(G) = E ∧ (inv(G) = G ∧ G ∘ G = G))) {
+  Equiv(G, E) ⇒ (Graph(G) ∧ (proj1(G) = E ∧ (inv(G) = G ∧ G ∘ G = G))) by assume h {
+    hg. Graph(G)                                                    by taut h
+    x ∈ proj1(G) ⇒ x ∈ E by assume m {
+      x ∈ proj1(G) ⇔ (∃y)(Ͻ(x, y) ∈ G)                              by mem_proj1
+      e. (∃y)(Ͻ(x, y) ∈ G)                                          by iff_mp ^ m
+      Ͻ(x, y) ∈ G ⇒ x ∈ E by assume p {
+        x ∈ E ∧ y ∈ E                                               by equiv_mem h p
+        x ∈ E                                                       by taut ^
+      }
+      (∀y)(Ͻ(x, y) ∈ G ⇒ x ∈ E)                                     by gen ^ with y
+      _                                                             by obtain e ^
+    }
+    l. proj1(G) ⊂ E                                                 by gen ^ with x
+    x ∈ E ⇒ x ∈ proj1(G) by assume m {
+      Ͻ(x, x) ∈ G                                                   by equiv_refl h m
+      (∃y)(Ͻ(x, y) ∈ G)                                             by exists_intro ^
+      x ∈ proj1(G) ⇔ (∃y)(Ͻ(x, y) ∈ G)                              by mem_proj1
+      _                                                             by iff_mpr ^ ^^
+    }
+    r. E ⊂ proj1(G)                                                 by gen ^ with x
+    p1. proj1(G) = E                                                by ext l r
+    a. Ͻ(x, y) ∈ inv(G) ⇔ Ͻ(y, x) ∈ G                               by mem_inv
+    b. Ͻ(y, x) ∈ G ⇒ Ͻ(x, y) ∈ G by assume p {
+      _                                                             by equiv_symm h p
+    }
+    c. Ͻ(x, y) ∈ G ⇒ Ͻ(y, x) ∈ G by assume p {
+      _                                                             by equiv_symm h p
+    }
+    Ͻ(x, y) ∈ inv(G) ⇔ Ͻ(x, y) ∈ G                                  by taut a b c
+    (∀y)(Ͻ(x, y) ∈ inv(G) ⇔ Ͻ(x, y) ∈ G)                            by gen ^ with y
+    (∀x)(∀y)(Ͻ(x, y) ∈ inv(G) ⇔ Ͻ(x, y) ∈ G)                        by gen ^ with x
+    ig. Graph(inv(G))                                               by inv_graph
+    ie. inv(G) = G                                                  by graph_eq ig hg ^^
+    d. Ͻ(x, y) ∈ G ∘ G ⇔ (∃z)(Ͻ(x, z) ∈ G ∧ Ͻ(z, y) ∈ G)            by mem_comp
+    (Ͻ(x, z) ∈ G ∧ Ͻ(z, y) ∈ G) ⇒ Ͻ(x, y) ∈ G by assume p {
+      p1. Ͻ(x, z) ∈ G                                               by taut p
+      p2. Ͻ(z, y) ∈ G                                               by taut p
+      _                                                             by equiv_trans h p1 p2
+    }
+    fz. (∀z)((Ͻ(x, z) ∈ G ∧ Ͻ(z, y) ∈ G) ⇒ Ͻ(x, y) ∈ G)             by gen ^ with z
+    e1. (∃z)(Ͻ(x, z) ∈ G ∧ Ͻ(z, y) ∈ G) ⇒ Ͻ(x, y) ∈ G by assume e {
+      _                                                             by obtain e fz
+    }
+    e2. Ͻ(x, y) ∈ G ⇒ (∃z)(Ͻ(x, z) ∈ G ∧ Ͻ(z, y) ∈ G) by assume p {
+      x ∈ E ∧ y ∈ E                                                 by equiv_mem h p
+      y ∈ E                                                         by taut ^
+      Ͻ(y, y) ∈ G                                                   by equiv_refl h ^
+      Ͻ(x, y) ∈ G ∧ Ͻ(y, y) ∈ G                                     by C20 p ^
+      (∃z)(Ͻ(x, z) ∈ G ∧ Ͻ(z, y) ∈ G)                               by exists_intro ^
+    }
+    Ͻ(x, y) ∈ G ∘ G ⇔ Ͻ(x, y) ∈ G                                   by taut d e1 e2
+    (∀y)(Ͻ(x, y) ∈ G ∘ G ⇔ Ͻ(x, y) ∈ G)                             by gen ^ with y
+    (∀x)(∀y)(Ͻ(x, y) ∈ G ∘ G ⇔ Ͻ(x, y) ∈ G)                         by gen ^ with x
+    cg. Graph(G ∘ G)                                                by comp_graph
+    ce. G ∘ G = G                                                   by graph_eq cg hg ^^
+    Graph(G) ∧ (proj1(G) = E ∧ (inv(G) = G ∧ G ∘ G = G))            by taut hg p1 ie ce
+  }
+  (Graph(G) ∧ (proj1(G) = E ∧ (inv(G) = G ∧ G ∘ G = G))) ⇒ Equiv(G, E) by assume h {
+    hg. Graph(G)                                                    by taut h
+    pe. proj1(G) = E                                                by taut h
+    ie. inv(G) = G                                                  by taut h
+    ce. G ∘ G = G                                                   by taut h
+    sy. Ͻ(x, y) ∈ G ⇒ Ͻ(y, x) ∈ G by assume p {
+      Ͻ(y, x) ∈ inv(G) ⇔ Ͻ(x, y) ∈ G                                by mem_inv
+      Ͻ(y, x) ∈ inv(G)                                              by iff_mpr ^ p
+      Ͻ(y, x) ∈ inv(G) ⇔ Ͻ(y, x) ∈ G                                by eq_mem ie
+      _                                                             by iff_mp ^ ^^
+    }
+    (∀y)(Ͻ(x, y) ∈ G ⇒ Ͻ(y, x) ∈ G)                                 by gen sy with y
+    s. (∀x)(∀y)(Ͻ(x, y) ∈ G ⇒ Ͻ(y, x) ∈ G)                          by gen ^ with x
+    (Ͻ(x, y) ∈ G ∧ Ͻ(y, z) ∈ G) ⇒ Ͻ(x, z) ∈ G by assume p {
+      (∃w)(Ͻ(x, w) ∈ G ∧ Ͻ(w, z) ∈ G)                               by exists_intro p
+      Ͻ(x, z) ∈ G ∘ G ⇔ (∃w)(Ͻ(x, w) ∈ G ∧ Ͻ(w, z) ∈ G)             by mem_comp
+      Ͻ(x, z) ∈ G ∘ G                                               by iff_mpr ^ ^^
+      Ͻ(x, z) ∈ G ∘ G ⇔ Ͻ(x, z) ∈ G                                 by eq_mem ce
+      _                                                             by iff_mp ^ ^^
+    }
+    (∀z)((Ͻ(x, y) ∈ G ∧ Ͻ(y, z) ∈ G) ⇒ Ͻ(x, z) ∈ G)                 by gen ^ with z
+    (∀y)(∀z)((Ͻ(x, y) ∈ G ∧ Ͻ(y, z) ∈ G) ⇒ Ͻ(x, z) ∈ G)             by gen ^ with y
+    t. (∀x)(∀y)(∀z)((Ͻ(x, y) ∈ G ∧ Ͻ(y, z) ∈ G) ⇒ Ͻ(x, z) ∈ G)      by gen ^ with x
+    r1. Ͻ(x, x) ∈ G ⇒ x ∈ E by assume p {
+      x ∈ proj1(G) ∧ x ∈ proj2(G)                                   by pair_proj p
+      x ∈ proj1(G)                                                  by taut ^
+      x ∈ proj1(G) ⇔ x ∈ E                                          by eq_mem pe
+      _                                                             by iff_mp ^ ^^
+    }
+    r2. x ∈ E ⇒ Ͻ(x, x) ∈ G by assume m {
+      x ∈ proj1(G) ⇔ x ∈ E                                          by eq_mem pe
+      x ∈ proj1(G)                                                  by iff_mpr ^ m
+      x ∈ proj1(G) ⇔ (∃y)(Ͻ(x, y) ∈ G)                              by mem_proj1
+      e. (∃y)(Ͻ(x, y) ∈ G)                                          by iff_mp ^ ^^
+      Ͻ(x, y) ∈ G ⇒ Ͻ(x, x) ∈ G by assume p {
+        q. Ͻ(y, x) ∈ G                                              by mp p sy
+        (∀z)((Ͻ(x, y) ∈ G ∧ Ͻ(y, z) ∈ G) ⇒ Ͻ(x, z) ∈ G)             by inst2 t
+        (Ͻ(x, y) ∈ G ∧ Ͻ(y, x) ∈ G) ⇒ Ͻ(x, x) ∈ G                   by inst ^
+        Ͻ(x, x) ∈ G                                                 by taut p q ^
+      }
+      (∀y)(Ͻ(x, y) ∈ G ⇒ Ͻ(x, x) ∈ G)                               by gen ^ with y
+      _                                                             by obtain e ^
+    }
+    Ͻ(x, x) ∈ G ⇔ x ∈ E                                             by taut r1 r2
+    rf. (∀x)(Ͻ(x, x) ∈ G ⇔ x ∈ E)                                   by gen ^ with x
+    Equiv(G, E)                                                     by taut hg s t rf
+  }
+  _                                                                 by taut 1 2
+}
+
+-- Примеры (стр. 126): равенство в E (график Δ(E)) и соотношение "x ∈ E и y ∈ E" (график E × E).
+theorem equiv_diag {E : term} : Equiv(Δ(E), E) {
+  dg. Graph(Δ(E))                                                   by diag_graph
+  p1. proj1(Δ(E)) = E                                               by proj1_diag
+  iv. inv(Δ(E)) = Δ(E)                                              by inv_diag
+  proj1(Δ(E)) ⊂ E                                                   by eq_subset p1
+  cd. Δ(E) ∘ Δ(E) = Δ(E)                                            by comp_diag_right dg ^
+  Graph(Δ(E)) ∧ (proj1(Δ(E)) = E ∧ (inv(Δ(E)) = Δ(E) ∧ Δ(E) ∘ Δ(E) = Δ(E)))   by taut dg p1 iv cd
+  Equiv(Δ(E), E) ⇔ (Graph(Δ(E)) ∧ (proj1(Δ(E)) = E ∧ (inv(Δ(E)) = Δ(E) ∧ Δ(E) ∘ Δ(E) = Δ(E))))   by equiv_iff
+  _                                                                 by iff_mpr ^ ^^
+}
+
+theorem equiv_full {E : term} : Equiv(E × E, E) {
+  g. Graph(E × E)                                                   by prod_graph
+  a. Ͻ(x, y) ∈ E × E ⇔ (x ∈ E ∧ y ∈ E)                              by pair_mem_prod
+  b. Ͻ(y, x) ∈ E × E ⇔ (y ∈ E ∧ x ∈ E)                              by pair_mem_prod
+  Ͻ(x, y) ∈ E × E ⇒ Ͻ(y, x) ∈ E × E                                 by taut a b
+  (∀y)(Ͻ(x, y) ∈ E × E ⇒ Ͻ(y, x) ∈ E × E)                           by gen ^ with y
+  s. (∀x)(∀y)(Ͻ(x, y) ∈ E × E ⇒ Ͻ(y, x) ∈ E × E)                    by gen ^ with x
+  c. Ͻ(y, z) ∈ E × E ⇔ (y ∈ E ∧ z ∈ E)                              by pair_mem_prod
+  d. Ͻ(x, z) ∈ E × E ⇔ (x ∈ E ∧ z ∈ E)                              by pair_mem_prod
+  (Ͻ(x, y) ∈ E × E ∧ Ͻ(y, z) ∈ E × E) ⇒ Ͻ(x, z) ∈ E × E             by taut a c d
+  (∀z)((Ͻ(x, y) ∈ E × E ∧ Ͻ(y, z) ∈ E × E) ⇒ Ͻ(x, z) ∈ E × E)       by gen ^ with z
+  (∀y)(∀z)((Ͻ(x, y) ∈ E × E ∧ Ͻ(y, z) ∈ E × E) ⇒ Ͻ(x, z) ∈ E × E)   by gen ^ with y
+  t. (∀x)(∀y)(∀z)((Ͻ(x, y) ∈ E × E ∧ Ͻ(y, z) ∈ E × E) ⇒ Ͻ(x, z) ∈ E × E)   by gen ^ with x
+  Ͻ(x, x) ∈ E × E ⇔ (x ∈ E ∧ x ∈ E)                                 by pair_mem_prod
+  Ͻ(x, x) ∈ E × E ⇔ x ∈ E                                           by taut ^
+  r. (∀x)(Ͻ(x, x) ∈ E × E ⇔ x ∈ E)                                  by gen ^ with x
+  _                                                                 by taut g s t r
+}
+
+-- Пары (x, y) из E × E с условием R{x, y} образуют множество (C52: они лежат в E × E).
+theorem pairsE_coll {E : term} {R : rel 2} : Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ (x ∈ E ∧ (y ∈ E ∧ R(x, y))))) {
+  (∃x)(∃y)(z = Ͻ(x, y) ∧ (x ∈ E ∧ (y ∈ E ∧ R(x, y)))) ⇒ z ∈ E × E by assume q {
+    (z = Ͻ(x, y) ∧ (x ∈ E ∧ (y ∈ E ∧ R(x, y)))) ⇒ z ∈ E × E by assume a {
+      ze. z = Ͻ(x, y)                                               by taut a
+      Ͻ(x, y) ∈ E × E ⇔ (x ∈ E ∧ y ∈ E)                             by pair_mem_prod
+      Ͻ(x, y) ∈ E × E                                               by taut a ^
+      z ∈ E × E ⇔ Ͻ(x, y) ∈ E × E                                   by rcong ze
+      z ∈ E × E                                                     by iff_mpr ^ ^^
+    }
+    (∀y)((z = Ͻ(x, y) ∧ (x ∈ E ∧ (y ∈ E ∧ R(x, y)))) ⇒ z ∈ E × E)                  by gen ^ with y
+    (∀x)(∀y)((z = Ͻ(x, y) ∧ (x ∈ E ∧ (y ∈ E ∧ R(x, y)))) ⇒ z ∈ E × E)              by gen ^ with x
+    z ∈ E × E                                                       by obtain2 q ^
+  }
+  (∀z)((∃x)(∃y)(z = Ͻ(x, y) ∧ (x ∈ E ∧ (y ∈ E ∧ R(x, y)))) ⇒ z ∈ E × E)            by gen ^ with z
+  _                                                                 by C52 ^
+}
+
+theorem mem_pairsE {E T U : term} {R : rel 2} : Ͻ(T, U) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y))) ⇔ (T ∈ E ∧ (U ∈ E ∧ R(T, U))) {
+  Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ (x ∈ E ∧ (y ∈ E ∧ R(x, y)))))                      by pairsE_coll
+  _                                                                 by pairs_mem ^
+}
+
+-- Общий способ получить эквивалентность: соотношение R{x, y}, симметричное, транзитивное
+-- и рефлексивное на E, вместе с условием "x ∈ E и y ∈ E" (так построены примеры 2-4, стр. 126).
+theorem equiv_pairs {E : term} {R : rel 2} (hs : (∀x)(∀y)(R(x, y) ⇒ R(y, x))) (ht : (∀x)(∀y)(∀z)((R(x, y) ∧ R(y, z)) ⇒ R(x, z))) (hr : (∀x)(x ∈ E ⇒ R(x, x))) : Equiv(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y))), E) {
+  co. Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ (x ∈ E ∧ (y ∈ E ∧ R(x, y)))))                  by pairsE_coll
+  g. Graph(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y))))                                                    by pairs_graph co
+  pxy. Ͻ(x, y) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y))) ⇔ (x ∈ E ∧ (y ∈ E ∧ R(x, y)))                                by pairs_mem co
+  pyx. Ͻ(y, x) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y))) ⇔ (y ∈ E ∧ (x ∈ E ∧ R(y, x)))                                by pairs_mem co
+  pyz. Ͻ(y, z) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y))) ⇔ (y ∈ E ∧ (z ∈ E ∧ R(y, z)))                                by pairs_mem co
+  pxz. Ͻ(x, z) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y))) ⇔ (x ∈ E ∧ (z ∈ E ∧ R(x, z)))                                by pairs_mem co
+  pxx. Ͻ(x, x) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y))) ⇔ (x ∈ E ∧ (x ∈ E ∧ R(x, x)))                                by pairs_mem co
+  R(x, y) ⇒ R(y, x)                                                 by inst2 hs
+  Ͻ(x, y) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y))) ⇒ Ͻ(y, x) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y)))                                   by taut pxy pyx ^
+  (∀y)(Ͻ(x, y) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y))) ⇒ Ͻ(y, x) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y))))                             by gen ^ with y
+  s. (∀x)(∀y)(Ͻ(x, y) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y))) ⇒ Ͻ(y, x) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y))))                      by gen ^ with x
+  (∀y)(∀z)((R(x, y) ∧ R(y, z)) ⇒ R(x, z))                           by inst ht
+  (∀z)((R(x, y) ∧ R(y, z)) ⇒ R(x, z))                               by inst ^
+  (R(x, y) ∧ R(y, z)) ⇒ R(x, z)                                     by inst ^
+  (Ͻ(x, y) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y))) ∧ Ͻ(y, z) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y)))) ⇒ Ͻ(x, z) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y)))               by taut pxy pyz pxz ^
+  (∀z)((Ͻ(x, y) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y))) ∧ Ͻ(y, z) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y)))) ⇒ Ͻ(x, z) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y))))         by gen ^ with z
+  (∀y)(∀z)((Ͻ(x, y) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y))) ∧ Ͻ(y, z) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y)))) ⇒ Ͻ(x, z) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y))))     by gen ^ with y
+  t. (∀x)(∀y)(∀z)((Ͻ(x, y) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y))) ∧ Ͻ(y, z) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y)))) ⇒ Ͻ(x, z) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y))))   by gen ^ with x
+  x ∈ E ⇒ R(x, x)                                                   by inst hr
+  Ͻ(x, x) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y))) ⇔ x ∈ E                                            by taut pxx ^
+  r. (∀x)(Ͻ(x, x) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ R(x, y))) ⇔ x ∈ E)                                   by gen ^ with x
+  _                                                                 by taut g s t r
+}
+
+-- n° 2. Классы эквивалентности (стр. 126-127).
+theorem canon_ap {G E T : term} (t : T ∈ E) : ap(canon(G, E), T) = sect(G, T) by ap_fn t
+
+theorem canon_map {G E : term} : Map(canon(G, E), E, quot(G, E)) {
+  m. Map(canon(G, E), E, ℰ_y((∃x)(y = sect(G, x) ∧ x ∈ E)))        by fn_map
+  ee. E ⊂ E                                                         by subset_refl
+  x ∈ E ⇒ sect(G, x) ∈ quot(G, E) by assume a {
+    ap(canon(G, E), x) ∈ img(canon(G, E), E)                        by ap_mem_img m ee a
+    ap(canon(G, E), x) = sect(G, x)                                 by canon_ap a
+    ap(canon(G, E), x) ∈ quot(G, E) ⇔ sect(G, x) ∈ quot(G, E)       by rcong ^
+    sect(G, x) ∈ quot(G, E)                                         by taut ^^^ ^
+  }
+  (∀x)(x ∈ E ⇒ sect(G, x) ∈ quot(G, E))                             by gen ^ with x
+  _                                                                 by fn_map_into ^
+}
+
+-- Каноническое отображение E на E/R сюръективно (E/R по определению его образ).
+theorem canon_surj {G E : term} : Surj(canon(G, E), E, quot(G, E)) {
+  Map(canon(G, E), E, quot(G, E))                                   by canon_map
+  img(canon(G, E), E) = quot(G, E)                                  by T1
+  _                                                                 by C20 ^^ ^
+}
+
+theorem mem_quot {G E C : term} : C ∈ quot(G, E) ⇔ (∃x)(x ∈ E ∧ C = sect(G, x)) {
+  m. Map(canon(G, E), E, quot(G, E))                                by canon_map
+  ee. E ⊂ E                                                         by subset_refl
+  a. C ∈ quot(G, E) ⇔ (∃x)(x ∈ E ∧ C = ap(canon(G, E), x))          by mem_img_map m ee
+  b. x ∈ E ⇒ (C = ap(canon(G, E), x) ⇔ C = sect(G, x)) by assume t {
+    ap(canon(G, E), x) = sect(G, x)                                 by canon_ap t
+    C = ap(canon(G, E), x) ⇔ C = sect(G, x)                         by rcong ^
+  }
+  (x ∈ E ∧ C = ap(canon(G, E), x)) ⇔ (x ∈ E ∧ C = sect(G, x))       by taut b
+  (∀x)((x ∈ E ∧ C = ap(canon(G, E), x)) ⇔ (x ∈ E ∧ C = sect(G, x)))   by gen ^ with x
+  (∃x)(x ∈ E ∧ C = ap(canon(G, E), x)) ⇔ (∃x)(x ∈ E ∧ C = sect(G, x))   by C31_exists_iff ^
+  _                                                                 by taut a ^
+}
+
+-- Классы двух элементов совпадают в точности для эквивалентных элементов (стр. 127).
+theorem cls_eq {G E T U : term} (h : Equiv(G, E)) : Ͻ(T, U) ∈ G ⇔ (T ∈ E ∧ (U ∈ E ∧ sect(G, T) = sect(G, U))) {
+  Ͻ(T, U) ∈ G ⇒ (T ∈ E ∧ (U ∈ E ∧ sect(G, T) = sect(G, U))) by assume p {
+    mm. T ∈ E ∧ U ∈ E                                               by equiv_mem h p
+    q. Ͻ(U, T) ∈ G                                                  by equiv_symm h p
+    a. z ∈ sect(G, T) ⇔ Ͻ(T, z) ∈ G                                 by mem_sect
+    b. z ∈ sect(G, U) ⇔ Ͻ(U, z) ∈ G                                 by mem_sect
+    c. Ͻ(T, z) ∈ G ⇒ Ͻ(U, z) ∈ G by assume r {
+      Ͻ(U, z) ∈ G                                                   by equiv_trans h q r
+    }
+    d. Ͻ(U, z) ∈ G ⇒ Ͻ(T, z) ∈ G by assume r {
+      Ͻ(T, z) ∈ G                                                   by equiv_trans h p r
+    }
+    z ∈ sect(G, T) ⇔ z ∈ sect(G, U)                                 by taut a b c d
+    (∀z)(z ∈ sect(G, T) ⇔ z ∈ sect(G, U))                           by gen ^ with z
+    sect(G, T) = sect(G, U)                                         by ext_iff ^
+    T ∈ E ∧ (U ∈ E ∧ sect(G, T) = sect(G, U))                       by taut mm ^
+  }
+  (T ∈ E ∧ (U ∈ E ∧ sect(G, T) = sect(G, U))) ⇒ Ͻ(T, U) ∈ G by assume p {
+    U ∈ E                                                           by taut p
+    Ͻ(U, U) ∈ G                                                     by equiv_refl h ^
+    U ∈ sect(G, U) ⇔ Ͻ(U, U) ∈ G                                    by mem_sect
+    U ∈ sect(G, U)                                                  by taut ^^ ^
+    e. sect(G, T) = sect(G, U)                                      by taut p
+    U ∈ sect(G, T) ⇔ U ∈ sect(G, U)                                 by eq_mem e
+    U ∈ sect(G, T)                                                  by taut ^ ^^^
+    U ∈ sect(G, T) ⇔ Ͻ(T, U) ∈ G                                    by mem_sect
+    Ͻ(T, U) ∈ G                                                     by taut ^^ ^
+  }
+  _                                                                 by taut 1 2
+}
+
+-- C55 (стр. 127): R{x, y} ⇔ (x ∈ E, y ∈ E и p(x) = p(y)), p каноническое отображение.
+theorem C55 {G E T U : term} (h : Equiv(G, E)) : Ͻ(T, U) ∈ G ⇔ (T ∈ E ∧ (U ∈ E ∧ ap(canon(G, E), T) = ap(canon(G, E), U))) {
+  a. Ͻ(T, U) ∈ G ⇔ (T ∈ E ∧ (U ∈ E ∧ sect(G, T) = sect(G, U)))      by cls_eq h
+  b. (T ∈ E ∧ U ∈ E) ⇒ (sect(G, T) = sect(G, U) ⇔ ap(canon(G, E), T) = ap(canon(G, E), U)) by assume m {
+    T ∈ E                                                           by taut m
+    e1. ap(canon(G, E), T) = sect(G, T)                             by canon_ap ^
+    U ∈ E                                                           by taut m
+    e2. ap(canon(G, E), U) = sect(G, U)                             by canon_ap ^
+    f1. sect(G, T) = ap(canon(G, E), T)                             by T2 e1
+    f2. sect(G, U) = ap(canon(G, E), U)                             by T2 e2
+    sect(G, T) = sect(G, U) ⇔ ap(canon(G, E), T) = ap(canon(G, E), U)   by rcong2 f1 f2
+  }
+  _                                                                 by taut a b
+}
+
+theorem self_mem_cls {G E X : term} (h : Equiv(G, E)) (hx : X ∈ E) : X ∈ sect(G, X) {
+  Ͻ(X, X) ∈ G                                                       by equiv_refl h hx
+  X ∈ sect(G, X) ⇔ Ͻ(X, X) ∈ G                                      by mem_sect
+  _                                                                 by iff_mpr ^ ^^
+}
+
+theorem sect_mem_quot {G E X : term} (hx : X ∈ E) : sect(G, X) ∈ quot(G, E) {
+  sect(G, X) = sect(G, X)                                           by T1
+  X ∈ E ∧ sect(G, X) = sect(G, X)                                   by C20 hx ^
+  (∃x)(x ∈ E ∧ sect(G, X) = sect(G, x))                             by exists_intro ^
+  sect(G, X) ∈ quot(G, E) ⇔ (∃x)(x ∈ E ∧ sect(G, X) = sect(G, x))          by mem_quot
+  _                                                                 by iff_mpr ^ ^^
+}
+
+-- Всякий элемент класса определяет класс: если X ∈ C ∈ E/R, то C = G(X).
+theorem quot_cls {G E C X : term} (h : Equiv(G, E)) (hc : C ∈ quot(G, E)) (hx : X ∈ C) : C = sect(G, X) {
+  C ∈ quot(G, E) ⇔ (∃x)(x ∈ E ∧ C = sect(G, x))                            by mem_quot
+  e. (∃x)(x ∈ E ∧ C = sect(G, x))                                   by iff_mp ^ hc
+  (x ∈ E ∧ C = sect(G, x)) ⇒ C = sect(G, X) by assume p {
+    c. C = sect(G, x)                                               by taut p
+    X ∈ C ⇔ X ∈ sect(G, x)                                          by eq_mem c
+    X ∈ sect(G, x)                                                  by iff_mp ^ hx
+    X ∈ sect(G, x) ⇔ Ͻ(x, X) ∈ G                                    by mem_sect
+    Ͻ(x, X) ∈ G                                                     by iff_mp ^ ^^
+    Ͻ(x, X) ∈ G ⇔ (x ∈ E ∧ (X ∈ E ∧ sect(G, x) = sect(G, X)))       by cls_eq h
+    d. sect(G, x) = sect(G, X)                                      by taut ^^ ^
+    C = sect(G, X)                                                  by chain c d
+  }
+  (∀x)((x ∈ E ∧ C = sect(G, x)) ⇒ C = sect(G, X))                   by gen ^ with x
+  _                                                                 by obtain e ^
+}
+
+-- Классы непусты и лежат в E.
+theorem quot_mem {G E C : term} (h : Equiv(G, E)) (hc : C ∈ quot(G, E)) : C ≠ ∅ ∧ C ⊂ E {
+  C ∈ quot(G, E) ⇔ (∃x)(x ∈ E ∧ C = sect(G, x))                            by mem_quot
+  e. (∃x)(x ∈ E ∧ C = sect(G, x))                                   by iff_mp ^ hc
+  (x ∈ E ∧ C = sect(G, x)) ⇒ (C ≠ ∅ ∧ C ⊂ E) by assume p {
+    xe. x ∈ E                                                       by taut p
+    c. C = sect(G, x)                                               by taut p
+    x ∈ sect(G, x)                                                  by self_mem_cls h xe
+    x ∈ C ⇔ x ∈ sect(G, x)                                          by eq_mem c
+    x ∈ C                                                           by iff_mpr ^ ^^
+    (∃y)(y ∈ C)                                                     by exists_intro ^
+    C ≠ ∅ ⇔ (∃y)(y ∈ C)                                             by nonempty
+    ne. C ≠ ∅                                                       by iff_mpr ^ ^^
+    z ∈ C ⇒ z ∈ E by assume m {
+      z ∈ C ⇔ z ∈ sect(G, x)                                        by eq_mem c
+      z ∈ sect(G, x)                                                by iff_mp ^ m
+      z ∈ sect(G, x) ⇔ Ͻ(x, z) ∈ G                                  by mem_sect
+      Ͻ(x, z) ∈ G                                                   by iff_mp ^ ^^
+      x ∈ E ∧ z ∈ E                                                 by equiv_mem h ^
+      z ∈ E                                                         by taut ^
+    }
+    C ⊂ E                                                           by gen ^ with z
+    C ≠ ∅ ∧ C ⊂ E                                                   by C20 ne ^
+  }
+  (∀x)((x ∈ E ∧ C = sect(G, x)) ⇒ (C ≠ ∅ ∧ C ⊂ E))                  by gen ^ with x
+  _                                                                 by obtain e ^
+}
+
+-- Фактормножество E/R есть разбиение E (стр. 127-128).
+theorem quot_partition {G E : term} (h : Equiv(G, E)) : Partition_C(quot(G, E), E, C) {
+  C ∈ quot(G, E) ⇒ (C ≠ ∅ ∧ C ⊂ E) by assume m {
+    C ≠ ∅ ∧ C ⊂ E                                                   by quot_mem h m
+  }
+  a. (∀C)(C ∈ quot(G, E) ⇒ (C ≠ ∅ ∧ C ⊂ E))                                by gen ^ with C
+  (C ∈ quot(G, E) ∧ (D ∈ quot(G, E) ∧ C ≠ D)) ⇒ C ∩ D = ∅ by assume m {
+    hc. C ∈ quot(G, E)                                                     by taut m
+    hd. D ∈ quot(G, E)                                                     by taut m
+    z ∈ C ∩ D ⇒ C = D by assume z1 {
+      z ∈ C ∩ D ⇔ (z ∈ C ∧ z ∈ D)                                   by mem_cap
+      zc. z ∈ C                                                     by taut z1 ^
+      zd. z ∈ D                                                     by taut z1 ^^
+      c. C = sect(G, z)                                             by quot_cls h hc zc
+      d. D = sect(G, z)                                             by quot_cls h hd zd
+      C = D                                                         by chain c d
+    }
+    z ∉ C ∩ D                                                       by taut m ^
+    (∀z)(z ∉ C ∩ D)                                                 by gen ^ with z
+    (∀z)(z ∉ C ∩ D) ⇔ C ∩ D = ∅                                     by empty_iff
+    C ∩ D = ∅                                                       by iff_mp ^ ^^
+  }
+  (∀D)((C ∈ quot(G, E) ∧ (D ∈ quot(G, E) ∧ C ≠ D)) ⇒ C ∩ D = ∅)                   by gen ^ with D
+  b. (∀C)(∀D)((C ∈ quot(G, E) ∧ (D ∈ quot(G, E) ∧ C ≠ D)) ⇒ C ∩ D = ∅)            by gen ^ with C
+  x ∈ E ⇒ x ∈ ⋃_C(quot(G, E), C) by assume m {
+    s. sect(G, x) ∈ quot(G, E)                                             by sect_mem_quot m
+    x ∈ sect(G, x)                                                  by self_mem_cls h m
+    sect(G, x) ∈ quot(G, E) ∧ x ∈ sect(G, x)                               by C20 s ^
+    (∃C)(C ∈ quot(G, E) ∧ x ∈ C)                                           by exists_intro ^
+    x ∈ ⋃_C(quot(G, E), C) ⇔ (∃C)(C ∈ quot(G, E) ∧ x ∈ C)                         by mem_union
+    x ∈ ⋃_C(quot(G, E), C)                                                 by iff_mpr ^ ^^
+  }
+  c. E ⊂ ⋃_C(quot(G, E), C)                                                by gen ^ with x
+  _                                                                 by taut a b c
+}
+
+-- Обратно (стр. 128): разбиение (X_ι) множества E задаёт соотношение эквивалентности
+-- "существует ι, для которого x ∈ X_ι и y ∈ X_ι".
+theorem partition_equiv {I E : term} {X : term 1} (hp : Partition_i(I, E, X(i))) : Equiv(Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))), E) {
+  hs. (∀i)(i ∈ I ⇒ (X(i) ≠ ∅ ∧ X(i) ⊂ E))                           by taut hp
+  hd. (∀i)(∀j)((i ∈ I ∧ (j ∈ I ∧ i ≠ j)) ⇒ X(i) ∩ X(j) = ∅)         by taut hp
+  hc. E ⊂ ⋃_i(I, X(i))                                              by taut hp
+  ie. (i ∈ I ∧ w ∈ X(i)) ⇒ w ∈ E by assume a {
+    i ∈ I ⇒ (X(i) ≠ ∅ ∧ X(i) ⊂ E)                                   by inst hs
+    X(i) ⊂ E                                                        by taut a ^
+    w ∈ X(i) ⇒ w ∈ E                                                by inst ^
+    w ∈ E                                                           by taut a ^
+  }
+  (∀w)((i ∈ I ∧ w ∈ X(i)) ⇒ w ∈ E)                                 by gen ie with w
+  iea. (∀i)(∀w)((i ∈ I ∧ w ∈ X(i)) ⇒ w ∈ E)                         by gen ^ with i
+  (∃x)(∃y)(z = Ͻ(x, y) ∧ (∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))) ⇒ z ∈ E × E by assume q {
+    (z = Ͻ(x, y) ∧ (∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))) ⇒ z ∈ E × E by assume a {
+      ze. z = Ͻ(x, y)                                               by taut a
+      ei. (∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))                                                       by taut a
+      (i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i))) ⇒ (x ∈ E ∧ y ∈ E) by assume b {
+        (i ∈ I ∧ x ∈ X(i)) ⇒ x ∈ E                                  by inst2 iea
+        (i ∈ I ∧ y ∈ X(i)) ⇒ y ∈ E                                  by inst2 iea
+        x ∈ E ∧ y ∈ E                                               by taut b 1 2
+      }
+      (∀i)((i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i))) ⇒ (x ∈ E ∧ y ∈ E))       by gen ^ with i
+      xy. x ∈ E ∧ y ∈ E                                             by obtain ei ^
+      Ͻ(x, y) ∈ E × E ⇔ (x ∈ E ∧ y ∈ E)                             by pair_mem_prod
+      Ͻ(x, y) ∈ E × E                                               by iff_mpr ^ xy
+      z ∈ E × E ⇔ Ͻ(x, y) ∈ E × E                                   by rcong ze
+      z ∈ E × E                                                     by iff_mpr ^ ^^
+    }
+    (∀y)((z = Ͻ(x, y) ∧ (∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))) ⇒ z ∈ E × E)                           by gen ^ with y
+    (∀x)(∀y)((z = Ͻ(x, y) ∧ (∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))) ⇒ z ∈ E × E)                       by gen ^ with x
+    z ∈ E × E                                                       by obtain2 q ^
+  }
+  (∀z)((∃x)(∃y)(z = Ͻ(x, y) ∧ (∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))) ⇒ z ∈ E × E)                     by gen ^ with z
+  co. Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ (∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))))                           by C52 ^
+  g. Graph(Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))))                                                    by pairs_graph co
+  pxy. Ͻ(x, y) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))) ⇔ (∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))                                by pairs_mem co
+  pyx. Ͻ(y, x) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))) ⇔ (∃i)(i ∈ I ∧ (y ∈ X(i) ∧ x ∈ X(i)))                                by pairs_mem co
+  pyz. Ͻ(y, z) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))) ⇔ (∃i)(i ∈ I ∧ (y ∈ X(i) ∧ z ∈ X(i)))                                by pairs_mem co
+  pxz. Ͻ(x, z) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))) ⇔ (∃i)(i ∈ I ∧ (x ∈ X(i) ∧ z ∈ X(i)))                                by pairs_mem co
+  pxx. Ͻ(x, x) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))) ⇔ (∃i)(i ∈ I ∧ (x ∈ X(i) ∧ x ∈ X(i)))                                by pairs_mem co
+  -- симметричность
+  (i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i))) ⇒ (i ∈ I ∧ (y ∈ X(i) ∧ x ∈ X(i)))   by taut
+  (∀i)((i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i))) ⇒ (i ∈ I ∧ (y ∈ X(i) ∧ x ∈ X(i))))   by gen ^ with i
+  (∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i))) ⇒ (∃i)(i ∈ I ∧ (y ∈ X(i) ∧ x ∈ X(i)))                                       by C31_exists ^
+  Ͻ(x, y) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))) ⇒ Ͻ(y, x) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i))))                                   by taut pxy pyx ^
+  (∀y)(Ͻ(x, y) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))) ⇒ Ͻ(y, x) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))))                             by gen ^ with y
+  s. (∀x)(∀y)(Ͻ(x, y) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))) ⇒ Ͻ(y, x) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))))                      by gen ^ with x
+  -- транзитивность: y лежит в X_ι и в X_κ, а разные множества разбиения не пересекаются
+  (Ͻ(x, y) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))) ∧ Ͻ(y, z) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i))))) ⇒ Ͻ(x, z) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))) by assume p {
+    e1. (∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))                                                by taut p pxy
+    e2. (∃j)(j ∈ I ∧ (y ∈ X(j) ∧ z ∈ X(j)))                         by taut p pyz
+    (i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i))) ⇒ Ͻ(x, z) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))) by assume a {
+      (j ∈ I ∧ (y ∈ X(j) ∧ z ∈ X(j))) ⇒ Ͻ(x, z) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))) by assume b {
+        d. (i ∈ I ∧ (j ∈ I ∧ i ≠ j)) ⇒ X(i) ∩ X(j) = ∅              by inst2 hd
+        y ∈ X(i) ∩ X(j) ⇔ (y ∈ X(i) ∧ y ∈ X(j))                     by mem_cap
+        y ∈ X(i) ∩ X(j)                                             by taut a b ^
+        (∃w)(w ∈ X(i) ∩ X(j))                                       by exists_intro ^
+        X(i) ∩ X(j) ≠ ∅ ⇔ (∃w)(w ∈ X(i) ∩ X(j))                     by nonempty
+        ne. X(i) ∩ X(j) ≠ ∅                                         by iff_mpr ^ ^^
+        ij. i = j                                                   by taut a b d ne
+        X(i) = X(j)                                                 by cong ij
+        z ∈ X(i) ⇔ z ∈ X(j)                                         by eq_mem ^
+        z ∈ X(i)                                                    by taut b ^
+        i ∈ I ∧ (x ∈ X(i) ∧ z ∈ X(i))                               by taut a ^
+        (∃i)(i ∈ I ∧ (x ∈ X(i) ∧ z ∈ X(i)))                                                by exists_intro ^
+        Ͻ(x, z) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i))))                                              by iff_mpr pxz ^
+      }
+      (∀j)((j ∈ I ∧ (y ∈ X(j) ∧ z ∈ X(j))) ⇒ Ͻ(x, z) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))))        by gen ^ with j
+      Ͻ(x, z) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i))))                                                by obtain e2 ^
+    }
+    (∀i)((i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i))) ⇒ Ͻ(x, z) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))))          by gen ^ with i
+    Ͻ(x, z) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i))))                                                  by obtain e1 ^
+  }
+  (∀z)((Ͻ(x, y) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))) ∧ Ͻ(y, z) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i))))) ⇒ Ͻ(x, z) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))))         by gen ^ with z
+  (∀y)(∀z)((Ͻ(x, y) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))) ∧ Ͻ(y, z) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i))))) ⇒ Ͻ(x, z) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))))     by gen ^ with y
+  t. (∀x)(∀y)(∀z)((Ͻ(x, y) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))) ∧ Ͻ(y, z) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i))))) ⇒ Ͻ(x, z) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))))   by gen ^ with x
+  -- рефлексивность в E: множества разбиения лежат в E и покрывают E
+  Ͻ(x, x) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))) ⇒ x ∈ E by assume p {
+    e. (∃i)(i ∈ I ∧ (x ∈ X(i) ∧ x ∈ X(i)))                                                 by iff_mp pxx p
+    (i ∈ I ∧ (x ∈ X(i) ∧ x ∈ X(i))) ⇒ x ∈ E by assume a {
+      (i ∈ I ∧ x ∈ X(i)) ⇒ x ∈ E                                    by inst2 iea
+      x ∈ E                                                         by taut a ^
+    }
+    (∀i)((i ∈ I ∧ (x ∈ X(i) ∧ x ∈ X(i))) ⇒ x ∈ E)                   by gen ^ with i
+    x ∈ E                                                           by obtain e ^
+  }
+  x ∈ E ⇒ Ͻ(x, x) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))) by assume m {
+    x ∈ E ⇒ x ∈ ⋃_i(I, X(i))                                        by inst hc
+    x ∈ ⋃_i(I, X(i))                                                by mp m ^
+    x ∈ ⋃_i(I, X(i)) ⇔ (∃i)(i ∈ I ∧ x ∈ X(i))                       by mem_union
+    e. (∃i)(i ∈ I ∧ x ∈ X(i))                                       by iff_mp ^ ^^
+    (i ∈ I ∧ x ∈ X(i)) ⇒ (i ∈ I ∧ (x ∈ X(i) ∧ x ∈ X(i)))            by taut
+    (∀i)((i ∈ I ∧ x ∈ X(i)) ⇒ (i ∈ I ∧ (x ∈ X(i) ∧ x ∈ X(i))))      by gen ^ with i
+    (∃i)(i ∈ I ∧ x ∈ X(i)) ⇒ (∃i)(i ∈ I ∧ (x ∈ X(i) ∧ x ∈ X(i)))                           by C31_exists ^
+    (∃i)(i ∈ I ∧ (x ∈ X(i) ∧ x ∈ X(i)))                                                    by mp e ^
+    Ͻ(x, x) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i))))                                                  by iff_mpr pxx ^
+  }
+  Ͻ(x, x) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))) ⇔ x ∈ E                                            by taut ^^ ^
+  r. (∀x)(Ͻ(x, x) ∈ Pairs_{x,y}((∃i)(i ∈ I ∧ (x ∈ X(i) ∧ y ∈ X(i)))) ⇔ x ∈ E)                                   by gen ^ with x
+  _                                                                 by taut g s t r
+}
+
+-- n° 3. C56 (стр. 128): если P{x} совместимо с R, то для класса t соотношения
+-- "P истинно для некоторого элемента t" и "P истинно для всех элементов t" равносильны.
+theorem C56 {G E T : term} {P : rel 1} (h : Equiv(G, E)) (hp : (∀x)(∀y)((P(x) ∧ Ͻ(x, y) ∈ G) ⇒ P(y))) (ht : T ∈ quot(G, E)) : (∃x)(x ∈ T ∧ P(x)) ⇔ (∀x)(x ∈ T ⇒ P(x)) {
+  (∃x)(x ∈ T ∧ P(x)) ⇒ (∀x)(x ∈ T ⇒ P(x)) by assume e {
+    (a ∈ T ∧ P(a)) ⇒ (∀x)(x ∈ T ⇒ P(x)) by assume pa {
+      at. a ∈ T                                                     by taut pa
+      ap. P(a)                                                      by taut pa
+      c. T = sect(G, a)                                             by quot_cls h ht at
+      x ∈ T ⇒ P(x) by assume m {
+        x ∈ T ⇔ x ∈ sect(G, a)                                      by eq_mem c
+        x ∈ sect(G, a)                                              by iff_mp ^ m
+        x ∈ sect(G, a) ⇔ Ͻ(a, x) ∈ G                                by mem_sect
+        q. Ͻ(a, x) ∈ G                                              by iff_mp ^ ^^
+        (P(a) ∧ Ͻ(a, x) ∈ G) ⇒ P(x)                                 by inst2 hp
+        P(x)                                                        by taut ap q ^
+      }
+      (∀x)(x ∈ T ⇒ P(x))                                            by gen ^ with x
+    }
+    (∀a)((a ∈ T ∧ P(a)) ⇒ (∀x)(x ∈ T ⇒ P(x)))                       by gen ^ with a
+    (∀x)(x ∈ T ⇒ P(x))                                              by obtain e ^
+  }
+  (∀x)(x ∈ T ⇒ P(x)) ⇒ (∃x)(x ∈ T ∧ P(x)) by assume f {
+    T ≠ ∅ ∧ T ⊂ E                                                   by quot_mem h ht
+    T ≠ ∅                                                           by taut ^
+    T ≠ ∅ ⇔ (∃x)(x ∈ T)                                             by nonempty
+    e. (∃x)(x ∈ T)                                                  by iff_mp ^ ^^
+    a ∈ T ⇒ (∃x)(x ∈ T ∧ P(x)) by assume m {
+      a ∈ T ⇒ P(a)                                                  by inst f
+      a ∈ T ∧ P(a)                                                  by taut m ^
+      (∃x)(x ∈ T ∧ P(x))                                            by exists_intro ^
+    }
+    (∀a)(a ∈ T ⇒ (∃x)(x ∈ T ∧ P(x)))                                by gen ^ with a
+    (∃x)(x ∈ T ∧ P(x))                                              by obtain e ^
+  }
+  _                                                                 by taut 1 2
+}
+
+-- n° 4. Насыщенные части (стр. 129).
+-- Часть A ⊂ E содержится в своём насыщении G⟨A⟩ (объединении классов элементов A).
+theorem sub_saturation {G E A : term} (h : Equiv(G, E)) (ha : A ⊂ E) : A ⊂ img(G, A) {
+  x ∈ A ⇒ x ∈ img(G, A) by assume m {
+    x ∈ A ⇒ x ∈ E                                                   by inst ha
+    x ∈ E                                                           by mp m ^
+    Ͻ(x, x) ∈ G                                                     by equiv_refl h ^
+    x ∈ A ∧ Ͻ(x, x) ∈ G                                             by C20 m ^
+    (∃y)(y ∈ A ∧ Ͻ(y, x) ∈ G)                                       by exists_intro ^
+    x ∈ img(G, A) ⇔ (∃y)(y ∈ A ∧ Ͻ(y, x) ∈ G)                       by mem_img
+    x ∈ img(G, A)                                                   by iff_mpr ^ ^^
+  }
+  _                                                                 by gen ^ with x
+}
+
+-- Насыщение насыщено.
+theorem saturation_sat {G E A : term} (h : Equiv(G, E)) : Sat(G, img(G, A)) {
+  x ∈ img(G, A) ⇒ sect(G, x) ⊂ img(G, A) by assume m {
+    x ∈ img(G, A) ⇔ (∃a)(a ∈ A ∧ Ͻ(a, x) ∈ G)                       by mem_img
+    e. (∃a)(a ∈ A ∧ Ͻ(a, x) ∈ G)                                    by iff_mp ^ m
+    y ∈ sect(G, x) ⇒ y ∈ img(G, A) by assume n {
+      y ∈ sect(G, x) ⇔ Ͻ(x, y) ∈ G                                  by mem_sect
+      q. Ͻ(x, y) ∈ G                                                by iff_mp ^ n
+      (a ∈ A ∧ Ͻ(a, x) ∈ G) ⇒ y ∈ img(G, A) by assume p {
+        p1. Ͻ(a, x) ∈ G                                             by taut p
+        Ͻ(a, y) ∈ G                                                 by equiv_trans h p1 q
+        a ∈ A ∧ Ͻ(a, y) ∈ G                                         by taut p ^
+        (∃a)(a ∈ A ∧ Ͻ(a, y) ∈ G)                                   by exists_intro ^
+        y ∈ img(G, A) ⇔ (∃a)(a ∈ A ∧ Ͻ(a, y) ∈ G)                   by mem_img
+        y ∈ img(G, A)                                               by iff_mpr ^ ^^
+      }
+      (∀a)((a ∈ A ∧ Ͻ(a, x) ∈ G) ⇒ y ∈ img(G, A))                   by gen ^ with a
+      y ∈ img(G, A)                                                 by obtain e ^
+    }
+    sect(G, x) ⊂ img(G, A)                                          by gen ^ with y
+  }
+  _                                                                 by gen ^ with x
+}
+
+-- Насыщение есть наименьшая насыщенная часть, содержащая A.
+theorem saturation_least {G A B : term} (hb : Sat(G, B)) (hab : A ⊂ B) : img(G, A) ⊂ B {
+  y ∈ img(G, A) ⇒ y ∈ B by assume m {
+    y ∈ img(G, A) ⇔ (∃a)(a ∈ A ∧ Ͻ(a, y) ∈ G)                       by mem_img
+    e. (∃a)(a ∈ A ∧ Ͻ(a, y) ∈ G)                                    by iff_mp ^ m
+    (a ∈ A ∧ Ͻ(a, y) ∈ G) ⇒ y ∈ B by assume p {
+      a ∈ A ⇒ a ∈ B                                                 by inst hab
+      ab. a ∈ B                                                     by taut p ^
+      a ∈ B ⇒ sect(G, a) ⊂ B                                        by inst hb
+      sect(G, a) ⊂ B                                                by mp ab ^
+      y ∈ sect(G, a) ⇒ y ∈ B                                        by inst ^
+      y ∈ sect(G, a) ⇔ Ͻ(a, y) ∈ G                                  by mem_sect
+      y ∈ B                                                         by taut p ^^ ^
+    }
+    (∀a)((a ∈ A ∧ Ͻ(a, y) ∈ G) ⇒ y ∈ B)                             by gen ^ with a
+    y ∈ B                                                           by obtain e ^
+  }
+  _                                                                 by gen ^ with y
+}
+
+-- A ⊂ E насыщена тогда и только тогда, когда совпадает со своим насыщением.
+theorem sat_iff {G E A : term} (h : Equiv(G, E)) (ha : A ⊂ E) : Sat(G, A) ⇔ img(G, A) = A {
+  l. A ⊂ img(G, A)                                                  by sub_saturation h ha
+  Sat(G, A) ⇒ img(G, A) = A by assume s {
+    aa. A ⊂ A                                                       by subset_refl
+    img(G, A) ⊂ A                                                   by saturation_least s aa
+    img(G, A) = A                                                   by ext ^ l
+  }
+  img(G, A) = A ⇒ Sat(G, A) by assume e {
+    Sat(G, img(G, A))                                               by saturation_sat h
+    Sat(G, img(G, A)) ⇔ Sat(G, A)                                   by rcong e
+    Sat(G, A)                                                       by iff_mp ^ ^^
+  }
+  _                                                                 by taut 2 3
+}
+
+-- Дополнение насыщенной части насыщено (§ 4, предложение 6).
+theorem sat_compl {G E A : term} (h : Equiv(G, E)) (hs : Sat(G, A)) : Sat(G, ∁(E, A)) {
+  x ∈ ∁(E, A) ⇒ sect(G, x) ⊂ ∁(E, A) by assume m {
+    x ∈ ∁(E, A) ⇔ (x ∉ A ∧ x ∈ E)                                   by mem_compl
+    xn. x ∉ A                                                       by taut m ^
+    y ∈ sect(G, x) ⇒ y ∈ ∁(E, A) by assume n {
+      y ∈ sect(G, x) ⇔ Ͻ(x, y) ∈ G                                  by mem_sect
+      q. Ͻ(x, y) ∈ G                                                by iff_mp ^ n
+      x ∈ E ∧ y ∈ E                                                 by equiv_mem h q
+      ye. y ∈ E                                                     by taut ^
+      y ∈ A ⇒ x ∈ A by assume ya {
+        y ∈ A ⇒ sect(G, y) ⊂ A                                      by inst hs
+        sect(G, y) ⊂ A                                              by mp ya ^
+        x ∈ sect(G, y) ⇒ x ∈ A                                      by inst ^
+        Ͻ(y, x) ∈ G                                                 by equiv_symm h q
+        x ∈ sect(G, y) ⇔ Ͻ(y, x) ∈ G                                by mem_sect
+        x ∈ A                                                       by taut ^^^ ^^ ^
+      }
+      y ∉ A                                                         by taut xn ^
+      y ∈ ∁(E, A) ⇔ (y ∉ A ∧ y ∈ E)                                 by mem_compl
+      y ∈ ∁(E, A)                                                   by taut ^^ ye ^
+    }
+    sect(G, x) ⊂ ∁(E, A)                                            by gen ^ with y
+  }
+  _                                                                 by gen ^ with x
+}
+
+-- Объединение насыщенных частей насыщено (§ 4, предложение 3).
+theorem sat_union {G I : term} {X : term 1} (hs : (∀i)(i ∈ I ⇒ Sat(G, X(i)))) : Sat(G, ⋃_i(I, X(i))) {
+  x ∈ ⋃_i(I, X(i)) ⇒ sect(G, x) ⊂ ⋃_i(I, X(i)) by assume m {
+    x ∈ ⋃_i(I, X(i)) ⇔ (∃i)(i ∈ I ∧ x ∈ X(i))                       by mem_union
+    e. (∃i)(i ∈ I ∧ x ∈ X(i))                                       by iff_mp ^ m
+    (i ∈ I ∧ x ∈ X(i)) ⇒ sect(G, x) ⊂ ⋃_i(I, X(i)) by assume p {
+      i ∈ I ⇒ Sat(G, X(i))                                          by inst hs
+      Sat(G, X(i))                                                  by taut p ^
+      x ∈ X(i) ⇒ sect(G, x) ⊂ X(i)                                  by inst ^
+      a. sect(G, x) ⊂ X(i)                                          by taut p ^
+      i ∈ I                                                         by taut p
+      b. X(i) ⊂ ⋃_i(I, X(i))                                        by sub_union ^
+      sect(G, x) ⊂ ⋃_i(I, X(i))                                     by subset_trans a b
+    }
+    (∀i)((i ∈ I ∧ x ∈ X(i)) ⇒ sect(G, x) ⊂ ⋃_i(I, X(i)))            by gen ^ with i
+    sect(G, x) ⊂ ⋃_i(I, X(i))                                       by obtain e ^
+  }
+  _                                                                 by gen ^ with x
+}
+
+-- Пересечение насыщенных частей (I ≠ ∅) насыщено (§ 4, предложение 4).
+theorem sat_inter {G I : term} {X : term 1} (hi : I ≠ ∅) (hs : (∀i)(i ∈ I ⇒ Sat(G, X(i)))) : Sat(G, ⋂_i(I, X(i))) {
+  mi. x ∈ ⋂_i(I, X(i)) ⇔ (∀i)(i ∈ I ⇒ x ∈ X(i))                     by mem_inter hi
+  x ∈ ⋂_i(I, X(i)) ⇒ sect(G, x) ⊂ ⋂_i(I, X(i)) by assume m {
+    f. (∀i)(i ∈ I ⇒ x ∈ X(i))                                       by iff_mp mi m
+    i ∈ I ⇒ sect(G, x) ⊂ X(i) by assume a {
+      i ∈ I ⇒ Sat(G, X(i))                                          by inst hs
+      Sat(G, X(i))                                                  by mp a ^
+      x ∈ X(i) ⇒ sect(G, x) ⊂ X(i)                                  by inst ^
+      i ∈ I ⇒ x ∈ X(i)                                              by inst f
+      x ∈ X(i)                                                      by mp a ^
+      sect(G, x) ⊂ X(i)                                             by mp ^ ^^^
+    }
+    (∀i)(i ∈ I ⇒ sect(G, x) ⊂ X(i))                                 by gen ^ with i
+    sect(G, x) ⊂ ⋂_i(I, X(i))                                       by sub_inter hi ^
+  }
+  _                                                                 by gen ^ with x
+}
+
+-- n° 5. C57 (стр. 130): f : E → B совместимо с R (постоянно на классах) тогда и только тогда,
+-- когда f = h ∘ p для некоторого h : E/R → B (p каноническое отображение).
+theorem C57 {F G E B : term} (h : Equiv(G, E)) (hf : Map(F, E, B)) : (∃H)(Map(H, quot(G, E), B) ∧ F = H ∘ canon(G, E)) ⇔ (∀x)(∀y)(Ͻ(x, y) ∈ G ⇒ ap(F, x) = ap(F, y)) {
+  cs. Surj(canon(G, E), E, quot(G, E))                              by canon_surj
+  a. (∃H)(Map(H, quot(G, E), B) ∧ F = H ∘ canon(G, E)) ⇔ (∀x)(∀y)((x ∈ E ∧ (y ∈ E ∧ ap(canon(G, E), x) = ap(canon(G, E), y))) ⇒ ap(F, x) = ap(F, y))   by factor_surj hf cs
+  Ͻ(x, y) ∈ G ⇔ (x ∈ E ∧ (y ∈ E ∧ ap(canon(G, E), x) = ap(canon(G, E), y)))   by C55 h
+  ((x ∈ E ∧ (y ∈ E ∧ ap(canon(G, E), x) = ap(canon(G, E), y))) ⇒ ap(F, x) = ap(F, y)) ⇔ (Ͻ(x, y) ∈ G ⇒ ap(F, x) = ap(F, y))   by taut ^
+  (∀y)(((x ∈ E ∧ (y ∈ E ∧ ap(canon(G, E), x) = ap(canon(G, E), y))) ⇒ ap(F, x) = ap(F, y)) ⇔ (Ͻ(x, y) ∈ G ⇒ ap(F, x) = ap(F, y)))   by gen ^ with y
+  (∀y)((x ∈ E ∧ (y ∈ E ∧ ap(canon(G, E), x) = ap(canon(G, E), y))) ⇒ ap(F, x) = ap(F, y)) ⇔ (∀y)(Ͻ(x, y) ∈ G ⇒ ap(F, x) = ap(F, y))   by C31_iff ^
+  (∀x)((∀y)((x ∈ E ∧ (y ∈ E ∧ ap(canon(G, E), x) = ap(canon(G, E), y))) ⇒ ap(F, x) = ap(F, y)) ⇔ (∀y)(Ͻ(x, y) ∈ G ⇒ ap(F, x) = ap(F, y)))   by gen ^ with x
+  (∀x)(∀y)((x ∈ E ∧ (y ∈ E ∧ ap(canon(G, E), x) = ap(canon(G, E), y))) ⇒ ap(F, x) = ap(F, y)) ⇔ (∀x)(∀y)(Ͻ(x, y) ∈ G ⇒ ap(F, x) = ap(F, y))   by C31_iff ^
+  _                                                                 by taut a ^
+}
+
+-- h в C57 единственно (так как p сюръективно).
+theorem C57_uniq {G E B H H' : term} (hh : Map(H, quot(G, E), B)) (hh' : Map(H', quot(G, E), B)) (e : H ∘ canon(G, E) = H' ∘ canon(G, E)) : H = H' {
+  Surj(canon(G, E), E, quot(G, E))                                  by canon_surj
+  _                                                                 by factor_surj_uniq ^ hh hh' e
+}
+
+-- Значение отображения, выведенного переходом к фактормножеству: h(G(x)) = f(x).
+theorem ap_factor {F G E B H T : term} (hh : Map(H, quot(G, E), B)) (e : F = H ∘ canon(G, E)) (ht : T ∈ E) : ap(F, T) = ap(H, sect(G, T)) {
+  mc. Map(canon(G, E), E, quot(G, E))                               by canon_map
+  a. ap(F, T) = ap(H ∘ canon(G, E), T)                              by cong e
+  b. ap(H ∘ canon(G, E), T) = ap(H, ap(canon(G, E), T))             by ap_comp mc hh ht
+  ap(canon(G, E), T) = sect(G, T)                                   by canon_ap ht
+  c. ap(H, ap(canon(G, E), T)) = ap(H, sect(G, T))                  by cong ^
+  _                                                                 by chain a b c
+}
+
+-- Соотношение эквивалентности, ассоциированное с отображением f (стр. 126, 130): f(x) = f(y).
+theorem fun_equiv {F E : term} : Equiv(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E) {
+  ap(F, x) = ap(F, y) ⇒ ap(F, y) = ap(F, x) by assume p {
+    ap(F, y) = ap(F, x)                                             by T2 p
+  }
+  (∀y)(ap(F, x) = ap(F, y) ⇒ ap(F, y) = ap(F, x))                   by gen ^ with y
+  s. (∀x)(∀y)(ap(F, x) = ap(F, y) ⇒ ap(F, y) = ap(F, x))            by gen ^ with x
+  (ap(F, x) = ap(F, y) ∧ ap(F, y) = ap(F, z)) ⇒ ap(F, x) = ap(F, z) by assume p {
+    p1. ap(F, x) = ap(F, y)                                         by taut p
+    p2. ap(F, y) = ap(F, z)                                         by taut p
+    ap(F, x) = ap(F, z)                                             by chain p1 p2
+  }
+  (∀z)((ap(F, x) = ap(F, y) ∧ ap(F, y) = ap(F, z)) ⇒ ap(F, x) = ap(F, z))   by gen ^ with z
+  (∀y)(∀z)((ap(F, x) = ap(F, y) ∧ ap(F, y) = ap(F, z)) ⇒ ap(F, x) = ap(F, z))   by gen ^ with y
+  t. (∀x)(∀y)(∀z)((ap(F, x) = ap(F, y) ∧ ap(F, y) = ap(F, z)) ⇒ ap(F, x) = ap(F, z))   by gen ^ with x
+  ap(F, x) = ap(F, x)                                               by T1
+  x ∈ E ⇒ ap(F, x) = ap(F, x)                                       by taut ^
+  r. (∀x)(x ∈ E ⇒ ap(F, x) = ap(F, x))                              by gen ^ with x
+  _                                                                 by equiv_pairs s t r
+}
+
+-- Каноническое разложение (стр. 130): f = h ∘ p, где p : E → E/R для соотношения
+-- f(x) = f(y), а выведенное h : E/R → B инъективно.
+theorem canon_decomp {F E B : term} (hf : Map(F, E, B)) : (∃H)(Inj(H, quot(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E), B) ∧ F = H ∘ canon(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E)) {
+  he. Equiv(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E)                                                by fun_equiv
+  pm. Ͻ(x, y) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))) ⇔ (x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y)))      by mem_pairsE
+  Ͻ(x, y) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))) ⇒ ap(F, x) = ap(F, y)                              by taut pm
+  (∀y)(Ͻ(x, y) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))) ⇒ ap(F, x) = ap(F, y))                        by gen ^ with y
+  (∀x)(∀y)(Ͻ(x, y) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))) ⇒ ap(F, x) = ap(F, y))                    by gen ^ with x
+  c57. (∃H)(Map(H, quot(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E), B) ∧ F = H ∘ canon(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E)) ⇔ (∀x)(∀y)(Ͻ(x, y) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))) ⇒ ap(F, x) = ap(F, y))   by C57 he hf
+  ex. (∃H)(Map(H, quot(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E), B) ∧ F = H ∘ canon(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E))                           by iff_mpr c57 ^^
+  (Map(H, quot(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E), B) ∧ F = H ∘ canon(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E)) ⇒ (∃H)(Inj(H, quot(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E), B) ∧ F = H ∘ canon(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E)) by assume p {
+    mh. Map(H, quot(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E), B)                                              by taut p
+    fe. F = H ∘ canon(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E)                                                by taut p
+    (C ∈ quot(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E) ∧ (D ∈ quot(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E) ∧ ap(H, C) = ap(H, D))) ⇒ C = D by assume q {
+      C ∈ quot(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E) ⇔ (∃x)(x ∈ E ∧ C = sect(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), x))                     by mem_quot
+      ec. (∃x)(x ∈ E ∧ C = sect(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), x))                           by taut q ^
+      D ∈ quot(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E) ⇔ (∃y)(y ∈ E ∧ D = sect(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), y))                     by mem_quot
+      ed. (∃y)(y ∈ E ∧ D = sect(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), y))                           by taut q ^
+      hcd. ap(H, C) = ap(H, D)                                      by taut q
+      (x ∈ E ∧ C = sect(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), x)) ⇒ C = D by assume a {
+        (y ∈ E ∧ D = sect(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), y)) ⇒ C = D by assume b {
+          xe. x ∈ E                                                 by taut a
+          ye. y ∈ E                                                 by taut b
+          cx. C = sect(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), x)                                     by taut a
+          dy. D = sect(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), y)                                     by taut b
+          f1. ap(F, x) = ap(H, sect(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), x))                       by ap_factor mh fe xe
+          f2. ap(F, y) = ap(H, sect(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), y))                       by ap_factor mh fe ye
+          g1. ap(H, C) = ap(H, sect(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), x))                       by cong cx
+          g2. ap(H, D) = ap(H, sect(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), y))                       by cong dy
+          ap(F, x) = ap(F, y)                                       by chain f1 g1 hcd g2 f2
+          Ͻ(x, y) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y)))                                            by taut pm xe ye ^
+          Ͻ(x, y) ∈ Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))) ⇔ (x ∈ E ∧ (y ∈ E ∧ sect(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), x) = sect(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), y)))   by cls_eq he
+          s. sect(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), x) = sect(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), y)                          by taut ^^ ^
+          C = D                                                     by chain cx s dy
+        }
+        (∀y)((y ∈ E ∧ D = sect(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), y)) ⇒ C = D)                   by gen ^ with y
+        C = D                                                       by obtain ed ^
+      }
+      (∀x)((x ∈ E ∧ C = sect(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), x)) ⇒ C = D)                     by gen ^ with x
+      C = D                                                         by obtain ec ^
+    }
+    (∀D)((C ∈ quot(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E) ∧ (D ∈ quot(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E) ∧ ap(H, C) = ap(H, D))) ⇒ C = D)       by gen ^ with D
+    (∀C)(∀D)((C ∈ quot(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E) ∧ (D ∈ quot(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E) ∧ ap(H, C) = ap(H, D))) ⇒ C = D)   by gen ^ with C
+    Inj(H, quot(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E), B)                                                  by C20 mh ^
+    Inj(H, quot(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E), B) ∧ F = H ∘ canon(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E)                                   by C20 ^ fe
+    (∃H)(Inj(H, quot(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E), B) ∧ F = H ∘ canon(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E))                             by exists_intro ^
+  }
+  (∀H)((Map(H, quot(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E), B) ∧ F = H ∘ canon(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E)) ⇒ (∃H)(Inj(H, quot(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E), B) ∧ F = H ∘ canon(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ ap(F, x) = ap(F, y))), E)))   by gen ^ with H
+  _                                                                 by obtain ex ^
+}
+
+-- n° 6 (стр. 131): полный прообраз эквивалентности S при отображении φ : E → F.
+theorem equiv_preimg {F E B S : term} (hf : Map(F, E, B)) (hs : Equiv(S, B)) : Equiv(Pairs_{x,y}(x ∈ E ∧ (y ∈ E ∧ Ͻ(ap(F, x), ap(F, y)) ∈ S)), E) {
+  Ͻ(ap(F, x), ap(F, y)) ∈ S ⇒ Ͻ(ap(F, y), ap(F, x)) ∈ S by assume p {
+    Ͻ(ap(F, y), ap(F, x)) ∈ S                                       by equiv_symm hs p
+  }
+  (∀y)(Ͻ(ap(F, x), ap(F, y)) ∈ S ⇒ Ͻ(ap(F, y), ap(F, x)) ∈ S)       by gen ^ with y
+  s. (∀x)(∀y)(Ͻ(ap(F, x), ap(F, y)) ∈ S ⇒ Ͻ(ap(F, y), ap(F, x)) ∈ S)   by gen ^ with x
+  (Ͻ(ap(F, x), ap(F, y)) ∈ S ∧ Ͻ(ap(F, y), ap(F, z)) ∈ S) ⇒ Ͻ(ap(F, x), ap(F, z)) ∈ S by assume p {
+    p1. Ͻ(ap(F, x), ap(F, y)) ∈ S                                   by taut p
+    p2. Ͻ(ap(F, y), ap(F, z)) ∈ S                                   by taut p
+    Ͻ(ap(F, x), ap(F, z)) ∈ S                                       by equiv_trans hs p1 p2
+  }
+  (∀z)((Ͻ(ap(F, x), ap(F, y)) ∈ S ∧ Ͻ(ap(F, y), ap(F, z)) ∈ S) ⇒ Ͻ(ap(F, x), ap(F, z)) ∈ S)   by gen ^ with z
+  (∀y)(∀z)((Ͻ(ap(F, x), ap(F, y)) ∈ S ∧ Ͻ(ap(F, y), ap(F, z)) ∈ S) ⇒ Ͻ(ap(F, x), ap(F, z)) ∈ S)   by gen ^ with y
+  t. (∀x)(∀y)(∀z)((Ͻ(ap(F, x), ap(F, y)) ∈ S ∧ Ͻ(ap(F, y), ap(F, z)) ∈ S) ⇒ Ͻ(ap(F, x), ap(F, z)) ∈ S)   by gen ^ with x
+  x ∈ E ⇒ Ͻ(ap(F, x), ap(F, x)) ∈ S by assume m {
+    ap(F, x) ∈ B                                                    by ap_mem hf m
+    Ͻ(ap(F, x), ap(F, x)) ∈ S                                       by equiv_refl hs ^
+  }
+  r. (∀x)(x ∈ E ⇒ Ͻ(ap(F, x), ap(F, x)) ∈ S)                        by gen ^ with x
+  _                                                                 by equiv_pairs s t r
+}
+
+-- Индуцированное соотношение R_A на части A ⊂ E (стр. 131).
+theorem equiv_induced {G E A : term} (h : Equiv(G, E)) (ha : A ⊂ E) : Equiv(Pairs_{x,y}(x ∈ A ∧ (y ∈ A ∧ Ͻ(x, y) ∈ G)), A) {
+  Ͻ(x, y) ∈ G ⇒ Ͻ(y, x) ∈ G by assume p {
+    Ͻ(y, x) ∈ G                                                     by equiv_symm h p
+  }
+  (∀y)(Ͻ(x, y) ∈ G ⇒ Ͻ(y, x) ∈ G)                                   by gen ^ with y
+  s. (∀x)(∀y)(Ͻ(x, y) ∈ G ⇒ Ͻ(y, x) ∈ G)                            by gen ^ with x
+  (Ͻ(x, y) ∈ G ∧ Ͻ(y, z) ∈ G) ⇒ Ͻ(x, z) ∈ G by assume p {
+    p1. Ͻ(x, y) ∈ G                                                 by taut p
+    p2. Ͻ(y, z) ∈ G                                                 by taut p
+    Ͻ(x, z) ∈ G                                                     by equiv_trans h p1 p2
+  }
+  (∀z)((Ͻ(x, y) ∈ G ∧ Ͻ(y, z) ∈ G) ⇒ Ͻ(x, z) ∈ G)                   by gen ^ with z
+  (∀y)(∀z)((Ͻ(x, y) ∈ G ∧ Ͻ(y, z) ∈ G) ⇒ Ͻ(x, z) ∈ G)               by gen ^ with y
+  t. (∀x)(∀y)(∀z)((Ͻ(x, y) ∈ G ∧ Ͻ(y, z) ∈ G) ⇒ Ͻ(x, z) ∈ G)        by gen ^ with x
+  x ∈ A ⇒ Ͻ(x, x) ∈ G by assume m {
+    x ∈ A ⇒ x ∈ E                                                   by inst ha
+    x ∈ E                                                           by mp m ^
+    Ͻ(x, x) ∈ G                                                     by equiv_refl h ^
+  }
+  r. (∀x)(x ∈ A ⇒ Ͻ(x, x) ∈ G)                                      by gen ^ with x
+  _                                                                 by equiv_pairs s t r
+}
+
+-- n° 7 (стр. 131-132): S мельче R (график S содержится в графике R) тогда и только тогда,
+-- когда всякий класс по R насыщен для S.
+theorem finer_iff {S R E : term} (hs : Equiv(S, E)) (hr : Equiv(R, E)) : S ⊂ R ⇔ (∀x)(x ∈ E ⇒ Sat(S, sect(R, x))) {
+  gs. Graph(S)                                                      by taut hs
+  gi. S ⊂ R ⇔ (∀x)(sect(S, x) ⊂ sect(R, x))                         by graph_sub_iff gs
+  S ⊂ R ⇒ (∀x)(x ∈ E ⇒ Sat(S, sect(R, x))) by assume sub {
+    f. (∀x)(sect(S, x) ⊂ sect(R, x))                                by iff_mp gi sub
+    x ∈ E ⇒ Sat(S, sect(R, x)) by assume m {
+      y ∈ sect(R, x) ⇒ sect(S, y) ⊂ sect(R, x) by assume n {
+        y ∈ sect(R, x) ⇔ Ͻ(x, y) ∈ R                                by mem_sect
+        q. Ͻ(x, y) ∈ R                                              by iff_mp ^ n
+        z ∈ sect(S, y) ⇒ z ∈ sect(R, x) by assume k {
+          sect(S, y) ⊂ sect(R, y)                                   by inst f
+          z ∈ sect(S, y) ⇒ z ∈ sect(R, y)                           by inst ^
+          z ∈ sect(R, y)                                            by mp k ^
+          z ∈ sect(R, y) ⇔ Ͻ(y, z) ∈ R                              by mem_sect
+          Ͻ(y, z) ∈ R                                               by iff_mp ^ ^^
+          Ͻ(x, z) ∈ R                                               by equiv_trans hr q ^
+          z ∈ sect(R, x) ⇔ Ͻ(x, z) ∈ R                              by mem_sect
+          z ∈ sect(R, x)                                            by iff_mpr ^ ^^
+        }
+        sect(S, y) ⊂ sect(R, x)                                     by gen ^ with z
+      }
+      Sat(S, sect(R, x))                                            by gen ^ with y
+    }
+    (∀x)(x ∈ E ⇒ Sat(S, sect(R, x)))                                by gen ^ with x
+  }
+  (∀x)(x ∈ E ⇒ Sat(S, sect(R, x))) ⇒ S ⊂ R by assume f {
+    y ∈ sect(S, x) ⇒ y ∈ sect(R, x) by assume n {
+      y ∈ sect(S, x) ⇔ Ͻ(x, y) ∈ S                                  by mem_sect
+      Ͻ(x, y) ∈ S                                                   by iff_mp ^ n
+      x ∈ E ∧ y ∈ E                                                 by equiv_mem hs ^
+      xe. x ∈ E                                                     by taut ^
+      x ∈ E ⇒ Sat(S, sect(R, x))                                    by inst f
+      st. Sat(S, sect(R, x))                                        by mp xe ^
+      xr. x ∈ sect(R, x)                                            by self_mem_cls hr xe
+      x ∈ sect(R, x) ⇒ sect(S, x) ⊂ sect(R, x)                      by inst st
+      sect(S, x) ⊂ sect(R, x)                                       by mp xr ^
+      y ∈ sect(S, x) ⇒ y ∈ sect(R, x)                               by inst ^
+      y ∈ sect(R, x)                                                by mp n ^
+    }
+    sect(S, x) ⊂ sect(R, x)                                         by gen ^ with y
+    (∀x)(sect(S, x) ⊂ sect(R, x))                                   by gen ^ with x
+    S ⊂ R                                                           by iff_mpr gi ^
+  }
+  _                                                                 by taut 3 4
+}
+
+-- n° 8 (стр. 132): произведение R × R' двух соотношений эквивалентности, эквивалентность на E × E'.
+-- Запись через проекции: u и v из E × E', pr1 u ≡ pr1 v (mod R), pr2 u ≡ pr2 v (mod R').
+theorem equiv_prod {G G' E E' : term} (h : Equiv(G, E)) (h' : Equiv(G', E')) : Equiv(Pairs_{u,v}(u ∈ E × E' ∧ (v ∈ E × E' ∧ (Ͻ(pr1(u), pr1(v)) ∈ G ∧ Ͻ(pr2(u), pr2(v)) ∈ G'))), E × E') {
+  (Ͻ(pr1(u), pr1(v)) ∈ G ∧ Ͻ(pr2(u), pr2(v)) ∈ G') ⇒ (Ͻ(pr1(v), pr1(u)) ∈ G ∧ Ͻ(pr2(v), pr2(u)) ∈ G') by assume p {
+    Ͻ(pr1(u), pr1(v)) ∈ G                                           by taut p
+    a. Ͻ(pr1(v), pr1(u)) ∈ G                                        by equiv_symm h ^
+    Ͻ(pr2(u), pr2(v)) ∈ G'                                          by taut p
+    b. Ͻ(pr2(v), pr2(u)) ∈ G'                                       by equiv_symm h' ^
+    Ͻ(pr1(v), pr1(u)) ∈ G ∧ Ͻ(pr2(v), pr2(u)) ∈ G'                  by C20 a b
+  }
+  (∀v)((Ͻ(pr1(u), pr1(v)) ∈ G ∧ Ͻ(pr2(u), pr2(v)) ∈ G') ⇒ (Ͻ(pr1(v), pr1(u)) ∈ G ∧ Ͻ(pr2(v), pr2(u)) ∈ G'))   by gen ^ with v
+  s. (∀u)(∀v)((Ͻ(pr1(u), pr1(v)) ∈ G ∧ Ͻ(pr2(u), pr2(v)) ∈ G') ⇒ (Ͻ(pr1(v), pr1(u)) ∈ G ∧ Ͻ(pr2(v), pr2(u)) ∈ G'))   by gen ^ with u
+  ((Ͻ(pr1(u), pr1(v)) ∈ G ∧ Ͻ(pr2(u), pr2(v)) ∈ G') ∧ (Ͻ(pr1(v), pr1(w)) ∈ G ∧ Ͻ(pr2(v), pr2(w)) ∈ G')) ⇒ (Ͻ(pr1(u), pr1(w)) ∈ G ∧ Ͻ(pr2(u), pr2(w)) ∈ G') by assume p {
+    p1. Ͻ(pr1(u), pr1(v)) ∈ G                                       by taut p
+    p2. Ͻ(pr1(v), pr1(w)) ∈ G                                       by taut p
+    q1. Ͻ(pr2(u), pr2(v)) ∈ G'                                      by taut p
+    q2. Ͻ(pr2(v), pr2(w)) ∈ G'                                      by taut p
+    a. Ͻ(pr1(u), pr1(w)) ∈ G                                        by equiv_trans h p1 p2
+    b. Ͻ(pr2(u), pr2(w)) ∈ G'                                       by equiv_trans h' q1 q2
+    Ͻ(pr1(u), pr1(w)) ∈ G ∧ Ͻ(pr2(u), pr2(w)) ∈ G'                  by C20 a b
+  }
+  (∀w)(((Ͻ(pr1(u), pr1(v)) ∈ G ∧ Ͻ(pr2(u), pr2(v)) ∈ G') ∧ (Ͻ(pr1(v), pr1(w)) ∈ G ∧ Ͻ(pr2(v), pr2(w)) ∈ G')) ⇒ (Ͻ(pr1(u), pr1(w)) ∈ G ∧ Ͻ(pr2(u), pr2(w)) ∈ G'))   by gen ^ with w
+  (∀v)(∀w)(((Ͻ(pr1(u), pr1(v)) ∈ G ∧ Ͻ(pr2(u), pr2(v)) ∈ G') ∧ (Ͻ(pr1(v), pr1(w)) ∈ G ∧ Ͻ(pr2(v), pr2(w)) ∈ G')) ⇒ (Ͻ(pr1(u), pr1(w)) ∈ G ∧ Ͻ(pr2(u), pr2(w)) ∈ G'))   by gen ^ with v
+  t. (∀u)(∀v)(∀w)(((Ͻ(pr1(u), pr1(v)) ∈ G ∧ Ͻ(pr2(u), pr2(v)) ∈ G') ∧ (Ͻ(pr1(v), pr1(w)) ∈ G ∧ Ͻ(pr2(v), pr2(w)) ∈ G')) ⇒ (Ͻ(pr1(u), pr1(w)) ∈ G ∧ Ͻ(pr2(u), pr2(w)) ∈ G'))   by gen ^ with u
+  u ∈ E × E' ⇒ (Ͻ(pr1(u), pr1(u)) ∈ G ∧ Ͻ(pr2(u), pr2(u)) ∈ G') by assume m {
+    u ∈ E × E' ⇔ (IsPair(u) ∧ (pr1(u) ∈ E ∧ pr2(u) ∈ E'))           by mem_prod
+    pr1(u) ∈ E                                                      by taut m ^
+    a. Ͻ(pr1(u), pr1(u)) ∈ G                                        by equiv_refl h ^
+    pr2(u) ∈ E'                                                     by taut m ^^^
+    b. Ͻ(pr2(u), pr2(u)) ∈ G'                                       by equiv_refl h' ^
+    Ͻ(pr1(u), pr1(u)) ∈ G ∧ Ͻ(pr2(u), pr2(u)) ∈ G'                  by C20 a b
+  }
+  r. (∀u)(u ∈ E × E' ⇒ (Ͻ(pr1(u), pr1(u)) ∈ G ∧ Ͻ(pr2(u), pr2(u)) ∈ G'))   by gen ^ with u
+  _                                                                 by equiv_pairs s t r
+}
+
+-- Класс элемента (x, x') по R × R' есть произведение классов G(x) × G'(x') (стр. 133).
+theorem prod_cls {G G' E E' X X' : term} (h : Equiv(G, E)) (h' : Equiv(G', E')) (hx : X ∈ E) (hx' : X' ∈ E') : sect(Pairs_{u,v}(u ∈ E × E' ∧ (v ∈ E × E' ∧ (Ͻ(pr1(u), pr1(v)) ∈ G ∧ Ͻ(pr2(u), pr2(v)) ∈ G'))), Ͻ(X, X')) = sect(G, X) × sect(G', X') {
+  a. z ∈ sect(Pairs_{u,v}(u ∈ E × E' ∧ (v ∈ E × E' ∧ (Ͻ(pr1(u), pr1(v)) ∈ G ∧ Ͻ(pr2(u), pr2(v)) ∈ G'))), Ͻ(X, X')) ⇔ Ͻ(Ͻ(X, X'), z) ∈ Pairs_{u,v}(u ∈ E × E' ∧ (v ∈ E × E' ∧ (Ͻ(pr1(u), pr1(v)) ∈ G ∧ Ͻ(pr2(u), pr2(v)) ∈ G')))                by mem_sect
+  b. Ͻ(Ͻ(X, X'), z) ∈ Pairs_{u,v}(u ∈ E × E' ∧ (v ∈ E × E' ∧ (Ͻ(pr1(u), pr1(v)) ∈ G ∧ Ͻ(pr2(u), pr2(v)) ∈ G'))) ⇔ (Ͻ(X, X') ∈ E × E' ∧ (z ∈ E × E' ∧ (Ͻ(pr1(Ͻ(X, X')), pr1(z)) ∈ G ∧ Ͻ(pr2(Ͻ(X, X')), pr2(z)) ∈ G')))   by mem_pairsE
+  pr1(Ͻ(X, X')) = X                                                 by pr1_pair
+  c. Ͻ(pr1(Ͻ(X, X')), pr1(z)) ∈ G ⇔ Ͻ(X, pr1(z)) ∈ G                by rcong ^
+  pr2(Ͻ(X, X')) = X'                                                by pr2_pair
+  d. Ͻ(pr2(Ͻ(X, X')), pr2(z)) ∈ G' ⇔ Ͻ(X', pr2(z)) ∈ G'             by rcong ^
+  e. Ͻ(X, X') ∈ E × E' ⇔ (X ∈ E ∧ X' ∈ E')                          by pair_mem_prod
+  f. z ∈ E × E' ⇔ (IsPair(z) ∧ (pr1(z) ∈ E ∧ pr2(z) ∈ E'))          by mem_prod
+  g. z ∈ sect(G, X) × sect(G', X') ⇔ (IsPair(z) ∧ (pr1(z) ∈ sect(G, X) ∧ pr2(z) ∈ sect(G', X')))   by mem_prod
+  h1. pr1(z) ∈ sect(G, X) ⇔ Ͻ(X, pr1(z)) ∈ G                        by mem_sect
+  h2. pr2(z) ∈ sect(G', X') ⇔ Ͻ(X', pr2(z)) ∈ G'                    by mem_sect
+  k1. Ͻ(X, pr1(z)) ∈ G ⇒ pr1(z) ∈ E by assume p {
+    X ∈ E ∧ pr1(z) ∈ E                                              by equiv_mem h p
+    pr1(z) ∈ E                                                      by taut ^
+  }
+  k2. Ͻ(X', pr2(z)) ∈ G' ⇒ pr2(z) ∈ E' by assume p {
+    X' ∈ E' ∧ pr2(z) ∈ E'                                           by equiv_mem h' p
+    pr2(z) ∈ E'                                                     by taut ^
+  }
+  z ∈ sect(Pairs_{u,v}(u ∈ E × E' ∧ (v ∈ E × E' ∧ (Ͻ(pr1(u), pr1(v)) ∈ G ∧ Ͻ(pr2(u), pr2(v)) ∈ G'))), Ͻ(X, X')) ⇔ z ∈ sect(G, X) × sect(G', X')          by taut hx hx' a b c d e f g h1 h2 k1 k2
+  (∀z)(z ∈ sect(Pairs_{u,v}(u ∈ E × E' ∧ (v ∈ E × E' ∧ (Ͻ(pr1(u), pr1(v)) ∈ G ∧ Ͻ(pr2(u), pr2(v)) ∈ G'))), Ͻ(X, X')) ⇔ z ∈ sect(G, X) × sect(G', X'))    by gen ^ with z
+  _                                                                 by ext_iff ^
+}
+
+end

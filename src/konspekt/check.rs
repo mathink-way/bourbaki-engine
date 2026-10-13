@@ -408,11 +408,19 @@ impl Ctx<'_> {
 
     fn line(&mut self, l: &Line) -> Result<Fact, CheckError> {
         self.line = l.line;
+        let started = std::time::Instant::now();
         let given = match &l.formula {
             Some(f) => Some(self.parse_rel(f)?),
             None => None,
         };
-        self.line_given(l, given)
+        let r = self.line_given(l, given);
+        if std::env::var_os("BOURBAKI_TIME_LINES").is_some() {
+            let t = started.elapsed().as_secs_f64();
+            if t > 0.01 {
+                eprintln!("{t:8.3} с  строка {}", l.line + 1);
+            }
+        }
+        r
     }
 
     fn line_given(&mut self, l: &Line, given: Option<Relation>) -> Result<Fact, CheckError> {
@@ -520,23 +528,46 @@ impl Ctx<'_> {
                 };
                 Fact { rel, thm }
             }
-            Just::Taut => {
+            Just::Taut(refs) => {
                 let r = self.need_formula(&given, "тавтологии")?;
                 if !self.th.is_logical() {
                     return Err(
                         self.err("тавтологии есть только в логической теории (схемы S1-S4)")
                     );
                 }
-                if let Some(cex) = self.lift(logic::tautology_counterexample(&r))? {
-                    return Err(self.err(format!("{r} не тавтология: ложно при {cex}")));
+                let premises = refs
+                    .iter()
+                    .map(|a| self.get(a))
+                    .collect::<Result<Vec<_>, _>>()?;
+                // a ⇒ (b ⇒ ... ⇒ r)
+                let chain = premises
+                    .iter()
+                    .rev()
+                    .fold(r.clone(), |acc, p| p.rel.implies(&acc));
+                if let Some(cex) = self.lift(logic::tautology_counterexample(&chain))? {
+                    return Err(self.err(if premises.is_empty() {
+                        format!("{r} не тавтология: ложно при {cex}")
+                    } else {
+                        format!(
+                            "{r} не следует из {} по тавтологии: {chain} ложно при {cex}",
+                            refs.join(", ")
+                        )
+                    }));
                 }
-                let thm = if self.expand {
-                    Some(self.lift(logic::taut(&self.th, &r))?)
+                let mut thm = if self.expand {
+                    Some(self.lift(logic::taut(&self.th, &chain))?)
                 } else {
                     None
                 };
+                for p in &premises {
+                    thm = match (&p.thm, thm) {
+                        (Some(a), Some(b)) => Some(self.lift(Theorem::mp(a, &b))?),
+                        _ => None,
+                    };
+                }
                 Fact { rel: r, thm }
             }
+            Just::Chain(refs) => self.chain(refs, &given)?,
             Just::Use {
                 name,
                 assigns,
@@ -549,6 +580,141 @@ impl Ctx<'_> {
             }
         }
         Ok(fact)
+    }
+
+    /// Части равенства T = U (знак "=" веса 2), или ничего.
+    fn eq_sides(&self, r: &Relation) -> Option<(Expr, Expr)> {
+        match r.expr().shape() {
+            crate::expr::Shape::Special(s, args)
+                if s.name() == "=" && args.len() == 2 && s.is_relational() =>
+            {
+                Some((args[0].clone(), args[1].clone()))
+            }
+            _ => None,
+        }
+    }
+
+    /// Применить доказанную теорему `name` (полное имя) к фактам `facts`, получив `want`.
+    /// Подстановка выводится из гипотез и `want`, как в обычной строке.
+    fn apply_theorem(
+        &mut self,
+        name: &str,
+        facts: &[Fact],
+        want: &Relation,
+    ) -> Result<Fact, CheckError> {
+        let k = self.k;
+        let lemma = k
+            .find_theorem_in(&self.names, name)
+            .map_err(|m| self.err(m))?
+            .ok_or_else(|| {
+                self.err(format!(
+                    "нужна теорема {name} (импортируйте 02_quant_eq.bk)"
+                ))
+            })?;
+        if !lemma.base.is_literally_weaker(&self.th) {
+            return Err(self.err(format!(
+                "теорема {name} доказана в теории {}, а здесь теория {} (она не сильнее)",
+                lemma.base.name(),
+                self.th.name()
+            )));
+        }
+        let mut pairs: Vec<(Expr, Expr)> =
+            vec![(lemma.statement.expr().clone(), want.expr().clone())];
+        for ((_, h), f) in lemma.hyps.iter().zip(facts) {
+            pairs.push((h.expr().clone(), f.rel.expr().clone()));
+        }
+        let sigma = self.infer(name, &lemma.metas, vec![], &pairs)?;
+        for ((_, h), f) in lemma.hyps.iter().zip(facts) {
+            if Relation(h.expr().replace_signs(&sigma)) != f.rel {
+                return Err(self.err(format!("{name}: не подходит {}", f.rel)));
+            }
+        }
+        let rel = Relation(lemma.statement.expr().replace_signs(&sigma));
+        let thm = if self.expand {
+            let full = lemma.expand(k)?;
+            let hyp_thms: Vec<Theorem> = facts.iter().map(|f| f.thm.clone().unwrap()).collect();
+            Some(self.lift(full.instantiate_signs(&sigma, &self.th, &hyp_thms))?)
+        } else {
+            None
+        };
+        Ok(Fact { rel, thm })
+    }
+
+    /// `by chain a b c`: путь от T к U по равенствам-строкам (поиск в ширину), затем
+    /// теоремы 1-3 § 5 (ch1.T1, ch1.T2, ch1.T3).
+    fn chain(&mut self, refs: &[String], given: &Option<Relation>) -> Result<Fact, CheckError> {
+        let r = self.need_formula(given, "цепочки равенств")?;
+        let (t, u) = self
+            .eq_sides(&r)
+            .ok_or_else(|| self.err(format!("chain: строка {r} должна быть равенством T = U")))?;
+        let mut edges: Vec<(Expr, Expr, Fact)> = Vec::new();
+        for a in refs {
+            let f = self.get(a)?;
+            let (x, y) = self
+                .eq_sides(&f.rel)
+                .ok_or_else(|| self.err(format!("chain: строка {a} ({}) не равенство", f.rel)))?;
+            edges.push((x, y, f));
+        }
+        // поиск в ширину: prev[i] = (откуда пришли, ребро, перевёрнуто ли)
+        let mut nodes: Vec<Expr> = vec![t.clone()];
+        let mut prev: Vec<Option<(usize, usize, bool)>> = vec![None];
+        let mut k = 0;
+        while k < nodes.len() && nodes[k] != u {
+            for (i, (x, y, _)) in edges.iter().enumerate() {
+                for (from, to, rev) in [(x, y, false), (y, x, true)] {
+                    if *from == nodes[k] && !nodes.contains(to) {
+                        nodes.push(to.clone());
+                        prev.push(Some((k, i, rev)));
+                    }
+                }
+            }
+            k += 1;
+        }
+        if k == nodes.len() {
+            return Err(self.err(format!(
+                "chain: равенства {} не соединяют левую часть {r} с правой",
+                refs.join(", ")
+            )));
+        }
+        let mut path = Vec::new();
+        let mut j = k;
+        while let Some((p, i, rev)) = prev[j] {
+            path.push((i, rev));
+            j = p;
+        }
+        path.reverse();
+        let eq = |a: &Expr, b: &Expr| -> Option<Relation> {
+            let crate::expr::Shape::Special(s, _) = r.expr().shape() else {
+                return None;
+            };
+            Some(Relation(Expr::special(
+                s.clone(),
+                vec![a.clone(), b.clone()],
+            )))
+        };
+        let mut acc: Option<Fact> = None;
+        for (i, rev) in path {
+            let (x, y, f) = edges[i].clone();
+            let e = if rev {
+                let want = eq(&y, &x).unwrap();
+                self.apply_theorem("ch1.T2", &[f], &want)?
+            } else {
+                f
+            };
+            acc = Some(match acc {
+                None => e,
+                Some(a) => {
+                    let (from, _) = self.eq_sides(&a.rel).unwrap();
+                    let (_, to) = self.eq_sides(&e.rel).unwrap();
+                    let want = eq(&from, &to).unwrap();
+                    self.apply_theorem("ch1.T3", &[a, e], &want)?
+                }
+            });
+        }
+        match acc {
+            Some(a) => Ok(a),
+            None => self.apply_theorem("ch1.T1", &[], &r),
+        }
     }
 
     fn letter(&self, s: &str) -> Result<Letter, CheckError> {
@@ -791,6 +957,7 @@ impl Ctx<'_> {
             }
             let facts: Vec<Fact> = refs.iter().map(|r| self.get(r)).collect::<Result<_, _>>()?;
             let sigma = self.assignments(name, &lemma.metas, assigns)?;
+            let t0 = std::time::Instant::now();
             let mut pairs: Vec<(Expr, Expr)> = Vec::new();
             if let Some(g) = given {
                 pairs.push((lemma.statement.expr().clone(), g.expr().clone()));
@@ -799,6 +966,7 @@ impl Ctx<'_> {
                 pairs.push((h.expr().clone(), f.rel.expr().clone()));
             }
             let sigma = self.infer(name, &lemma.metas, sigma, &pairs)?;
+            let t1 = std::time::Instant::now();
             for ((hl, h), (r, f)) in lemma.hyps.iter().zip(refs.iter().zip(&facts)) {
                 let need = Relation(h.expr().replace_signs(&sigma));
                 if need != f.rel {
@@ -809,7 +977,16 @@ impl Ctx<'_> {
                 }
             }
             let rel = Relation(lemma.statement.expr().replace_signs(&sigma));
+            let t2 = std::time::Instant::now();
             self.lift(self.th.check_signs(rel.expr()))?;
+            if std::env::var_os("BOURBAKI_TIME_USE").is_some() {
+                eprintln!(
+                    "{name}: вывод {:.3}, гипотезы {:.3}, знаки {:.3}",
+                    (t1 - t0).as_secs_f64(),
+                    (t2 - t1).as_secs_f64(),
+                    t2.elapsed().as_secs_f64()
+                );
+            }
             if lemma.sorry {
                 self.sorry = true;
             }

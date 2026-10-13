@@ -45,6 +45,7 @@ use crate::formative::{Abs, Relation, Term};
 use crate::sign::{Fixity, Kind, Letter, SpecialSign};
 use crate::theory::Arg;
 use std::cell::{Cell, RefCell};
+use std::collections::HashMap;
 use std::fmt;
 
 // ---------------------------------------------------------------------------
@@ -69,6 +70,9 @@ pub struct Abbrev {
     pub aliases: Vec<String>,
     /// Буквы-подсказки для печати связываемых букв (их число = наибольший вес параметра).
     pub binders: Vec<Letter>,
+    /// Сворачивать ли при печати (`abbrev ... nofold` не сворачивается: например,
+    /// (∃x)(A ∧ R) слишком часто встречается, чтобы всякий раз печатать его как ExA).
+    pub fold: bool,
 }
 
 impl Abbrev {
@@ -130,6 +134,7 @@ impl Abbrev {
             fixity,
             aliases,
             binders,
+            fold: true,
         }
     }
 
@@ -279,6 +284,8 @@ pub enum Style {
 thread_local! {
     static STYLE: Cell<Style> = const { Cell::new(Style::Infix) };
     static ABBREVS: RefCell<Vec<Abbrev>> = const { RefCell::new(Vec::new()) };
+    /// Уже узнанные сокращения (сбрасывается при смене списка сокращений).
+    static RECOGNIZED: RefCell<HashMap<(Expr, Sort), Option<Recognized>>> = RefCell::new(HashMap::new());
 }
 
 /// Выбрать вид печати (для текущего потока).
@@ -293,6 +300,7 @@ pub fn style() -> Style {
 /// Сокращения, которые печать будет узнавать (вместе с встроенными ⇒ ∧ ⇔ ∃ ∀).
 pub fn set_print_abbrevs(a: Vec<Abbrev>) {
     ABBREVS.with(|c| *c.borrow_mut() = a);
+    RECOGNIZED.with(|c| c.borrow_mut().clear());
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -476,9 +484,19 @@ fn quant(sym: &str, x: &Letter, body: &Expr) -> (String, Cls) {
 type Recognized = (Abbrev, String, Vec<(Expr, Sort)>);
 
 fn user_abbrev_args(e: &Expr, want: Sort) -> Option<Recognized> {
+    let key = (e.clone(), want);
+    if let Some(r) = RECOGNIZED.with(|c| c.borrow().get(&key).cloned()) {
+        return r;
+    }
+    let r = user_abbrev_args_uncached(e, want);
+    RECOGNIZED.with(|c| c.borrow_mut().insert(key, r.clone()));
+    r
+}
+
+fn user_abbrev_args_uncached(e: &Expr, want: Sort) -> Option<Recognized> {
     ABBREVS.with(|c| {
         for a in c.borrow().iter().rev() {
-            if a.sort != want {
+            if a.sort != want || !a.fold {
                 continue;
             }
             let mut got = Vec::new();

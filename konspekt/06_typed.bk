@@ -15,7 +15,8 @@ open base
 import "05_quant.bk"
 open ch1
 
-abbrev ExA (A R : rel 1) := (∃x)(A(x) ∧ R(x))
+-- nofold: (∃x)(A ∧ R) встречается на каждом шагу, при печати его не сворачиваем в ExA.
+abbrev ExA (A R : rel 1) nofold := (∃x)(A(x) ∧ R(x))
 abbrev AllA (A R : rel 1) := ¬(∃x)(A(x) ∧ ¬R(x))
 
 namespace ch1

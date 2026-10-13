@@ -1,0 +1,724 @@
+-- Глава II, § 3, n° 1-3. Графики, соответствия, обратный график, композиция (стр. 84-90).
+--
+-- Задача: графики (множества пар), проекции, образ множества, обратный график и композиция.
+-- Проблема: почти каждое определение это ℰ от соотношения про пары; чтобы им пользоваться,
+-- надо всякий раз доказывать, что соотношение коллективизирующее (C52, C53, S8), и
+-- выводить, когда пара (x, y) лежит в таком множестве.
+-- Решение: одно сокращение Pairs_{x,y}(R) = ℰ_z((∃x)(∃y)(z = (x, y) и R)) для "множества
+-- пар (x, y), таких, что R" и две общие леммы: graph_coll (если все пары с R лежат в одном
+-- множестве, то R обладает графиком) и pairs_mem ((T, U) ∈ Pairs_{x,y}(R) ⇔ R(T, U)).
+-- Дальше всё сводится к элементам: равенство множеств по ext_iff и тавтологии.
+-- Что осталось: соответствие у Бурбаки это тройка (G, A, B); все утверждения о нём это
+-- утверждения о графике G и множествах A, B, поэтому здесь они записаны для графиков.
+--
+-- Обозначения: pr₁⟨G⟩ это proj1(G), pr₂⟨G⟩ это proj2(G), G⟨X⟩ это img(G, X),
+-- срез G(x) это sect(G, x), обратный график G⁻¹ это inv(G), G' ∘ G это G' ∘ G.
+
+import "00_prelude.bk"
+open base
+import "11_pairs.bk"
+open ch1
+open sets
+
+abbrev Graph (G : term) := (∀z)(z ∈ G ⇒ IsPair(z))
+abbrev Pairs (R : rel 2) := ℰ_z((∃x)(∃y)(z = Ͻ(x, y) ∧ R(x, y)))
+abbrev proj1 (G : term) := ℰ_x((∃y)(Ͻ(x, y) ∈ G))
+abbrev proj2 (G : term) := ℰ_y((∃x)(Ͻ(x, y) ∈ G))
+abbrev img (G X : term) := ℰ_y((∃x)(x ∈ X ∧ Ͻ(x, y) ∈ G))
+abbrev sect (G X : term) := img(G, set1(X))
+abbrev inv (G : term) := Pairs_{x,y}(Ͻ(y, x) ∈ G)
+abbrev ∘ [\circ] (H G : term) infix := Pairs_{x,z}((∃y)(Ͻ(x, y) ∈ G ∧ Ͻ(y, z) ∈ H))
+abbrev Δ [\Delta] (A : term) := Pairs_{x,y}(x ∈ A ∧ x = y)
+
+namespace ch2
+in Set
+
+-- (∃x)(∃y)((T, U) = (x, y) и R{x, y}) ⇔ R{T, U}.
+theorem exists_pair_at {R : rel 2} {T U : term} : (∃x)(∃y)(Ͻ(T, U) = Ͻ(x, y) ∧ R(x, y)) ⇔ R(T, U) {
+  a. (∃x)(∃y)(Ͻ(T, U) = Ͻ(x, y) ∧ R(x, y)) ⇔ (IsPair(Ͻ(T, U)) ∧ R(pr1(Ͻ(T, U)), pr2(Ͻ(T, U))))   by exists_pair
+  b. IsPair(Ͻ(T, U))                                   by pair_is_pair
+  pr1(Ͻ(T, U)) = T                                     by pr1_pair
+  pr2(Ͻ(T, U)) = U                                     by pr2_pair
+  c. R(pr1(Ͻ(T, U)), pr2(Ͻ(T, U))) ⇔ R(T, U)           by rcong2 3 4
+  _                                                    by taut a b c
+}
+
+-- Стр. 85: если все пары (x, y) с R лежат в Z, то R обладает графиком.
+theorem graph_coll {R : rel 2} {Z : term} (h : (∀x)(∀y)(R(x, y) ⇒ Ͻ(x, y) ∈ Z)) : Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ R(x, y))) {
+  (∃x)(∃y)(z = Ͻ(x, y) ∧ R(x, y)) ⇒ z ∈ Z by assume e {
+    (z = Ͻ(x, y) ∧ R(x, y)) ⇒ z ∈ Z by assume a {
+      z = Ͻ(x, y)                                      by taut a
+      z ∈ Z ⇔ Ͻ(x, y) ∈ Z                              by rcong ^
+      R(x, y) ⇒ Ͻ(x, y) ∈ Z                            by inst2 h
+      z ∈ Z                                            by taut a 2 3
+    }
+    (∀y)((z = Ͻ(x, y) ∧ R(x, y)) ⇒ z ∈ Z)              by gen ^ with y
+    (∀x)(∀y)((z = Ͻ(x, y) ∧ R(x, y)) ⇒ z ∈ Z)          by gen ^ with x
+    z ∈ Z                                              by obtain2 e ^
+  }
+  (∀z)((∃x)(∃y)(z = Ͻ(x, y) ∧ R(x, y)) ⇒ z ∈ Z)        by gen ^ with z
+  _                                                    by C52 ^
+}
+
+-- Элементы Pairs_{x,y}(R): пара (T, U) лежит в нём тогда и только тогда, когда R{T, U}.
+theorem pairs_mem {R : rel 2} {T U : term} (hc : Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ R(x, y)))) : Ͻ(T, U) ∈ Pairs_{x,y}(R(x, y)) ⇔ R(T, U) {
+  Ͻ(T, U) ∈ Pairs_{x,y}(R(x, y)) ⇔ (∃x)(∃y)(Ͻ(T, U) = Ͻ(x, y) ∧ R(x, y))   by mem_E hc
+  (∃x)(∃y)(Ͻ(T, U) = Ͻ(x, y) ∧ R(x, y)) ⇔ R(T, U)                         by exists_pair_at
+  _                                                                       by C22' 1 2
+}
+
+-- Pairs_{x,y}(R) есть график.
+theorem pairs_graph {R : rel 2} (hc : Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ R(x, y)))) : Graph(Pairs_{x,y}(R(x, y))) {
+  z ∈ Pairs_{x,y}(R(x, y)) ⇒ IsPair(z) by assume m {
+    z ∈ Pairs_{x,y}(R(x, y)) ⇔ (∃x)(∃y)(z = Ͻ(x, y) ∧ R(x, y))      by mem_E hc
+    (∃x)(∃y)(z = Ͻ(x, y) ∧ R(x, y)) ⇔ (IsPair(z) ∧ R(pr1(z), pr2(z)))   by exists_pair
+    IsPair(z)                                                       by taut m 1 2
+  }
+  _                                                                 by gen ^ with z
+}
+
+-- Графики с одними и теми же парами равны (A1).
+theorem graph_eq {G H : term} (hg : Graph(G)) (hh : Graph(H)) (h : (∀x)(∀y)(Ͻ(x, y) ∈ G ⇔ Ͻ(x, y) ∈ H)) : G = H {
+  z ∈ G ⇒ z ∈ H by assume m {
+    z ∈ G ⇒ IsPair(z)                                    by inst hg
+    IsPair(z)                                            by mp m ^
+    e. z = Ͻ(pr1(z), pr2(z))                             by pair_eta ^
+    a. z ∈ G ⇔ Ͻ(pr1(z), pr2(z)) ∈ G                     by rcong e
+    b. z ∈ H ⇔ Ͻ(pr1(z), pr2(z)) ∈ H                     by rcong e
+    c. Ͻ(pr1(z), pr2(z)) ∈ G ⇔ Ͻ(pr1(z), pr2(z)) ∈ H     by inst2 h
+    z ∈ H                                                by taut m a b c
+  }
+  z ∈ H ⇒ z ∈ G by assume m {
+    z ∈ H ⇒ IsPair(z)                                    by inst hh
+    IsPair(z)                                            by mp m ^
+    e. z = Ͻ(pr1(z), pr2(z))                             by pair_eta ^
+    a. z ∈ G ⇔ Ͻ(pr1(z), pr2(z)) ∈ G                     by rcong e
+    b. z ∈ H ⇔ Ͻ(pr1(z), pr2(z)) ∈ H                     by rcong e
+    c. Ͻ(pr1(z), pr2(z)) ∈ G ⇔ Ͻ(pr1(z), pr2(z)) ∈ H     by inst2 h
+    z ∈ G                                                by taut m a b c
+  }
+  z ∈ G ⇔ z ∈ H                                          by iff_intro 1 2
+  (∀z)(z ∈ G ⇔ z ∈ H)                                    by gen ^ with z
+  _                                                      by ext_iff ^
+}
+
+-- Если G график и (x, y) ∈ G ⇔ R{x, y}, то G = Pairs_{x,y}(R): график соотношения R
+-- единствен (стр. 85).
+theorem graph_ext {R : rel 2} {G : term} (hg : Graph(G)) (hc : Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ R(x, y)))) (h : (∀x)(∀y)(Ͻ(x, y) ∈ G ⇔ R(x, y))) : G = Pairs_{x,y}(R(x, y)) {
+  hp. Graph(Pairs_{x,y}(R(x, y)))                             by pairs_graph hc
+  a. Ͻ(x, y) ∈ G ⇔ R(x, y)                                    by inst2 h
+  b. Ͻ(x, y) ∈ Pairs_{x,y}(R(x, y)) ⇔ R(x, y)                 by pairs_mem hc
+  Ͻ(x, y) ∈ G ⇔ Ͻ(x, y) ∈ Pairs_{x,y}(R(x, y))                by taut a b
+  (∀y)(Ͻ(x, y) ∈ G ⇔ Ͻ(x, y) ∈ Pairs_{x,y}(R(x, y)))          by gen ^ with y
+  (∀x)(∀y)(Ͻ(x, y) ∈ G ⇔ Ͻ(x, y) ∈ Pairs_{x,y}(R(x, y)))      by gen ^ with x
+  _                                                           by graph_eq hg hp ^
+}
+
+-- Предложение 1 (стр. 85): проекции графика. Множество pr₁⟨G⟩ существует по C53
+-- (это объекты вида pr₁ z для z ∈ G) и C52.
+theorem proj1_coll {G : term} : Coll_x((∃y)(Ͻ(x, y) ∈ G)) {
+  c. Coll_x((∃z)(x = pr1(z) ∧ z ∈ G))                         by C53 with T(t) := pr1(t); A := G
+  (∃y)(Ͻ(x, y) ∈ G) ⇒ x ∈ ℰ_x((∃z)(x = pr1(z) ∧ z ∈ G)) by assume h {
+    Ͻ(x, y) ∈ G ⇒ x ∈ ℰ_x((∃z)(x = pr1(z) ∧ z ∈ G)) by assume m {
+      pr1(Ͻ(x, y)) = x                                        by pr1_pair
+      x = pr1(Ͻ(x, y))                                        by T2 ^
+      x = pr1(Ͻ(x, y)) ∧ Ͻ(x, y) ∈ G                          by C20 ^ m
+      (∃z)(x = pr1(z) ∧ z ∈ G)                                by exists_intro ^
+      x ∈ ℰ_x((∃z)(x = pr1(z) ∧ z ∈ G)) ⇔ (∃z)(x = pr1(z) ∧ z ∈ G)   by mem_E c
+      x ∈ ℰ_x((∃z)(x = pr1(z) ∧ z ∈ G))                       by iff_mpr ^ ^^
+    }
+    (∀y)(Ͻ(x, y) ∈ G ⇒ x ∈ ℰ_x((∃z)(x = pr1(z) ∧ z ∈ G)))     by gen ^ with y
+    x ∈ ℰ_x((∃z)(x = pr1(z) ∧ z ∈ G))                         by obtain h ^
+  }
+  (∀x)((∃y)(Ͻ(x, y) ∈ G) ⇒ x ∈ ℰ_x((∃z)(x = pr1(z) ∧ z ∈ G)))   by gen ^ with x
+  _                                                           by C52 ^
+}
+
+theorem proj2_coll {G : term} : Coll_y((∃x)(Ͻ(x, y) ∈ G)) {
+  c. Coll_y((∃z)(y = pr2(z) ∧ z ∈ G))                         by C53 with T(t) := pr2(t); A := G
+  (∃x)(Ͻ(x, y) ∈ G) ⇒ y ∈ ℰ_y((∃z)(y = pr2(z) ∧ z ∈ G)) by assume h {
+    Ͻ(x, y) ∈ G ⇒ y ∈ ℰ_y((∃z)(y = pr2(z) ∧ z ∈ G)) by assume m {
+      pr2(Ͻ(x, y)) = y                                        by pr2_pair
+      y = pr2(Ͻ(x, y))                                        by T2 ^
+      y = pr2(Ͻ(x, y)) ∧ Ͻ(x, y) ∈ G                          by C20 ^ m
+      (∃z)(y = pr2(z) ∧ z ∈ G)                                by exists_intro ^
+      y ∈ ℰ_y((∃z)(y = pr2(z) ∧ z ∈ G)) ⇔ (∃z)(y = pr2(z) ∧ z ∈ G)   by mem_E c
+      y ∈ ℰ_y((∃z)(y = pr2(z) ∧ z ∈ G))                       by iff_mpr ^ ^^
+    }
+    (∀x)(Ͻ(x, y) ∈ G ⇒ y ∈ ℰ_y((∃z)(y = pr2(z) ∧ z ∈ G)))     by gen ^ with x
+    y ∈ ℰ_y((∃z)(y = pr2(z) ∧ z ∈ G))                         by obtain h ^
+  }
+  (∀y)((∃x)(Ͻ(x, y) ∈ G) ⇒ y ∈ ℰ_y((∃z)(y = pr2(z) ∧ z ∈ G)))   by gen ^ with y
+  _                                                           by C52 ^
+}
+
+theorem mem_proj1 {T G : term} : T ∈ proj1(G) ⇔ (∃y)(Ͻ(T, y) ∈ G) {
+  Coll_x((∃y)(Ͻ(x, y) ∈ G))         by proj1_coll
+  _                                 by mem_E ^
+}
+
+theorem mem_proj2 {T G : term} : T ∈ proj2(G) ⇔ (∃x)(Ͻ(x, T) ∈ G) {
+  Coll_y((∃x)(Ͻ(x, y) ∈ G))         by proj2_coll
+  _                                 by mem_E ^
+}
+
+-- Если (x, y) ∈ G, то x ∈ pr₁⟨G⟩ и y ∈ pr₂⟨G⟩.
+theorem pair_proj {T U G : term} (h : Ͻ(T, U) ∈ G) : T ∈ proj1(G) ∧ U ∈ proj2(G) {
+  (∃y)(Ͻ(T, y) ∈ G)                 by exists_intro h
+  T ∈ proj1(G) ⇔ (∃y)(Ͻ(T, y) ∈ G)  by mem_proj1
+  a. T ∈ proj1(G)                   by iff_mpr ^ ^^
+  (∃x)(Ͻ(x, U) ∈ G)                 by exists_intro h
+  U ∈ proj2(G) ⇔ (∃x)(Ͻ(x, U) ∈ G)  by mem_proj2
+  b. U ∈ proj2(G)                   by iff_mpr ^ ^^
+  _                                 by C20 a b
+}
+
+-- Стр. 86: G ⊂ pr₁⟨G⟩ × pr₂⟨G⟩; всякое множество пар есть часть произведения.
+theorem graph_sub_prod {G : term} (hg : Graph(G)) : G ⊂ proj1(G) × proj2(G) {
+  z ∈ G ⇒ z ∈ proj1(G) × proj2(G) by assume m {
+    z ∈ G ⇒ IsPair(z)                                       by inst hg
+    p. IsPair(z)                                            by mp m ^
+    e. z = Ͻ(pr1(z), pr2(z))                                by pair_eta p
+    z ∈ G ⇔ Ͻ(pr1(z), pr2(z)) ∈ G                           by rcong e
+    Ͻ(pr1(z), pr2(z)) ∈ G                                   by taut m ^
+    q. pr1(z) ∈ proj1(G) ∧ pr2(z) ∈ proj2(G)                by pair_proj ^
+    r. z ∈ proj1(G) × proj2(G) ⇔ (IsPair(z) ∧ (pr1(z) ∈ proj1(G) ∧ pr2(z) ∈ proj2(G)))   by mem_prod
+    z ∈ proj1(G) × proj2(G)                                 by taut p q r
+  }
+  _                                                         by gen ^ with z
+}
+
+-- Подмножество произведения есть график.
+theorem sub_prod_graph {G A B : term} (h : G ⊂ A × B) : Graph(G) {
+  z ∈ G ⇒ IsPair(z) by assume m {
+    z ∈ G ⇒ z ∈ A × B                                       by inst h
+    z ∈ A × B ⇔ (IsPair(z) ∧ (pr1(z) ∈ A ∧ pr2(z) ∈ B))     by mem_prod
+    IsPair(z)                                               by taut m 1 2
+  }
+  _                                                         by gen ^ with z
+}
+
+-- Замечание (стр. 86): x = y не обладает графиком, иначе его первая проекция была бы
+-- множеством всех объектов.
+theorem eq_no_graph : ¬(∃G)(∀x)(∀y)(x = y ⇔ Ͻ(x, y) ∈ G) {
+  (∀x)(∀y)(x = y ⇔ Ͻ(x, y) ∈ G) ⇒ (∃X)(∀x)(x ∈ X) by assume h {
+    x = x ⇔ Ͻ(x, x) ∈ G                     by inst2 h
+    x = x                                   by T1
+    Ͻ(x, x) ∈ G                             by taut 1 2
+    (∃y)(Ͻ(x, y) ∈ G)                       by exists_intro ^
+    x ∈ proj1(G) ⇔ (∃y)(Ͻ(x, y) ∈ G)        by mem_proj1
+    x ∈ proj1(G)                            by iff_mpr ^ ^^
+    (∀x)(x ∈ proj1(G))                      by gen ^ with x
+    (∃X)(∀x)(x ∈ X)                         by exists_intro ^
+  }
+  ¬(∃X)(∀x)(x ∈ X)                          by no_universe
+  ¬(∀x)(∀y)(x = y ⇔ Ͻ(x, y) ∈ G)            by taut 1 2
+  (∀G)¬(∀x)(∀y)(x = y ⇔ Ͻ(x, y) ∈ G)        by gen ^ with G
+  ¬(∃G)(∀x)(∀y)(x = y ⇔ Ͻ(x, y) ∈ G) ⇔ (∀G)¬(∀x)(∀y)(x = y ⇔ Ͻ(x, y) ∈ G)   by C29
+  _                                         by iff_mpr ^ ^^
+}
+
+-- Определение 3 (стр. 86): образ G⟨X⟩ множества X по графику G; он лежит в pr₂⟨G⟩.
+theorem img_coll {G X : term} : Coll_y((∃x)(x ∈ X ∧ Ͻ(x, y) ∈ G)) {
+  (∃x)(x ∈ X ∧ Ͻ(x, y) ∈ G) ⇒ y ∈ proj2(G) by assume h {
+    (x ∈ X ∧ Ͻ(x, y) ∈ G) ⇒ Ͻ(x, y) ∈ G       by C21'
+    (∀x)((x ∈ X ∧ Ͻ(x, y) ∈ G) ⇒ Ͻ(x, y) ∈ G) by gen ^ with x
+    (∃x)(x ∈ X ∧ Ͻ(x, y) ∈ G) ⇒ (∃x)(Ͻ(x, y) ∈ G)   by C31_exists ^
+    (∃x)(Ͻ(x, y) ∈ G)                         by mp h ^
+    y ∈ proj2(G) ⇔ (∃x)(Ͻ(x, y) ∈ G)          by mem_proj2
+    y ∈ proj2(G)                              by iff_mpr ^ ^^
+  }
+  (∀y)((∃x)(x ∈ X ∧ Ͻ(x, y) ∈ G) ⇒ y ∈ proj2(G))   by gen ^ with y
+  _                                           by C52 ^
+}
+
+theorem mem_img {T G X : term} : T ∈ img(G, X) ⇔ (∃x)(x ∈ X ∧ Ͻ(x, T) ∈ G) {
+  Coll_y((∃x)(x ∈ X ∧ Ͻ(x, y) ∈ G))   by img_coll
+  _                                   by mem_E ^
+}
+
+theorem img_sub_proj2 {G X : term} : img(G, X) ⊂ proj2(G) {
+  Coll_y((∃x)(x ∈ X ∧ Ͻ(x, y) ∈ G))                        by img_coll
+  Coll_y((∃x)(Ͻ(x, y) ∈ G))                                by proj2_coll
+  (x ∈ X ∧ Ͻ(x, y) ∈ G) ⇒ Ͻ(x, y) ∈ G                      by C21'
+  (∀x)((x ∈ X ∧ Ͻ(x, y) ∈ G) ⇒ Ͻ(x, y) ∈ G)                by gen ^ with x
+  (∃x)(x ∈ X ∧ Ͻ(x, y) ∈ G) ⇒ (∃x)(Ͻ(x, y) ∈ G)            by C31_exists ^
+  (∀y)((∃x)(x ∈ X ∧ Ͻ(x, y) ∈ G) ⇒ (∃x)(Ͻ(x, y) ∈ G))      by gen ^ with y
+  (∀y)((∃x)(x ∈ X ∧ Ͻ(x, y) ∈ G) ⇒ (∃x)(Ͻ(x, y) ∈ G)) ⇔ img(G, X) ⊂ proj2(G)   by C50 1 2
+  _                                                        by iff_mp ^ ^^
+}
+
+-- Стр. 87: G⟨∅⟩ = ∅.
+theorem img_empty {G : term} : img(G, ∅) = ∅ {
+  y ∈ img(G, ∅) ⇔ (∃x)(x ∈ ∅ ∧ Ͻ(x, y) ∈ G)                   by mem_img
+  x ∉ ∅                                                      by not_mem_empty
+  ¬(x ∈ ∅ ∧ Ͻ(x, y) ∈ G)                                     by taut ^
+  (∀x)¬(x ∈ ∅ ∧ Ͻ(x, y) ∈ G)                                 by gen ^ with x
+  ¬(∃x)(x ∈ ∅ ∧ Ͻ(x, y) ∈ G) ⇔ (∀x)¬(x ∈ ∅ ∧ Ͻ(x, y) ∈ G)    by C29
+  y ∉ img(G, ∅)                                              by taut 1 4 5
+  (∀y)(y ∉ img(G, ∅))                                        by gen ^ with y
+  (∀y)(y ∉ img(G, ∅)) ⇔ img(G, ∅) = ∅                        by empty_iff
+  _                                                          by iff_mp ^ ^^
+}
+
+-- Предложение 2 (стр. 87): X ⊂ Y ⇒ G⟨X⟩ ⊂ G⟨Y⟩.
+theorem img_mono {G X Y : term} (h : X ⊂ Y) : img(G, X) ⊂ img(G, Y) {
+  (x ∈ X ∧ Ͻ(x, y) ∈ G) ⇒ (x ∈ Y ∧ Ͻ(x, y) ∈ G) by assume a {
+    x ∈ X ⇒ x ∈ Y                                        by inst h
+    x ∈ Y ∧ Ͻ(x, y) ∈ G                                  by taut a ^
+  }
+  (∀x)((x ∈ X ∧ Ͻ(x, y) ∈ G) ⇒ (x ∈ Y ∧ Ͻ(x, y) ∈ G))    by gen ^ with x
+  (∃x)(x ∈ X ∧ Ͻ(x, y) ∈ G) ⇒ (∃x)(x ∈ Y ∧ Ͻ(x, y) ∈ G)  by C31_exists ^
+  (∀y)((∃x)(x ∈ X ∧ Ͻ(x, y) ∈ G) ⇒ (∃x)(x ∈ Y ∧ Ͻ(x, y) ∈ G))   by gen ^ with y
+  Coll_y((∃x)(x ∈ X ∧ Ͻ(x, y) ∈ G))                      by img_coll
+  Coll_y((∃x)(x ∈ Y ∧ Ͻ(x, y) ∈ G))                      by img_coll
+  (∀y)((∃x)(x ∈ X ∧ Ͻ(x, y) ∈ G) ⇒ (∃x)(x ∈ Y ∧ Ͻ(x, y) ∈ G)) ⇔ img(G, X) ⊂ img(G, Y)   by C50 5 6
+  _                                                      by iff_mp ^ 4
+}
+
+-- Следствие (стр. 87): если pr₁⟨G⟩ ⊂ A, то G⟨A⟩ = pr₂⟨G⟩.
+theorem img_full {G A : term} (h : proj1(G) ⊂ A) : img(G, A) = proj2(G) {
+  l. img(G, A) ⊂ proj2(G)                                by img_sub_proj2
+  y ∈ proj2(G) ⇒ y ∈ img(G, A) by assume m {
+    y ∈ proj2(G) ⇔ (∃x)(Ͻ(x, y) ∈ G)                     by mem_proj2
+    e. (∃x)(Ͻ(x, y) ∈ G)                                 by iff_mp ^ m
+    Ͻ(x, y) ∈ G ⇒ y ∈ img(G, A) by assume p {
+      x ∈ proj1(G) ∧ y ∈ proj2(G)                        by pair_proj p
+      x ∈ proj1(G) ⇒ x ∈ A                               by inst h
+      x ∈ A ∧ Ͻ(x, y) ∈ G                                by taut p 1 2
+      (∃x)(x ∈ A ∧ Ͻ(x, y) ∈ G)                          by exists_intro ^
+      y ∈ img(G, A) ⇔ (∃x)(x ∈ A ∧ Ͻ(x, y) ∈ G)          by mem_img
+      y ∈ img(G, A)                                      by iff_mpr ^ ^^
+    }
+    (∀x)(Ͻ(x, y) ∈ G ⇒ y ∈ img(G, A))                    by gen ^ with x
+    y ∈ img(G, A)                                        by obtain e ^
+  }
+  r. proj2(G) ⊂ img(G, A)                                by gen ^ with y
+  _                                                      by ext l r
+}
+
+-- Стр. 87: если X ⊂ pr₁⟨G⟩ и X ≠ ∅, то G⟨X⟩ ≠ ∅.
+theorem img_nonempty {G X : term} (h : X ⊂ proj1(G)) (hx : X ≠ ∅) : img(G, X) ≠ ∅ {
+  X ≠ ∅ ⇔ (∃x)(x ∈ X)                                    by nonempty
+  e. (∃x)(x ∈ X)                                         by iff_mp ^ hx
+  x ∈ X ⇒ (∃y)(y ∈ img(G, X)) by assume m {
+    x ∈ X ⇒ x ∈ proj1(G)                                 by inst h
+    x ∈ proj1(G) ⇔ (∃y)(Ͻ(x, y) ∈ G)                     by mem_proj1
+    f. (∃y)(Ͻ(x, y) ∈ G)                                 by taut m 1 2
+    Ͻ(x, y) ∈ G ⇒ (∃y)(y ∈ img(G, X)) by assume p {
+      x ∈ X ∧ Ͻ(x, y) ∈ G                                by C20 m p
+      (∃x)(x ∈ X ∧ Ͻ(x, y) ∈ G)                          by exists_intro ^
+      y ∈ img(G, X) ⇔ (∃x)(x ∈ X ∧ Ͻ(x, y) ∈ G)          by mem_img
+      y ∈ img(G, X)                                      by iff_mpr ^ ^^
+      (∃y)(y ∈ img(G, X))                                by exists_intro ^
+    }
+    (∀y)(Ͻ(x, y) ∈ G ⇒ (∃y)(y ∈ img(G, X)))              by gen ^ with y
+    (∃y)(y ∈ img(G, X))                                  by obtain f ^
+  }
+  (∀x)(x ∈ X ⇒ (∃y)(y ∈ img(G, X)))                      by gen ^ with x
+  (∃y)(y ∈ img(G, X))                                    by obtain e ^
+  img(G, X) ≠ ∅ ⇔ (∃y)(y ∈ img(G, X))                    by nonempty
+  _                                                      by iff_mpr ^ ^^
+}
+
+-- Определение 4 (стр. 87): срез G(x) = G⟨{x}⟩; y ∈ G(x) ⇔ (x, y) ∈ G (по C43).
+theorem mem_sect {T U G : term} : U ∈ sect(G, T) ⇔ Ͻ(T, U) ∈ G {
+  a. U ∈ sect(G, T) ⇔ (∃x)(x ∈ set1(T) ∧ Ͻ(x, U) ∈ G)          by mem_img
+  x ∈ set1(T) ⇔ x = T                                          by mem_set1
+  (x ∈ set1(T) ∧ Ͻ(x, U) ∈ G) ⇔ (x = T ∧ Ͻ(x, U) ∈ G)          by taut ^
+  (∀x)((x ∈ set1(T) ∧ Ͻ(x, U) ∈ G) ⇔ (x = T ∧ Ͻ(x, U) ∈ G))    by gen ^ with x
+  b. (∃x)(x ∈ set1(T) ∧ Ͻ(x, U) ∈ G) ⇔ (∃x)(x = T ∧ Ͻ(x, U) ∈ G)   by C31_exists_iff ^
+  c. (∃x)(x = T ∧ Ͻ(x, U) ∈ G) ⇔ Ͻ(T, U) ∈ G                   by exists_eq
+  _                                                            by taut a b c
+}
+
+-- Стр. 87: для графиков G ⊂ G' ⇔ (∀x)(G(x) ⊂ G'(x)).
+theorem graph_sub_iff {G H : term} (hg : Graph(G)) : G ⊂ H ⇔ (∀x)(sect(G, x) ⊂ sect(H, x)) {
+  G ⊂ H ⇒ (∀x)(sect(G, x) ⊂ sect(H, x)) by assume h {
+    y ∈ sect(G, x) ⇒ y ∈ sect(H, x) by assume m {
+      y ∈ sect(G, x) ⇔ Ͻ(x, y) ∈ G                       by mem_sect
+      y ∈ sect(H, x) ⇔ Ͻ(x, y) ∈ H                       by mem_sect
+      Ͻ(x, y) ∈ G ⇒ Ͻ(x, y) ∈ H                          by inst h
+      y ∈ sect(H, x)                                     by taut m 1 2 3
+    }
+    sect(G, x) ⊂ sect(H, x)                              by gen ^ with y
+    (∀x)(sect(G, x) ⊂ sect(H, x))                        by gen ^ with x
+  }
+  (∀x)(sect(G, x) ⊂ sect(H, x)) ⇒ G ⊂ H by assume h {
+    z ∈ G ⇒ z ∈ H by assume m {
+      z ∈ G ⇒ IsPair(z)                                  by inst hg
+      IsPair(z)                                          by mp m ^
+      e. z = Ͻ(pr1(z), pr2(z))                           by pair_eta ^
+      a. z ∈ G ⇔ Ͻ(pr1(z), pr2(z)) ∈ G                   by rcong e
+      b. z ∈ H ⇔ Ͻ(pr1(z), pr2(z)) ∈ H                   by rcong e
+      sect(G, pr1(z)) ⊂ sect(H, pr1(z))                  by inst h
+      c. pr2(z) ∈ sect(G, pr1(z)) ⇒ pr2(z) ∈ sect(H, pr1(z))   by inst ^
+      d. pr2(z) ∈ sect(G, pr1(z)) ⇔ Ͻ(pr1(z), pr2(z)) ∈ G      by mem_sect
+      f. pr2(z) ∈ sect(H, pr1(z)) ⇔ Ͻ(pr1(z), pr2(z)) ∈ H      by mem_sect
+      z ∈ H                                              by taut m a b c d f
+    }
+    G ⊂ H                                                by gen ^ with z
+  }
+  _                                                      by iff_intro 1 2
+}
+
+-- n° 2. Обратный график (определение 5, стр. 87-88): пары (x, y), такие, что (y, x) ∈ G.
+theorem inv_coll {G : term} : Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ Ͻ(y, x) ∈ G)) {
+  Ͻ(y, x) ∈ G ⇒ Ͻ(x, y) ∈ proj2(G) × proj1(G) by assume m {
+    y ∈ proj1(G) ∧ x ∈ proj2(G)                             by pair_proj m
+    Ͻ(x, y) ∈ proj2(G) × proj1(G) ⇔ (x ∈ proj2(G) ∧ y ∈ proj1(G))   by pair_mem_prod
+    Ͻ(x, y) ∈ proj2(G) × proj1(G)                           by taut 1 2
+  }
+  (∀y)(Ͻ(y, x) ∈ G ⇒ Ͻ(x, y) ∈ proj2(G) × proj1(G))         by gen ^ with y
+  (∀x)(∀y)(Ͻ(y, x) ∈ G ⇒ Ͻ(x, y) ∈ proj2(G) × proj1(G))     by gen ^ with x
+  _                                                         by graph_coll ^
+}
+
+theorem mem_inv {T U G : term} : Ͻ(T, U) ∈ inv(G) ⇔ Ͻ(U, T) ∈ G {
+  Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ Ͻ(y, x) ∈ G))   by inv_coll
+  _                                             by pairs_mem ^
+}
+
+theorem inv_graph {G : term} : Graph(inv(G)) {
+  Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ Ͻ(y, x) ∈ G))   by inv_coll
+  _                                             by pairs_graph ^
+}
+
+-- Стр. 88: обратный к G⁻¹ есть G; pr₁⟨G⁻¹⟩ = pr₂⟨G⟩, pr₂⟨G⁻¹⟩ = pr₁⟨G⟩; (X × Y)⁻¹ = Y × X.
+theorem inv_inv {G : term} (hg : Graph(G)) : inv(inv(G)) = G {
+  a. Ͻ(x, y) ∈ inv(inv(G)) ⇔ Ͻ(y, x) ∈ inv(G)       by mem_inv
+  b. Ͻ(y, x) ∈ inv(G) ⇔ Ͻ(x, y) ∈ G                 by mem_inv
+  Ͻ(x, y) ∈ inv(inv(G)) ⇔ Ͻ(x, y) ∈ G               by taut a b
+  (∀y)(Ͻ(x, y) ∈ inv(inv(G)) ⇔ Ͻ(x, y) ∈ G)         by gen ^ with y
+  (∀x)(∀y)(Ͻ(x, y) ∈ inv(inv(G)) ⇔ Ͻ(x, y) ∈ G)     by gen ^ with x
+  Graph(inv(inv(G)))                                by inv_graph
+  _                                                 by graph_eq ^ hg ^^
+}
+
+theorem proj1_inv {G : term} : proj1(inv(G)) = proj2(G) {
+  a. x ∈ proj1(inv(G)) ⇔ (∃y)(Ͻ(x, y) ∈ inv(G))     by mem_proj1
+  Ͻ(x, y) ∈ inv(G) ⇔ Ͻ(y, x) ∈ G                    by mem_inv
+  (∀y)(Ͻ(x, y) ∈ inv(G) ⇔ Ͻ(y, x) ∈ G)              by gen ^ with y
+  b. (∃y)(Ͻ(x, y) ∈ inv(G)) ⇔ (∃y)(Ͻ(y, x) ∈ G)     by C31_exists_iff ^
+  c. x ∈ proj2(G) ⇔ (∃y)(Ͻ(y, x) ∈ G)               by mem_proj2
+  x ∈ proj1(inv(G)) ⇔ x ∈ proj2(G)                  by taut a b c
+  (∀x)(x ∈ proj1(inv(G)) ⇔ x ∈ proj2(G))            by gen ^ with x
+  _                                                 by ext_iff ^
+}
+
+theorem proj2_inv {G : term} : proj2(inv(G)) = proj1(G) {
+  a. y ∈ proj2(inv(G)) ⇔ (∃x)(Ͻ(x, y) ∈ inv(G))     by mem_proj2
+  Ͻ(x, y) ∈ inv(G) ⇔ Ͻ(y, x) ∈ G                    by mem_inv
+  (∀x)(Ͻ(x, y) ∈ inv(G) ⇔ Ͻ(y, x) ∈ G)              by gen ^ with x
+  b. (∃x)(Ͻ(x, y) ∈ inv(G)) ⇔ (∃x)(Ͻ(y, x) ∈ G)     by C31_exists_iff ^
+  c. y ∈ proj1(G) ⇔ (∃x)(Ͻ(y, x) ∈ G)               by mem_proj1
+  y ∈ proj2(inv(G)) ⇔ y ∈ proj1(G)                  by taut a b c
+  (∀y)(y ∈ proj2(inv(G)) ⇔ y ∈ proj1(G))            by gen ^ with y
+  _                                                 by ext_iff ^
+}
+
+theorem prod_graph {X Y : term} : Graph(X × Y) {
+  X × Y ⊂ X × Y                                     by subset_refl
+  _                                                 by sub_prod_graph ^
+}
+
+theorem inv_prod {X Y : term} : inv(X × Y) = Y × X {
+  a. Ͻ(x, y) ∈ inv(X × Y) ⇔ Ͻ(y, x) ∈ X × Y         by mem_inv
+  b. Ͻ(y, x) ∈ X × Y ⇔ (y ∈ X ∧ x ∈ Y)              by pair_mem_prod
+  c. Ͻ(x, y) ∈ Y × X ⇔ (x ∈ Y ∧ y ∈ X)              by pair_mem_prod
+  Ͻ(x, y) ∈ inv(X × Y) ⇔ Ͻ(x, y) ∈ Y × X            by taut a b c
+  (∀y)(Ͻ(x, y) ∈ inv(X × Y) ⇔ Ͻ(x, y) ∈ Y × X)      by gen ^ with y
+  (∀x)(∀y)(Ͻ(x, y) ∈ inv(X × Y) ⇔ Ͻ(x, y) ∈ Y × X)  by gen ^ with x
+  Graph(inv(X × Y))                                 by inv_graph
+  Graph(Y × X)                                      by prod_graph
+  _                                                 by graph_eq ^^ ^ ^^^
+}
+
+-- Полный прообраз G⁻¹⟨Y⟩: x ∈ G⁻¹⟨Y⟩ ⇔ (∃y)(y ∈ Y и (x, y) ∈ G).
+theorem mem_preimg {T G Y : term} : T ∈ img(inv(G), Y) ⇔ (∃y)(y ∈ Y ∧ Ͻ(T, y) ∈ G) {
+  a. T ∈ img(inv(G), Y) ⇔ (∃y)(y ∈ Y ∧ Ͻ(y, T) ∈ inv(G))   by mem_img
+  Ͻ(y, T) ∈ inv(G) ⇔ Ͻ(T, y) ∈ G                           by mem_inv
+  (y ∈ Y ∧ Ͻ(y, T) ∈ inv(G)) ⇔ (y ∈ Y ∧ Ͻ(T, y) ∈ G)       by taut ^
+  (∀y)((y ∈ Y ∧ Ͻ(y, T) ∈ inv(G)) ⇔ (y ∈ Y ∧ Ͻ(T, y) ∈ G)) by gen ^ with y
+  b. (∃y)(y ∈ Y ∧ Ͻ(y, T) ∈ inv(G)) ⇔ (∃y)(y ∈ Y ∧ Ͻ(T, y) ∈ G)   by C31_exists_iff ^
+  _                                                        by C22' a b
+}
+
+-- n° 3. Композиция графиков (определение 6, стр. 88).
+theorem comp_coll {G H : term} : Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ (∃t)(Ͻ(x, t) ∈ G ∧ Ͻ(t, y) ∈ H))) {
+  (∃t)(Ͻ(x, t) ∈ G ∧ Ͻ(t, y) ∈ H) ⇒ Ͻ(x, y) ∈ proj1(G) × proj2(H) by assume e {
+    (Ͻ(x, t) ∈ G ∧ Ͻ(t, y) ∈ H) ⇒ Ͻ(x, y) ∈ proj1(G) × proj2(H) by assume m {
+      Ͻ(x, t) ∈ G                                           by taut m
+      x ∈ proj1(G) ∧ t ∈ proj2(G)                           by pair_proj ^
+      Ͻ(t, y) ∈ H                                           by taut m
+      t ∈ proj1(H) ∧ y ∈ proj2(H)                           by pair_proj ^
+      Ͻ(x, y) ∈ proj1(G) × proj2(H) ⇔ (x ∈ proj1(G) ∧ y ∈ proj2(H))   by pair_mem_prod
+      Ͻ(x, y) ∈ proj1(G) × proj2(H)                         by taut 2 4 5
+    }
+    (∀t)((Ͻ(x, t) ∈ G ∧ Ͻ(t, y) ∈ H) ⇒ Ͻ(x, y) ∈ proj1(G) × proj2(H))   by gen ^ with t
+    Ͻ(x, y) ∈ proj1(G) × proj2(H)                           by obtain e ^
+  }
+  (∀y)((∃t)(Ͻ(x, t) ∈ G ∧ Ͻ(t, y) ∈ H) ⇒ Ͻ(x, y) ∈ proj1(G) × proj2(H))       by gen ^ with y
+  (∀x)(∀y)((∃t)(Ͻ(x, t) ∈ G ∧ Ͻ(t, y) ∈ H) ⇒ Ͻ(x, y) ∈ proj1(G) × proj2(H))   by gen ^ with x
+  _                                                         by graph_coll ^
+}
+
+theorem mem_comp {T U G H : term} : Ͻ(T, U) ∈ H ∘ G ⇔ (∃y)(Ͻ(T, y) ∈ G ∧ Ͻ(y, U) ∈ H) {
+  Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ (∃t)(Ͻ(x, t) ∈ G ∧ Ͻ(t, y) ∈ H)))   by comp_coll
+  _                                                                 by pairs_mem ^
+}
+
+theorem comp_graph {G H : term} : Graph(H ∘ G) {
+  Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ (∃t)(Ͻ(x, t) ∈ G ∧ Ͻ(t, y) ∈ H)))   by comp_coll
+  _                                                                 by pairs_graph ^
+}
+
+-- Предложение 3 (стр. 88): (G' ∘ G)⁻¹ = G⁻¹ ∘ G'⁻¹.
+theorem inv_comp {G H : term} : inv(H ∘ G) = inv(G) ∘ inv(H) {
+  a. Ͻ(x, z) ∈ inv(H ∘ G) ⇔ Ͻ(z, x) ∈ H ∘ G                          by mem_inv
+  b. Ͻ(z, x) ∈ H ∘ G ⇔ (∃y)(Ͻ(z, y) ∈ G ∧ Ͻ(y, x) ∈ H)               by mem_comp
+  c. Ͻ(x, z) ∈ inv(G) ∘ inv(H) ⇔ (∃y)(Ͻ(x, y) ∈ inv(H) ∧ Ͻ(y, z) ∈ inv(G))   by mem_comp
+  d. Ͻ(x, y) ∈ inv(H) ⇔ Ͻ(y, x) ∈ H                                 by mem_inv
+  f. Ͻ(y, z) ∈ inv(G) ⇔ Ͻ(z, y) ∈ G                                 by mem_inv
+  (Ͻ(x, y) ∈ inv(H) ∧ Ͻ(y, z) ∈ inv(G)) ⇔ (Ͻ(z, y) ∈ G ∧ Ͻ(y, x) ∈ H)   by taut d f
+  (∀y)((Ͻ(x, y) ∈ inv(H) ∧ Ͻ(y, z) ∈ inv(G)) ⇔ (Ͻ(z, y) ∈ G ∧ Ͻ(y, x) ∈ H))   by gen ^ with y
+  g. (∃y)(Ͻ(x, y) ∈ inv(H) ∧ Ͻ(y, z) ∈ inv(G)) ⇔ (∃y)(Ͻ(z, y) ∈ G ∧ Ͻ(y, x) ∈ H)   by C31_exists_iff ^
+  Ͻ(x, z) ∈ inv(H ∘ G) ⇔ Ͻ(x, z) ∈ inv(G) ∘ inv(H)                  by taut a b c g
+  (∀z)(Ͻ(x, z) ∈ inv(H ∘ G) ⇔ Ͻ(x, z) ∈ inv(G) ∘ inv(H))            by gen ^ with z
+  (∀x)(∀z)(Ͻ(x, z) ∈ inv(H ∘ G) ⇔ Ͻ(x, z) ∈ inv(G) ∘ inv(H))        by gen ^ with x
+  Graph(inv(H ∘ G))                                                 by inv_graph
+  Graph(inv(G) ∘ inv(H))                                            by comp_graph
+  _                                                                 by graph_eq ^^ ^ ^^^
+}
+
+-- Предложение 4 (стр. 88): (G₃ ∘ G₂) ∘ G₁ = G₃ ∘ (G₂ ∘ G₁).
+theorem comp_assoc {G1 G2 G3 : term} : (G3 ∘ G2) ∘ G1 = G3 ∘ (G2 ∘ G1) {
+  a. Ͻ(x, t) ∈ (G3 ∘ G2) ∘ G1 ⇔ (∃y)(Ͻ(x, y) ∈ G1 ∧ Ͻ(y, t) ∈ G3 ∘ G2)   by mem_comp
+  Ͻ(y, t) ∈ G3 ∘ G2 ⇔ (∃z)(Ͻ(y, z) ∈ G2 ∧ Ͻ(z, t) ∈ G3)                  by mem_comp
+  (Ͻ(x, y) ∈ G1 ∧ Ͻ(y, t) ∈ G3 ∘ G2) ⇔ (Ͻ(x, y) ∈ G1 ∧ (∃z)(Ͻ(y, z) ∈ G2 ∧ Ͻ(z, t) ∈ G3))   by taut ^
+  (∀y)((Ͻ(x, y) ∈ G1 ∧ Ͻ(y, t) ∈ G3 ∘ G2) ⇔ (Ͻ(x, y) ∈ G1 ∧ (∃z)(Ͻ(y, z) ∈ G2 ∧ Ͻ(z, t) ∈ G3)))   by gen ^ with y
+  b. (∃y)(Ͻ(x, y) ∈ G1 ∧ Ͻ(y, t) ∈ G3 ∘ G2) ⇔ (∃y)(Ͻ(x, y) ∈ G1 ∧ (∃z)(Ͻ(y, z) ∈ G2 ∧ Ͻ(z, t) ∈ G3))   by C31_exists_iff ^
+  c. (∃y)(Ͻ(x, y) ∈ G1 ∧ (∃z)(Ͻ(y, z) ∈ G2 ∧ Ͻ(z, t) ∈ G3)) ⇔ (∃z)((∃y)(Ͻ(x, y) ∈ G1 ∧ Ͻ(y, z) ∈ G2) ∧ Ͻ(z, t) ∈ G3)   by ex_assoc
+  d. Ͻ(x, t) ∈ G3 ∘ (G2 ∘ G1) ⇔ (∃z)(Ͻ(x, z) ∈ G2 ∘ G1 ∧ Ͻ(z, t) ∈ G3)   by mem_comp
+  Ͻ(x, z) ∈ G2 ∘ G1 ⇔ (∃y)(Ͻ(x, y) ∈ G1 ∧ Ͻ(y, z) ∈ G2)                  by mem_comp
+  (Ͻ(x, z) ∈ G2 ∘ G1 ∧ Ͻ(z, t) ∈ G3) ⇔ ((∃y)(Ͻ(x, y) ∈ G1 ∧ Ͻ(y, z) ∈ G2) ∧ Ͻ(z, t) ∈ G3)   by taut ^
+  (∀z)((Ͻ(x, z) ∈ G2 ∘ G1 ∧ Ͻ(z, t) ∈ G3) ⇔ ((∃y)(Ͻ(x, y) ∈ G1 ∧ Ͻ(y, z) ∈ G2) ∧ Ͻ(z, t) ∈ G3))   by gen ^ with z
+  f. (∃z)(Ͻ(x, z) ∈ G2 ∘ G1 ∧ Ͻ(z, t) ∈ G3) ⇔ (∃z)((∃y)(Ͻ(x, y) ∈ G1 ∧ Ͻ(y, z) ∈ G2) ∧ Ͻ(z, t) ∈ G3)   by C31_exists_iff ^
+  Ͻ(x, t) ∈ (G3 ∘ G2) ∘ G1 ⇔ Ͻ(x, t) ∈ G3 ∘ (G2 ∘ G1)                    by taut a b c d f
+  (∀t)(Ͻ(x, t) ∈ (G3 ∘ G2) ∘ G1 ⇔ Ͻ(x, t) ∈ G3 ∘ (G2 ∘ G1))              by gen ^ with t
+  (∀x)(∀t)(Ͻ(x, t) ∈ (G3 ∘ G2) ∘ G1 ⇔ Ͻ(x, t) ∈ G3 ∘ (G2 ∘ G1))          by gen ^ with x
+  Graph((G3 ∘ G2) ∘ G1)                                                  by comp_graph
+  Graph(G3 ∘ (G2 ∘ G1))                                                  by comp_graph
+  _                                                                      by graph_eq ^^ ^ ^^^
+}
+
+-- Предложение 5 (стр. 89): (G' ∘ G)⟨A⟩ = G'⟨G⟨A⟩⟩.
+theorem img_comp {G H A : term} : img(H ∘ G, A) = img(H, img(G, A)) {
+  a. z ∈ img(H ∘ G, A) ⇔ (∃x)(x ∈ A ∧ Ͻ(x, z) ∈ H ∘ G)                 by mem_img
+  Ͻ(x, z) ∈ H ∘ G ⇔ (∃y)(Ͻ(x, y) ∈ G ∧ Ͻ(y, z) ∈ H)                    by mem_comp
+  (x ∈ A ∧ Ͻ(x, z) ∈ H ∘ G) ⇔ (x ∈ A ∧ (∃y)(Ͻ(x, y) ∈ G ∧ Ͻ(y, z) ∈ H))   by taut ^
+  (∀x)((x ∈ A ∧ Ͻ(x, z) ∈ H ∘ G) ⇔ (x ∈ A ∧ (∃y)(Ͻ(x, y) ∈ G ∧ Ͻ(y, z) ∈ H)))   by gen ^ with x
+  b. (∃x)(x ∈ A ∧ Ͻ(x, z) ∈ H ∘ G) ⇔ (∃x)(x ∈ A ∧ (∃y)(Ͻ(x, y) ∈ G ∧ Ͻ(y, z) ∈ H))   by C31_exists_iff ^
+  c. (∃x)(x ∈ A ∧ (∃y)(Ͻ(x, y) ∈ G ∧ Ͻ(y, z) ∈ H)) ⇔ (∃y)((∃x)(x ∈ A ∧ Ͻ(x, y) ∈ G) ∧ Ͻ(y, z) ∈ H)   by ex_assoc
+  d. z ∈ img(H, img(G, A)) ⇔ (∃y)(y ∈ img(G, A) ∧ Ͻ(y, z) ∈ H)         by mem_img
+  y ∈ img(G, A) ⇔ (∃x)(x ∈ A ∧ Ͻ(x, y) ∈ G)                            by mem_img
+  (y ∈ img(G, A) ∧ Ͻ(y, z) ∈ H) ⇔ ((∃x)(x ∈ A ∧ Ͻ(x, y) ∈ G) ∧ Ͻ(y, z) ∈ H)   by taut ^
+  (∀y)((y ∈ img(G, A) ∧ Ͻ(y, z) ∈ H) ⇔ ((∃x)(x ∈ A ∧ Ͻ(x, y) ∈ G) ∧ Ͻ(y, z) ∈ H))   by gen ^ with y
+  f. (∃y)(y ∈ img(G, A) ∧ Ͻ(y, z) ∈ H) ⇔ (∃y)((∃x)(x ∈ A ∧ Ͻ(x, y) ∈ G) ∧ Ͻ(y, z) ∈ H)   by C31_exists_iff ^
+  z ∈ img(H ∘ G, A) ⇔ z ∈ img(H, img(G, A))                            by taut a b c d f
+  (∀z)(z ∈ img(H ∘ G, A) ⇔ z ∈ img(H, img(G, A)))                      by gen ^ with z
+  _                                                                    by ext_iff ^
+}
+
+-- Стр. 89: pr₂⟨G' ∘ G⟩ = G'⟨pr₂⟨G⟩⟩ и pr₁⟨G' ∘ G⟩ = G⁻¹⟨pr₁⟨G'⟩⟩.
+theorem proj2_comp {G H : term} : proj2(H ∘ G) = img(H, proj2(G)) {
+  a. z ∈ proj2(H ∘ G) ⇔ (∃x)(Ͻ(x, z) ∈ H ∘ G)                           by mem_proj2
+  Ͻ(x, z) ∈ H ∘ G ⇔ (∃y)(Ͻ(x, y) ∈ G ∧ Ͻ(y, z) ∈ H)                      by mem_comp
+  (∀x)(Ͻ(x, z) ∈ H ∘ G ⇔ (∃y)(Ͻ(x, y) ∈ G ∧ Ͻ(y, z) ∈ H))                by gen ^ with x
+  b. (∃x)(Ͻ(x, z) ∈ H ∘ G) ⇔ (∃x)(∃y)(Ͻ(x, y) ∈ G ∧ Ͻ(y, z) ∈ H)        by C31_exists_iff ^
+  c. (∃x)(∃y)(Ͻ(x, y) ∈ G ∧ Ͻ(y, z) ∈ H) ⇔ (∃y)((∃x)(Ͻ(x, y) ∈ G) ∧ Ͻ(y, z) ∈ H)   by ex_assoc'
+  d. z ∈ img(H, proj2(G)) ⇔ (∃y)(y ∈ proj2(G) ∧ Ͻ(y, z) ∈ H)            by mem_img
+  y ∈ proj2(G) ⇔ (∃x)(Ͻ(x, y) ∈ G)                                      by mem_proj2
+  (y ∈ proj2(G) ∧ Ͻ(y, z) ∈ H) ⇔ ((∃x)(Ͻ(x, y) ∈ G) ∧ Ͻ(y, z) ∈ H)      by taut ^
+  (∀y)((y ∈ proj2(G) ∧ Ͻ(y, z) ∈ H) ⇔ ((∃x)(Ͻ(x, y) ∈ G) ∧ Ͻ(y, z) ∈ H))   by gen ^ with y
+  f. (∃y)(y ∈ proj2(G) ∧ Ͻ(y, z) ∈ H) ⇔ (∃y)((∃x)(Ͻ(x, y) ∈ G) ∧ Ͻ(y, z) ∈ H)   by C31_exists_iff ^
+  z ∈ proj2(H ∘ G) ⇔ z ∈ img(H, proj2(G))                               by taut a b c d f
+  (∀z)(z ∈ proj2(H ∘ G) ⇔ z ∈ img(H, proj2(G)))                         by gen ^ with z
+  _                                                                     by ext_iff ^
+}
+
+theorem proj1_comp {G H : term} : proj1(H ∘ G) = img(inv(G), proj1(H)) {
+  -- переходим к обратным: pr₁⟨H ∘ G⟩ = pr₂⟨(H ∘ G)⁻¹⟩ = pr₂⟨G⁻¹ ∘ H⁻¹⟩ = G⁻¹⟨pr₂⟨H⁻¹⟩⟩
+  a. proj2(inv(H ∘ G)) = proj1(H ∘ G)                       by proj2_inv
+  inv(H ∘ G) = inv(G) ∘ inv(H)                              by inv_comp
+  b. proj2(inv(H ∘ G)) = proj2(inv(G) ∘ inv(H))             by cong ^
+  c. proj2(inv(G) ∘ inv(H)) = img(inv(G), proj2(inv(H)))    by proj2_comp
+  proj2(inv(H)) = proj1(H)                                  by proj2_inv
+  d. img(inv(G), proj2(inv(H))) = img(inv(G), proj1(H))     by cong ^
+  proj1(H ∘ G) = proj2(inv(H ∘ G))                          by T2 a
+  proj1(H ∘ G) = proj2(inv(G) ∘ inv(H))                     by T3 ^ b
+  proj1(H ∘ G) = img(inv(G), proj2(inv(H)))                 by T3 ^ c
+  _                                                         by T3 ^ d
+}
+
+-- Стр. 89: если X ⊂ pr₁⟨G⟩, то X ⊂ G⁻¹⟨G⟨X⟩⟩.
+theorem sub_preimg_img {G X : term} (h : X ⊂ proj1(G)) : X ⊂ img(inv(G), img(G, X)) {
+  x ∈ X ⇒ x ∈ img(inv(G), img(G, X)) by assume m {
+    x ∈ X ⇒ x ∈ proj1(G)                                    by inst h
+    x ∈ proj1(G) ⇔ (∃y)(Ͻ(x, y) ∈ G)                        by mem_proj1
+    e. (∃y)(Ͻ(x, y) ∈ G)                                    by taut m 1 2
+    Ͻ(x, y) ∈ G ⇒ x ∈ img(inv(G), img(G, X)) by assume p {
+      x ∈ X ∧ Ͻ(x, y) ∈ G                                   by C20 m p
+      (∃x)(x ∈ X ∧ Ͻ(x, y) ∈ G)                             by exists_intro ^
+      y ∈ img(G, X) ⇔ (∃x)(x ∈ X ∧ Ͻ(x, y) ∈ G)             by mem_img
+      y ∈ img(G, X)                                         by iff_mpr ^ ^^
+      y ∈ img(G, X) ∧ Ͻ(x, y) ∈ G                           by C20 ^ p
+      (∃y)(y ∈ img(G, X) ∧ Ͻ(x, y) ∈ G)                     by exists_intro ^
+      x ∈ img(inv(G), img(G, X)) ⇔ (∃y)(y ∈ img(G, X) ∧ Ͻ(x, y) ∈ G)   by mem_preimg
+      x ∈ img(inv(G), img(G, X))                            by iff_mpr ^ ^^
+    }
+    (∀y)(Ͻ(x, y) ∈ G ⇒ x ∈ img(inv(G), img(G, X)))          by gen ^ with y
+    x ∈ img(inv(G), img(G, X))                              by obtain e ^
+  }
+  _                                                         by gen ^ with x
+}
+
+-- Стр. 89: G₁ ⊂ G₂ и G₁' ⊂ G₂' влекут G₁' ∘ G₁ ⊂ G₂' ∘ G₂.
+theorem comp_mono {G1 G2 H1 H2 : term} (h1 : G1 ⊂ G2) (h2 : H1 ⊂ H2) : H1 ∘ G1 ⊂ H2 ∘ G2 {
+  (∃x)(∃y)(z = Ͻ(x, y) ∧ (∃t)(Ͻ(x, t) ∈ G1 ∧ Ͻ(t, y) ∈ H1)) ⇒ (∃x)(∃y)(z = Ͻ(x, y) ∧ (∃t)(Ͻ(x, t) ∈ G2 ∧ Ͻ(t, y) ∈ H2)) by assume e {
+    (z = Ͻ(x, y) ∧ (∃t)(Ͻ(x, t) ∈ G1 ∧ Ͻ(t, y) ∈ H1)) ⇒ (∃x)(∃y)(z = Ͻ(x, y) ∧ (∃t)(Ͻ(x, t) ∈ G2 ∧ Ͻ(t, y) ∈ H2)) by assume a {
+      (Ͻ(x, t) ∈ G1 ∧ Ͻ(t, y) ∈ H1) ⇒ (Ͻ(x, t) ∈ G2 ∧ Ͻ(t, y) ∈ H2) by assume b {
+        Ͻ(x, t) ∈ G1 ⇒ Ͻ(x, t) ∈ G2                         by inst h1
+        Ͻ(t, y) ∈ H1 ⇒ Ͻ(t, y) ∈ H2                         by inst h2
+        Ͻ(x, t) ∈ G2 ∧ Ͻ(t, y) ∈ H2                         by taut b 1 2
+      }
+      (∀t)((Ͻ(x, t) ∈ G1 ∧ Ͻ(t, y) ∈ H1) ⇒ (Ͻ(x, t) ∈ G2 ∧ Ͻ(t, y) ∈ H2))   by gen ^ with t
+      (∃t)(Ͻ(x, t) ∈ G1 ∧ Ͻ(t, y) ∈ H1) ⇒ (∃t)(Ͻ(x, t) ∈ G2 ∧ Ͻ(t, y) ∈ H2)   by C31_exists ^
+      z = Ͻ(x, y) ∧ (∃t)(Ͻ(x, t) ∈ G2 ∧ Ͻ(t, y) ∈ H2)       by taut a ^
+      (∃y)(z = Ͻ(x, y) ∧ (∃t)(Ͻ(x, t) ∈ G2 ∧ Ͻ(t, y) ∈ H2))  by exists_intro ^
+      (∃x)(∃y)(z = Ͻ(x, y) ∧ (∃t)(Ͻ(x, t) ∈ G2 ∧ Ͻ(t, y) ∈ H2))   by exists_intro ^
+    }
+    (∀y)((z = Ͻ(x, y) ∧ (∃t)(Ͻ(x, t) ∈ G1 ∧ Ͻ(t, y) ∈ H1)) ⇒ (∃x)(∃y)(z = Ͻ(x, y) ∧ (∃t)(Ͻ(x, t) ∈ G2 ∧ Ͻ(t, y) ∈ H2)))   by gen ^ with y
+    (∀x)(∀y)((z = Ͻ(x, y) ∧ (∃t)(Ͻ(x, t) ∈ G1 ∧ Ͻ(t, y) ∈ H1)) ⇒ (∃x)(∃y)(z = Ͻ(x, y) ∧ (∃t)(Ͻ(x, t) ∈ G2 ∧ Ͻ(t, y) ∈ H2)))   by gen ^ with x
+    (∃x)(∃y)(z = Ͻ(x, y) ∧ (∃t)(Ͻ(x, t) ∈ G2 ∧ Ͻ(t, y) ∈ H2))   by obtain2 e ^
+  }
+  (∀z)((∃x)(∃y)(z = Ͻ(x, y) ∧ (∃t)(Ͻ(x, t) ∈ G1 ∧ Ͻ(t, y) ∈ H1)) ⇒ (∃x)(∃y)(z = Ͻ(x, y) ∧ (∃t)(Ͻ(x, t) ∈ G2 ∧ Ͻ(t, y) ∈ H2)))   by gen ^ with z
+  Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ (∃t)(Ͻ(x, t) ∈ G1 ∧ Ͻ(t, y) ∈ H1)))   by comp_coll
+  Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ (∃t)(Ͻ(x, t) ∈ G2 ∧ Ͻ(t, y) ∈ H2)))   by comp_coll
+  (∀z)((∃x)(∃y)(z = Ͻ(x, y) ∧ (∃t)(Ͻ(x, t) ∈ G1 ∧ Ͻ(t, y) ∈ H1)) ⇒ (∃x)(∃y)(z = Ͻ(x, y) ∧ (∃t)(Ͻ(x, t) ∈ G2 ∧ Ͻ(t, y) ∈ H2))) ⇔ H1 ∘ G1 ⊂ H2 ∘ G2   by C50 ^^ ^
+  _                                                         by iff_mp ^ 2
+}
+
+-- Определение 8 (стр. 90): диагональ Δ_A, пары (x, x) для x ∈ A.
+theorem diag_coll {A : term} : Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ (x ∈ A ∧ x = y))) {
+  (x ∈ A ∧ x = y) ⇒ Ͻ(x, y) ∈ A × A by assume a {
+    x = y                                         by taut a
+    y = x                                         by T2 ^
+    y ∈ A ⇔ x ∈ A                                 by rcong ^
+    Ͻ(x, y) ∈ A × A ⇔ (x ∈ A ∧ y ∈ A)             by pair_mem_prod
+    Ͻ(x, y) ∈ A × A                               by taut a 3 4
+  }
+  (∀y)((x ∈ A ∧ x = y) ⇒ Ͻ(x, y) ∈ A × A)         by gen ^ with y
+  (∀x)(∀y)((x ∈ A ∧ x = y) ⇒ Ͻ(x, y) ∈ A × A)     by gen ^ with x
+  _                                               by graph_coll ^
+}
+
+theorem mem_diag {T U A : term} : Ͻ(T, U) ∈ Δ(A) ⇔ (T ∈ A ∧ T = U) {
+  Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ (x ∈ A ∧ x = y)))   by diag_coll
+  _                                                 by pairs_mem ^
+}
+
+theorem diag_graph {A : term} : Graph(Δ(A)) {
+  Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ (x ∈ A ∧ x = y)))   by diag_coll
+  _                                                 by pairs_graph ^
+}
+
+-- pr₁⟨Δ_A⟩ = pr₂⟨Δ_A⟩ = A.
+theorem proj1_diag {A : term} : proj1(Δ(A)) = A {
+  x ∈ proj1(Δ(A)) ⇒ x ∈ A by assume m {
+    x ∈ proj1(Δ(A)) ⇔ (∃y)(Ͻ(x, y) ∈ Δ(A))          by mem_proj1
+    e. (∃y)(Ͻ(x, y) ∈ Δ(A))                         by iff_mp ^ m
+    Ͻ(x, y) ∈ Δ(A) ⇒ x ∈ A by assume p {
+      Ͻ(x, y) ∈ Δ(A) ⇔ (x ∈ A ∧ x = y)              by mem_diag
+      x ∈ A                                         by taut p ^
+    }
+    (∀y)(Ͻ(x, y) ∈ Δ(A) ⇒ x ∈ A)                    by gen ^ with y
+    x ∈ A                                           by obtain e ^
+  }
+  l. proj1(Δ(A)) ⊂ A                                by gen ^ with x
+  x ∈ A ⇒ x ∈ proj1(Δ(A)) by assume m {
+    Ͻ(x, x) ∈ Δ(A) ⇔ (x ∈ A ∧ x = x)                by mem_diag
+    x = x                                           by T1
+    Ͻ(x, x) ∈ Δ(A)                                  by taut m 1 2
+    (∃y)(Ͻ(x, y) ∈ Δ(A))                            by exists_intro ^
+    x ∈ proj1(Δ(A)) ⇔ (∃y)(Ͻ(x, y) ∈ Δ(A))          by mem_proj1
+    x ∈ proj1(Δ(A))                                 by iff_mpr ^ ^^
+  }
+  r. A ⊂ proj1(Δ(A))                                by gen ^ with x
+  _                                                 by ext l r
+}
+
+theorem inv_diag {A : term} : inv(Δ(A)) = Δ(A) {
+  a. Ͻ(x, y) ∈ inv(Δ(A)) ⇔ Ͻ(y, x) ∈ Δ(A)           by mem_inv
+  b. Ͻ(y, x) ∈ Δ(A) ⇔ (y ∈ A ∧ y = x)               by mem_diag
+  c. Ͻ(x, y) ∈ Δ(A) ⇔ (x ∈ A ∧ x = y)               by mem_diag
+  d. (y ∈ A ∧ y = x) ⇔ (x ∈ A ∧ x = y)              by C43'
+  Ͻ(x, y) ∈ inv(Δ(A)) ⇔ Ͻ(x, y) ∈ Δ(A)              by taut a b c d
+  (∀y)(Ͻ(x, y) ∈ inv(Δ(A)) ⇔ Ͻ(x, y) ∈ Δ(A))        by gen ^ with y
+  (∀x)(∀y)(Ͻ(x, y) ∈ inv(Δ(A)) ⇔ Ͻ(x, y) ∈ Δ(A))    by gen ^ with x
+  Graph(inv(Δ(A)))                                  by inv_graph
+  Graph(Δ(A))                                       by diag_graph
+  _                                                 by graph_eq ^^ ^ ^^^
+}
+
+theorem proj2_diag {A : term} : proj2(Δ(A)) = A {
+  proj1(inv(Δ(A))) = proj2(Δ(A))         by proj1_inv
+  a. proj2(Δ(A)) = proj1(inv(Δ(A)))      by T2 ^
+  inv(Δ(A)) = Δ(A)                       by inv_diag
+  b. proj1(inv(Δ(A))) = proj1(Δ(A))      by cong ^
+  c. proj1(Δ(A)) = A                     by proj1_diag
+  proj2(Δ(A)) = proj1(Δ(A))              by T3 a b
+  _                                      by T3 ^ c
+}
+
+-- Стр. 90: Γ ∘ I_A = Γ и I_B ∘ Γ = Γ для соответствия Γ между A и B (на графиках).
+theorem comp_diag_right {G A : term} (hg : Graph(G)) (h : proj1(G) ⊂ A) : G ∘ Δ(A) = G {
+  a. Ͻ(x, z) ∈ G ∘ Δ(A) ⇔ (∃y)(Ͻ(x, y) ∈ Δ(A) ∧ Ͻ(y, z) ∈ G)          by mem_comp
+  Ͻ(x, y) ∈ Δ(A) ⇔ (x ∈ A ∧ x = y)                                     by mem_diag
+  x = y ⇔ y = x                                                        by eq_comm
+  (Ͻ(x, y) ∈ Δ(A) ∧ Ͻ(y, z) ∈ G) ⇔ (y = x ∧ (x ∈ A ∧ Ͻ(y, z) ∈ G))     by taut 2 3
+  (∀y)((Ͻ(x, y) ∈ Δ(A) ∧ Ͻ(y, z) ∈ G) ⇔ (y = x ∧ (x ∈ A ∧ Ͻ(y, z) ∈ G)))   by gen ^ with y
+  b. (∃y)(Ͻ(x, y) ∈ Δ(A) ∧ Ͻ(y, z) ∈ G) ⇔ (∃y)(y = x ∧ (x ∈ A ∧ Ͻ(y, z) ∈ G))   by C31_exists_iff ^
+  c. (∃y)(y = x ∧ (x ∈ A ∧ Ͻ(y, z) ∈ G)) ⇔ (x ∈ A ∧ Ͻ(x, z) ∈ G)       by exists_eq
+  d. Ͻ(x, z) ∈ G ⇒ x ∈ A by assume p {
+    x ∈ proj1(G) ∧ z ∈ proj2(G)                                        by pair_proj p
+    x ∈ proj1(G) ⇒ x ∈ A                                               by inst h
+    x ∈ A                                                              by taut 1 2
+  }
+  Ͻ(x, z) ∈ G ∘ Δ(A) ⇔ Ͻ(x, z) ∈ G                                     by taut a b c d
+  (∀z)(Ͻ(x, z) ∈ G ∘ Δ(A) ⇔ Ͻ(x, z) ∈ G)                               by gen ^ with z
+  (∀x)(∀z)(Ͻ(x, z) ∈ G ∘ Δ(A) ⇔ Ͻ(x, z) ∈ G)                           by gen ^ with x
+  Graph(G ∘ Δ(A))                                                      by comp_graph
+  _                                                                    by graph_eq ^ hg ^^
+}
+
+theorem comp_diag_left {G B : term} (hg : Graph(G)) (h : proj2(G) ⊂ B) : Δ(B) ∘ G = G {
+  a. Ͻ(x, z) ∈ Δ(B) ∘ G ⇔ (∃y)(Ͻ(x, y) ∈ G ∧ Ͻ(y, z) ∈ Δ(B))          by mem_comp
+  Ͻ(y, z) ∈ Δ(B) ⇔ (y ∈ B ∧ y = z)                                     by mem_diag
+  (Ͻ(x, y) ∈ G ∧ Ͻ(y, z) ∈ Δ(B)) ⇔ (y = z ∧ (Ͻ(x, y) ∈ G ∧ y ∈ B))     by taut ^
+  (∀y)((Ͻ(x, y) ∈ G ∧ Ͻ(y, z) ∈ Δ(B)) ⇔ (y = z ∧ (Ͻ(x, y) ∈ G ∧ y ∈ B)))   by gen ^ with y
+  b. (∃y)(Ͻ(x, y) ∈ G ∧ Ͻ(y, z) ∈ Δ(B)) ⇔ (∃y)(y = z ∧ (Ͻ(x, y) ∈ G ∧ y ∈ B))   by C31_exists_iff ^
+  c. (∃y)(y = z ∧ (Ͻ(x, y) ∈ G ∧ y ∈ B)) ⇔ (Ͻ(x, z) ∈ G ∧ z ∈ B)       by exists_eq
+  d. Ͻ(x, z) ∈ G ⇒ z ∈ B by assume p {
+    x ∈ proj1(G) ∧ z ∈ proj2(G)                                        by pair_proj p
+    z ∈ proj2(G) ⇒ z ∈ B                                               by inst h
+    z ∈ B                                                              by taut 1 2
+  }
+  Ͻ(x, z) ∈ Δ(B) ∘ G ⇔ Ͻ(x, z) ∈ G                                     by taut a b c d
+  (∀z)(Ͻ(x, z) ∈ Δ(B) ∘ G ⇔ Ͻ(x, z) ∈ G)                               by gen ^ with z
+  (∀x)(∀z)(Ͻ(x, z) ∈ Δ(B) ∘ G ⇔ Ͻ(x, z) ∈ G)                           by gen ^ with x
+  Graph(Δ(B) ∘ G)                                                      by comp_graph
+  _                                                                    by graph_eq ^ hg ^^
+}
+
+end

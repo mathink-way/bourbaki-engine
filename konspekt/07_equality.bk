@@ -125,4 +125,95 @@ theorem C47 {R S : rel 1} (h : ∃!_x(R(x))) : S(τx(R(x))) ⇔ (∃x)(R(x) ∧ 
   _                                                                             by C22 ^
 }
 
+-- "Подстановка равного": если x = T, то R(x) это R(T). Два удобных вида (из C43, S5, C30).
+theorem exists_eq {R : rel 1} {T : term} : (∃x)(x = T ∧ R(x)) ⇔ R(T) {
+  (∃x)(x = T ∧ R(x)) ⇒ R(T) by assume h {
+    (x = T ∧ R(x)) ⇒ R(T) by assume a {
+      (x = T ∧ R(x)) ⇔ (x = T ∧ R(T))    by C43 with R(t) := R(t); T := x; U := T
+      R(T)                               by taut a ^
+    }
+    (∀x)((x = T ∧ R(x)) ⇒ R(T))          by gen ^ with x
+    R(T)                                 by obtain h ^
+  }
+  R(T) ⇒ (∃x)(x = T ∧ R(x)) by assume a {
+    T = T                                by T1
+    T = T ∧ R(T)                         by C20 ^ a
+    (∃x)(x = T ∧ R(x))                   by exists_intro ^
+  }
+  _                                      by iff_intro 1 2
+}
+
+theorem forall_eq {R : rel 1} {T : term} : (∀x)(x = T ⇒ R(x)) ⇔ R(T) {
+  (∀x)(x = T ⇒ R(x)) ⇒ R(T) by assume h {
+    T = T ⇒ R(T)                         by inst h
+    T = T                                by T1
+    R(T)                                 by mp ^ ^^
+  }
+  R(T) ⇒ (∀x)(x = T ⇒ R(x)) by assume a {
+    x = T ⇒ R(x) by assume e {
+      (x = T ∧ R(x)) ⇔ (x = T ∧ R(T))    by C43 with R(t) := R(t); T := x; U := T
+      R(x)                               by taut e a ^
+    }
+    (∀x)(x = T ⇒ R(x))                   by gen ^ with x
+  }
+  _                                      by iff_intro 1 2
+}
+
+-- C44 с силлогизмом и для двух мест: равное можно подставлять в терм.
+theorem cong {V : term 1} {T U : term} (h : T = U) : V(T) = V(U) {
+  T = U ⇒ V(T) = V(U)    by C44
+  _                      by mp h ^
+}
+
+theorem cong2 {V : term 2} {T U T' U' : term} (h1 : T = T') (h2 : U = U') : V(T, U) = V(T', U') {
+  T = T' ⇒ V(T, U) = V(T', U)       by C44 with V(t) := V(t, U); T := T; U := T'
+  a. V(T, U) = V(T', U)             by mp h1 ^
+  U = U' ⇒ V(T', U) = V(T', U')     by C44 with V(t) := V(T', t); T := U; U := U'
+  b. V(T', U) = V(T', U')           by mp h2 ^
+  _                                 by T3 a b
+}
+
+-- S6 с силлогизмом и для двух мест: равное можно подставлять в соотношение.
+theorem rcong {R : rel 1} {T U : term} (h : T = U) : R(T) ⇔ R(U) {
+  T = U ⇒ (R(T) ⇔ R(U))    by S6
+  _                        by mp h ^
+}
+
+theorem rcong2 {R : rel 2} {T U T' U' : term} (h1 : T = T') (h2 : U = U') : R(T, U) ⇔ R(T', U') {
+  T = T' ⇒ (R(T, U) ⇔ R(T', U))       by S6 with R(t) := R(t, U); T := T; U := T'
+  a. R(T, U) ⇔ R(T', U)               by mp h1 ^
+  U = U' ⇒ (R(T', U) ⇔ R(T', U'))     by S6 with R(t) := R(T', t); T := U; U := U'
+  b. R(T', U) ⇔ R(T', U')             by mp h2 ^
+  _                                   by C22' a b
+}
+
+-- Если R(x) ⇔ x = T при всех x, то τx(R) = T: по S7 τx(R) = τx(x = T), а (∃x)(x = T)
+-- буквально есть τx(x = T) = T.
+theorem tau_eq {R : rel 1} {T : term} (h : (∀x)(R(x) ⇔ x = T)) : τx(R(x)) = T {
+  (∀x)(R(x) ⇔ x = T) ⇒ τx(R(x)) = τx(x = T)   by S7
+  a. τx(R(x)) = τx(x = T)                      by mp h ^
+  T = T                                        by T1
+  (∃x)(x = T)                                  by exists_intro ^
+  b. τx(x = T) = T                             by ^
+  _                                            by T3 a b
+}
+
+
+theorem eq_comm {T U : term} : T = U ⇔ U = T {
+  T = U ⇒ U = T by assume h {
+    U = T                    by T2 h
+  }
+  U = T ⇒ T = U by assume h {
+    T = U                    by T2 h
+  }
+  _                          by iff_intro 1 2
+}
+
+-- C43 с переставленными членами: (R(T) и T = U) ⇔ (R(U) и U = T).
+theorem C43' {R : rel 1} {T U : term} : (R(T) ∧ T = U) ⇔ (R(U) ∧ U = T) {
+  a. (T = U ∧ R(T)) ⇔ (T = U ∧ R(U))     by C43
+  b. T = U ⇔ U = T                       by eq_comm
+  _                                      by taut a b
+}
+
 end

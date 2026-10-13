@@ -56,6 +56,17 @@ theorem C30_2 {R : rel 2} {T U : term} : (∀x)(∀y)R(x, y) ⇒ R(T, U) {
   _                               by C6 1 2
 }
 
+-- C30 вместе с силлогизмом: из (∀x)R получить R(T) одной строкой.
+theorem inst {R : rel 1} {T : term} (h : (∀x)R(x)) : R(T) {
+  (∀x)R(x) ⇒ R(T)   by C30
+  _                 by mp h ^
+}
+
+theorem inst2 {R : rel 2} {T U : term} (h : (∀x)(∀y)R(x, y)) : R(T, U) {
+  (∀x)(∀y)R(x, y) ⇒ R(T, U)   by C30_2
+  _                           by mp h ^
+}
+
 -- C19, метод вспомогательной константы (§ 3, n° 3, стр. 48-49).
 -- Это не новое правило языка, а теорема: новые "правила" пишутся теоремами с гипотезами.
 -- "Пусть x такой предмет, что A(x)" записывается блоком assume, затем обобщением по x;
@@ -72,6 +83,16 @@ theorem C19 {A : rel 1} {B : rel} {T : term} (h : A(T)) (hb : (∀x)(A(x) ⇒ B)
 
 -- C19, когда известно только (∃x)A(x): это буквально A(τx(A(x))), так что T := τx(A(x)).
 theorem obtain {A : rel 1} {B : rel} (h : (∃x)A(x)) (hb : (∀x)(A(x) ⇒ B)) : B by C19 h hb
+
+-- obtain для двух букв сразу: (∃x)(∃y)A(x, y).
+theorem obtain2 {A : rel 2} {B : rel} (h : (∃x)(∃y)A(x, y)) (hb : (∀x)(∀y)(A(x, y) ⇒ B)) : B {
+  (∃y)A(x, y) ⇒ B by assume e {
+    (∀y)(A(x, y) ⇒ B)        by inst hb
+    B                        by obtain e ^
+  }
+  (∀x)((∃y)A(x, y) ⇒ B)      by gen ^ with x
+  B                          by obtain h ^
+}
 
 -- C31 (∀, стр. 56). План книги: присоединим (∀x)R; тогда R, значит S, значит (∀x)S.
 theorem C31 {R S : rel 1} (h : (∀x)(R(x) ⇒ S(x))) : (∀x)R(x) ⇒ (∀x)S(x) {
@@ -254,6 +275,97 @@ theorem C34'' {R : rel 2} : (∃x)(∀y)R(x, y) ⇒ (∀y)(∃x)R(x, y) {
     (∀x)((∀y)R(x, y) ⇒ (∀y)(∃x)R(x, y))       by gen ^ with x
     (∀y)(∃x)R(x, y)                           by obtain h ^
   }
+}
+
+-- C33' с членом справа: (∃x)(S ∧ R) ⇔ ((∃x)S ∧ R), x не встречается в R.
+theorem exists_and_right {R : rel} {S : rel 1} : (∃x)(S(x) ∧ R) ⇔ ((∃x)S(x) ∧ R) {
+  (S(x) ∧ R) ⇔ (R ∧ S(x))                       by C24_4
+  (∀x)((S(x) ∧ R) ⇔ (R ∧ S(x)))                 by gen ^ with x
+  a. (∃x)(S(x) ∧ R) ⇔ (∃x)(R ∧ S(x))            by C31_exists_iff ^
+  b. (∃x)(R ∧ S(x)) ⇔ (R ∧ (∃x)S(x))            by C33'
+  _                                             by taut a b
+}
+
+-- Перестановка кванторов в "композиции": (∃x)(A ∧ (∃y)(B ∧ C)) ⇔ (∃y)((∃x)(A ∧ B) ∧ C).
+-- Обе части эквивалентны (∃x)(∃y)(A ∧ (B ∧ C)) по C33' и C34'.
+theorem ex_assoc {A C : rel 1} {B : rel 2} : (∃x)(A(x) ∧ (∃y)(B(x, y) ∧ C(y))) ⇔ (∃y)((∃x)(A(x) ∧ B(x, y)) ∧ C(y)) {
+  (∃y)(A(x) ∧ (B(x, y) ∧ C(y))) ⇔ (A(x) ∧ (∃y)(B(x, y) ∧ C(y)))       by C33'
+  (A(x) ∧ (∃y)(B(x, y) ∧ C(y))) ⇔ (∃y)(A(x) ∧ (B(x, y) ∧ C(y)))       by C22 ^
+  (∀x)((A(x) ∧ (∃y)(B(x, y) ∧ C(y))) ⇔ (∃y)(A(x) ∧ (B(x, y) ∧ C(y))))   by gen ^ with x
+  l. (∃x)(A(x) ∧ (∃y)(B(x, y) ∧ C(y))) ⇔ (∃x)(∃y)(A(x) ∧ (B(x, y) ∧ C(y)))   by C31_exists_iff ^
+  a. (∃x)((A(x) ∧ B(x, y)) ∧ C(y)) ⇔ ((∃x)(A(x) ∧ B(x, y)) ∧ C(y))    by exists_and_right
+  ((A(x) ∧ B(x, y)) ∧ C(y)) ⇔ (A(x) ∧ (B(x, y) ∧ C(y)))               by taut
+  (∀x)(((A(x) ∧ B(x, y)) ∧ C(y)) ⇔ (A(x) ∧ (B(x, y) ∧ C(y))))         by gen ^ with x
+  b. (∃x)((A(x) ∧ B(x, y)) ∧ C(y)) ⇔ (∃x)(A(x) ∧ (B(x, y) ∧ C(y)))    by C31_exists_iff ^
+  ((∃x)(A(x) ∧ B(x, y)) ∧ C(y)) ⇔ (∃x)(A(x) ∧ (B(x, y) ∧ C(y)))       by taut a b
+  (∀y)(((∃x)(A(x) ∧ B(x, y)) ∧ C(y)) ⇔ (∃x)(A(x) ∧ (B(x, y) ∧ C(y))))   by gen ^ with y
+  r. (∃y)((∃x)(A(x) ∧ B(x, y)) ∧ C(y)) ⇔ (∃y)(∃x)(A(x) ∧ (B(x, y) ∧ C(y)))   by C31_exists_iff ^
+  s. (∃x)(∃y)(A(x) ∧ (B(x, y) ∧ C(y))) ⇔ (∃y)(∃x)(A(x) ∧ (B(x, y) ∧ C(y)))   by C34'
+  _                                                                     by taut l r s
+}
+
+-- То же без A: (∃x)(∃y)(B ∧ C) ⇔ (∃y)((∃x)B ∧ C).
+theorem ex_assoc' {C : rel 1} {B : rel 2} : (∃x)(∃y)(B(x, y) ∧ C(y)) ⇔ (∃y)((∃x)B(x, y) ∧ C(y)) {
+  (∃x)(B(x, y) ∧ C(y)) ⇔ ((∃x)B(x, y) ∧ C(y))                        by exists_and_right
+  ((∃x)B(x, y) ∧ C(y)) ⇔ (∃x)(B(x, y) ∧ C(y))                        by C22 ^
+  (∀y)(((∃x)B(x, y) ∧ C(y)) ⇔ (∃x)(B(x, y) ∧ C(y)))                  by gen ^ with y
+  r. (∃y)((∃x)B(x, y) ∧ C(y)) ⇔ (∃y)(∃x)(B(x, y) ∧ C(y))             by C31_exists_iff ^
+  s. (∃x)(∃y)(B(x, y) ∧ C(y)) ⇔ (∃y)(∃x)(B(x, y) ∧ C(y))             by C34'
+  _                                                                   by taut r s
+}
+
+
+-- Двойственное к ex_assoc: (∀y)((∃x)(A ∧ B) ⇒ C) ⇔ (∀x)(A ⇒ (∀y)(B ⇒ C)).
+theorem all_assoc {A C : rel 1} {B : rel 2} : (∀y)((∃x)(A(x) ∧ B(x, y)) ⇒ C(y)) ⇔ (∀x)(A(x) ⇒ (∀y)(B(x, y) ⇒ C(y))) {
+  (∀y)((∃x)(A(x) ∧ B(x, y)) ⇒ C(y)) ⇒ (∀x)(A(x) ⇒ (∀y)(B(x, y) ⇒ C(y))) by assume h {
+    A(x) ⇒ (∀y)(B(x, y) ⇒ C(y)) by assume a {
+      B(x, y) ⇒ C(y) by assume b {
+        A(x) ∧ B(x, y)                           by C20 a b
+        (∃x)(A(x) ∧ B(x, y))                     by exists_intro ^
+        (∃x)(A(x) ∧ B(x, y)) ⇒ C(y)              by inst h
+        C(y)                                     by mp 2 3
+      }
+      (∀y)(B(x, y) ⇒ C(y))                       by gen ^ with y
+    }
+    (∀x)(A(x) ⇒ (∀y)(B(x, y) ⇒ C(y)))            by gen ^ with x
+  }
+  (∀x)(A(x) ⇒ (∀y)(B(x, y) ⇒ C(y))) ⇒ (∀y)((∃x)(A(x) ∧ B(x, y)) ⇒ C(y)) by assume h {
+    (∃x)(A(x) ∧ B(x, y)) ⇒ C(y) by assume e {
+      (A(x) ∧ B(x, y)) ⇒ C(y) by assume a {
+        A(x) ⇒ (∀y)(B(x, y) ⇒ C(y))              by inst h
+        (∀y)(B(x, y) ⇒ C(y))                     by taut a ^
+        B(x, y) ⇒ C(y)                           by inst ^
+        C(y)                                     by taut a ^
+      }
+      (∀x)((A(x) ∧ B(x, y)) ⇒ C(y))              by gen ^ with x
+      C(y)                                       by obtain e ^
+    }
+    (∀y)((∃x)(A(x) ∧ B(x, y)) ⇒ C(y))            by gen ^ with y
+  }
+  _                                              by iff_intro 1 2
+}
+
+
+-- Если (∃x)A, то (∀x)(A ⇒ P) ⇔ P (x не встречается в P).
+theorem forall_imp_const {A : rel 1} {P : rel} (h : (∃x)A(x)) : (∀x)(A(x) ⇒ P) ⇔ P {
+  (∀x)(A(x) ⇒ P) ⇒ P by assume a {
+    P                                            by obtain h a
+  }
+  P ⇒ (∀x)(A(x) ⇒ P) by assume p {
+    A(x) ⇒ P                                     by taut p
+    (∀x)(A(x) ⇒ P)                               by gen ^ with x
+  }
+  _                                              by iff_intro 1 2
+}
+
+-- Если (∃x)A, то (∀x)(A ⇒ (P ∧ Q)) ⇔ (P ∧ (∀x)(A ⇒ Q)).
+theorem forall_and_const {A Q : rel 1} {P : rel} (h : (∃x)A(x)) : (∀x)(A(x) ⇒ (P ∧ Q(x))) ⇔ (P ∧ (∀x)(A(x) ⇒ Q(x))) {
+  (A(x) ⇒ (P ∧ Q(x))) ⇔ ((A(x) ⇒ P) ∧ (A(x) ⇒ Q(x)))                         by taut
+  (∀x)((A(x) ⇒ (P ∧ Q(x))) ⇔ ((A(x) ⇒ P) ∧ (A(x) ⇒ Q(x))))                   by gen ^ with x
+  a. (∀x)(A(x) ⇒ (P ∧ Q(x))) ⇔ (∀x)((A(x) ⇒ P) ∧ (A(x) ⇒ Q(x)))              by C31_iff ^
+  b. (∀x)((A(x) ⇒ P) ∧ (A(x) ⇒ Q(x))) ⇔ ((∀x)(A(x) ⇒ P) ∧ (∀x)(A(x) ⇒ Q(x)))   by C32
+  c. (∀x)(A(x) ⇒ P) ⇔ P                                                      by forall_imp_const h
+  _                                                                          by taut a b c
 }
 
 end

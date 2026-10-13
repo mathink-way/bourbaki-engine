@@ -113,11 +113,18 @@ state of a checked set of notes).
 | `05_quant.bk`       | § 4: C26-C34                                                           |
 | `06_typed.bk`       | typed quantifiers, C35-C42                                             |
 | `07_equality.bk`    | § 5: C43-C47, "single-valued" and "functional" relations               |
-| `10_sets.bk`        | chapter II, skeleton: ∈, pairs, S8, A1-A4, C48-C51, Russell's paradox, {x, y}, ∅, 𝔓 |
+| `10_sets.bk`        | chapter II, § 1 and the axioms: ∈, S8, A1-A4, C48-C53, Russell's paradox, {x, y}, complements, ∅, notations for pairs, × and 𝔓 |
+| `11_pairs.bk`       | § 2: ordered pairs (A3), projections, the product of two sets           |
+| `12_graphs.bk`      | § 3, n° 1-3: graphs, projections, images, inverse, composition, diagonal |
+| `13_functions.bk`   | § 3, n° 4-9: functions, C54, restrictions, injections and surjections, retractions and sections, theorem 1, propositions 6-9 |
+| `14_unions.bk`      | § 4: unions and intersections of families, complements, coverings, gluing, partitions, sums |
+| `15_products.bk`    | § 5: 𝔓 (A4), the set of maps F^E, products of families, associativity and distributivity (propositions 4-10), products of maps (proposition 11) |
+| `16_equivalence.bk` | § 6: equivalence relations (proposition 1), classes and quotient sets, C55-C57, saturated sets, the canonical decomposition, induced relations, products |
 
-All of chapter I is checked. Full unfolding down to the axioms has been verified for every
-theorem except C51 and the results built on it (it does not fit into 6 GB of memory, see
-the limitations).
+All of chapter I is checked, and chapter II from § 1 through § 6 (465 theorems, 351 of
+them in chapter II, none with `sorry`). Full unfolding down to the axioms has been verified for every
+theorem of chapter I except C51 and the results built on it (it does not fit into 6 GB of
+memory, see the limitations).
 
 ## Editor support
 
@@ -168,8 +175,13 @@ LaTeX works in the comments of the notes and in rustdoc, see [docs/DOCS.md](docs
 
 ## Status and limitations
 
-* All of chapter I and the beginning of chapter II. This is a study project, made to get a
-  hands-on feel for the book, not an industrial proof assistant.
+* All of chapter I and chapter II, §§ 1-6 (each file lists what is left out in its header:
+  mostly exercises and a few corollaries). This is a study project, made to get a hands-on
+  feel for the book, not an industrial proof assistant.
+* The notes are written literally in the book's terms: (∃x)R is R(τx(R)), every ∏ or E/R
+  is an assembly of τ and ∈. These assemblies grow quickly (a statement of § 5 is a tree of
+  over a million shared nodes), so checking § 5 takes about 15 seconds. Chapter III would
+  need definitions that stay folded until they are needed; this is where the project stops.
 * Unfolded proofs of late criteria are huge (C40 and C42 exceed 100,000 lines); C51 does
   not fit into 6 GB. Fast checking is unaffected.
 * For schemes like S6, where R occurs only as R(T), the substitution must be written.

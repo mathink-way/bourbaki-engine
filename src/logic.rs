@@ -469,32 +469,218 @@ pub fn is_tautology(r: &Relation) -> bool {
     matches!(tautology_counterexample(r), Ok(None))
 }
 
-/// Проверка таблицей истинности: `Ok(None)` если тавтология, иначе расстановка значений,
-/// при которой соотношение ложно. Ошибка, если составляющих слишком много (больше 20).
-pub fn tautology_counterexample(r: &Relation) -> Result<Option<String>> {
-    let at = logical_components(r);
-    if at.len() > 20 {
-        return Err(Error(format!(
-            "слишком много логических составляющих ({})",
-            at.len()
-        )));
+/// Составляющие, если раскрывать ¬ и ∨ не глубже `depth` уровней (глубже части считаются
+/// составляющими целиком). Подстановка в тавтологию даёт тавтологию, поэтому если
+/// соотношение тавтология относительно таких крупных составляющих, оно тавтология.
+fn atoms_upto(e: &Relation, depth: usize, out: &mut Vec<Relation>) -> bool {
+    let open = depth > 0;
+    match e.expr().shape() {
+        Shape::Not(_) if open => atoms_upto(&e.as_not().unwrap(), depth - 1, out),
+        Shape::Or(..) if open => {
+            let (a, b) = e.as_or().unwrap();
+            let x = atoms_upto(&a, depth - 1, out);
+            let y = atoms_upto(&b, depth - 1, out);
+            x && y
+        }
+        sh => {
+            if !out.contains(e) {
+                out.push(e.clone());
+            }
+            !matches!(sh, Shape::Not(_) | Shape::Or(..))
+        }
     }
+}
+
+fn truth_table(r: &Relation, at: &[Relation]) -> Option<String> {
     for m in 0..1u64 << at.len() {
         let vals: Vec<bool> = (0..at.len()).map(|i| m >> i & 1 == 1).collect();
-        if !eval(r, &at, &vals) {
+        if !eval(r, at, &vals) {
             let cex: Vec<String> = at
                 .iter()
                 .zip(&vals)
                 .map(|(a, v)| format!("{a} := {}", if *v { "истина" } else { "ложь" }))
                 .collect();
-            return Ok(Some(cex.join(", ")));
+            return Some(cex.join(", "));
         }
     }
-    Ok(None)
+    None
+}
+
+/// Найти составляющие, относительно которых соотношение тавтология: сначала самые
+/// крупные (неглубокое раскрытие), потом всё мельче. `Ok(Ok(составляющие))`, если
+/// тавтология; `Ok(Err(контрпример))`, если нет даже при полном раскрытии; ошибка, если
+/// составляющих больше `limit`.
+pub fn tautology_atoms(
+    r: &Relation,
+    limit: usize,
+) -> Result<std::result::Result<Vec<Relation>, String>> {
+    let mut depth = 1;
+    loop {
+        let mut at = Vec::new();
+        let complete = atoms_upto(r, depth, &mut at);
+        if at.len() > limit {
+            return Err(Error(format!(
+                "слишком много логических составляющих ({})",
+                at.len()
+            )));
+        }
+        match truth_table(r, &at) {
+            None => return Ok(Ok(at)),
+            Some(cex) if complete => return Ok(Err(cex)),
+            Some(_) => depth *= 2,
+        }
+    }
+}
+
+/// Проверка тавтологии: `Ok(None)` если тавтология, иначе расстановка значений
+/// составляющим, при которой соотношение ложно.
+///
+/// Это та же таблица истинности, но строки перебираются с отсечением (метод Куайна):
+/// значения составляющим даются по одной, начиная с самых внешних, и как только значение
+/// всего соотношения уже определено, остальные не перебираются. Соотношение хранится
+/// деревом с общими частями, так что повторяющиеся куски вычисляются один раз.
+pub fn tautology_counterexample(r: &Relation) -> Result<Option<String>> {
+    let mut g = PropGraph::default();
+    let root = g.build(r.expr());
+    if g.atoms.len() > 200 {
+        return Err(Error(format!(
+            "слишком много логических составляющих ({})",
+            g.atoms.len()
+        )));
+    }
+    let mut assign: Vec<Option<bool>> = vec![None; g.atoms.len()];
+    Ok(g.search(root, &mut assign).map(|cex| {
+        cex.iter()
+            .enumerate()
+            .filter_map(|(i, v)| {
+                v.map(|v| {
+                    format!(
+                        "{} := {}",
+                        Relation(g.atoms[i].clone()),
+                        if v { "истина" } else { "ложь" }
+                    )
+                })
+            })
+            .collect::<Vec<_>>()
+            .join(", ")
+    }))
+}
+
+/// Соотношение как схема из ¬ и ∨ над составляющими (с общими частями).
+#[derive(Default)]
+struct PropGraph {
+    nodes: Vec<PNode>,
+    ids: std::collections::HashMap<crate::expr::Expr, usize>,
+    atoms: Vec<crate::expr::Expr>,
+}
+
+#[derive(Clone, Copy)]
+enum PNode {
+    Atom(usize),
+    Not(usize),
+    Or(usize, usize),
+}
+
+impl PropGraph {
+    fn build(&mut self, e: &crate::expr::Expr) -> usize {
+        if let Some(&id) = self.ids.get(e) {
+            return id;
+        }
+        let node = match e.shape() {
+            Shape::Not(a) => PNode::Not(self.build(a)),
+            Shape::Or(a, b) => {
+                let x = self.build(a);
+                let y = self.build(b);
+                PNode::Or(x, y)
+            }
+            _ => {
+                self.atoms.push(e.clone());
+                PNode::Atom(self.atoms.len() - 1)
+            }
+        };
+        self.nodes.push(node);
+        let id = self.nodes.len() - 1;
+        self.ids.insert(e.clone(), id);
+        id
+    }
+
+    /// Трёхзначное значение (None: ещё не определено) при частичной расстановке.
+    fn value(
+        &self,
+        id: usize,
+        assign: &[Option<bool>],
+        memo: &mut Vec<Option<Option<bool>>>,
+    ) -> Option<bool> {
+        if let Some(v) = memo[id] {
+            return v;
+        }
+        let v = match self.nodes[id] {
+            PNode::Atom(i) => assign[i],
+            PNode::Not(a) => self.value(a, assign, memo).map(|v| !v),
+            PNode::Or(a, b) => match self.value(a, assign, memo) {
+                Some(true) => Some(true),
+                x => match (x, self.value(b, assign, memo)) {
+                    (_, Some(true)) => Some(true),
+                    (Some(false), Some(false)) => Some(false),
+                    _ => None,
+                },
+            },
+        };
+        memo[id] = Some(v);
+        v
+    }
+
+    /// Первая (самая внешняя) составляющая без значения, от которой зависит результат.
+    fn pick(
+        &self,
+        id: usize,
+        assign: &[Option<bool>],
+        memo: &mut Vec<Option<Option<bool>>>,
+    ) -> Option<usize> {
+        let mut queue = std::collections::VecDeque::from([id]);
+        let mut seen = vec![false; self.nodes.len()];
+        while let Some(n) = queue.pop_front() {
+            if seen[n] || self.value(n, assign, memo).is_some() {
+                continue;
+            }
+            seen[n] = true;
+            match self.nodes[n] {
+                PNode::Atom(i) => return Some(i),
+                PNode::Not(a) => queue.push_back(a),
+                PNode::Or(a, b) => {
+                    queue.push_back(a);
+                    queue.push_back(b);
+                }
+            }
+        }
+        None
+    }
+
+    fn search(&self, root: usize, assign: &mut Vec<Option<bool>>) -> Option<Vec<Option<bool>>> {
+        let mut memo = vec![None; self.nodes.len()];
+        match self.value(root, assign, &mut memo) {
+            Some(true) => return None,
+            Some(false) => return Some(assign.clone()),
+            None => {}
+        }
+        let i = self
+            .pick(root, assign, &mut memo)
+            .expect("неопределённое значение без свободных составляющих");
+        for v in [true, false] {
+            assign[i] = Some(v);
+            if let Some(cex) = self.search(root, assign) {
+                assign[i] = None;
+                return Some(cex);
+            }
+        }
+        assign[i] = None;
+        None
+    }
 }
 
 /// Доказать тавтологию в логической теории: строится настоящее доказательство из S1-S4
-/// (упр. 7 ж), конструкция Кальмара). Размер растёт как 2ⁿ, n = число составляющих.
+/// (упр. 7 ж), конструкция Кальмара). Размер растёт как 2ⁿ, n = число составляющих,
+/// поэтому составляющие берутся самые крупные из тех, при которых это тавтология.
 pub fn taut(th: &Th, f: &Relation) -> Result<Theorem> {
     if !th.is_logical() {
         return Err(Error(format!(
@@ -503,27 +689,17 @@ pub fn taut(th: &Th, f: &Relation) -> Result<Theorem> {
         )));
     }
     th.check_signs(f.expr())?;
-    let at = logical_components(f);
-    if at.len() > 12 {
-        return Err(Error(format!(
-            "слишком много логических составляющих ({}), доказательство будет огромным",
-            at.len()
-        )));
-    }
-    for m in 0..1u64 << at.len() {
-        let vals: Vec<bool> = (0..at.len()).map(|i| m >> i & 1 == 1).collect();
-        if !eval(f, &at, &vals) {
-            let cex: Vec<String> = at
-                .iter()
-                .zip(&vals)
-                .map(|(a, v)| format!("{a} := {}", if *v { "истина" } else { "ложь" }))
-                .collect();
-            return Err(Error(format!(
-                "{f} не тавтология: контрпример {}",
-                cex.join(", ")
-            )));
+    let at = match tautology_atoms(f, 12) {
+        Ok(Ok(at)) => at,
+        Ok(Err(cex)) => {
+            return Err(Error(format!("{f} не тавтология: контрпример {cex}")));
         }
-    }
+        Err(_) => {
+            return Err(Error(
+                "слишком много логических составляющих, доказательство будет огромным".into(),
+            ));
+        }
+    };
     let mut vals = vec![false; at.len()];
     prove_ctx(th, f, &at, 0, &mut vals)
 }

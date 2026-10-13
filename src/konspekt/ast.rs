@@ -93,8 +93,12 @@ pub enum Just {
         term: String,
         from: String,
     },
-    /// Упр. 7: тавтология (проверка таблицей истинности).
-    Taut,
+    /// Упр. 7: тавтология (проверка таблицей истинности). `by taut a b`: строка следует
+    /// из строк a, b по тавтологии, то есть a ⇒ (b ⇒ строка) тавтология (затем C1 дважды).
+    Taut(Vec<String>),
+    /// Цепочка равенств (теоремы 2 и 3 § 5): `by chain a b c`, строка T = U получается из
+    /// равенств a, b, c, соединяющих T с U (каждое можно читать в любую сторону).
+    Chain(Vec<String>),
     /// `by sorry`: пропуск, как в Lean.
     Sorry,
 }
@@ -211,6 +215,8 @@ pub enum Item {
         params: Vec<MetaDecl>,
         body: String,
         infix: bool,
+        /// `nofold`: при печати не сворачивать.
+        nofold: bool,
     },
     Scheme {
         name: String,

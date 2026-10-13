@@ -1,0 +1,321 @@
+-- Глава II, § 2. Пары (стр. 82-84).
+--
+-- Задача: координаты пары и произведение двух множеств.
+-- Проблема: pr₁ z и pr₂ z это τ-термы, (∃x)(∃y)(z = (x, y)) не говорит, какие именно x и y;
+-- нужно связать z = (x, y) с "z пара и x = pr₁ z и y = pr₂ z".
+-- Решение: по A3 соотношение (∃y)(z = (x, y)) при z = (T, U) эквивалентно x = T, а
+-- τx(x = T) = T есть (∃x)(x = T) (лемма tau_eq). Отсюда pr₁(T, U) = T, pr₂(T, U) = U,
+-- дальше всё через obtain2 (C19 для двух букв).
+-- Что осталось: упражнения.
+--
+-- Пара (x, y) записывается Ͻ(x, y), "z есть пара" это IsPair(z).
+
+import "00_prelude.bk"
+open base
+import "10_sets.bk"
+open ch1
+open sets
+
+abbrev IsPair (Z : term) := (∃x)(∃y)(Z = Ͻ(x, y))
+
+namespace ch2
+in Set
+
+-- n° 1. (x, y) = (x', y') ⇔ x = x' и y = y' (A3 и C44).
+theorem pair_eq {T U V W : term} : Ͻ(T, U) = Ͻ(V, W) ⇔ (T = V ∧ U = W) {
+  Ͻ(T, U) = Ͻ(V, W) ⇒ (T = V ∧ U = W)   by pair_inj
+  (T = V ∧ U = W) ⇒ Ͻ(T, U) = Ͻ(V, W) by assume h {
+    T = V                      by taut h
+    U = W                      by taut h
+    Ͻ(T, U) = Ͻ(V, W)          by cong2 1 2
+  }
+  _                            by iff_intro 1 2
+}
+
+theorem pair_is_pair {T U : term} : IsPair(Ͻ(T, U)) {
+  Ͻ(T, U) = Ͻ(T, U)                     by T1
+  (∃y)(Ͻ(T, U) = Ͻ(T, y))               by exists_intro ^
+  _                                     by exists_intro ^
+}
+
+-- pr₁(T, U) = T: (∃y)((T, U) = (x, y)) ⇔ x = T, затем tau_eq.
+theorem pr1_pair {T U : term} : pr1(Ͻ(T, U)) = T {
+  (∃y)(Ͻ(T, U) = Ͻ(x, y)) ⇒ x = T by assume h {
+    Ͻ(T, U) = Ͻ(x, y) ⇒ x = T by assume e {
+      Ͻ(T, U) = Ͻ(x, y) ⇒ (T = x ∧ U = y)   by pair_inj
+      T = x ∧ U = y                     by mp e ^
+      T = x                             by taut ^
+      x = T                             by T2 ^
+    }
+    (∀y)(Ͻ(T, U) = Ͻ(x, y) ⇒ x = T)     by gen ^ with y
+    x = T                               by obtain h ^
+  }
+  x = T ⇒ (∃y)(Ͻ(T, U) = Ͻ(x, y)) by assume e {
+    T = x                               by T2 e
+    U = U                               by T1
+    Ͻ(T, U) = Ͻ(x, U)                   by cong2 1 2
+    (∃y)(Ͻ(T, U) = Ͻ(x, y))             by exists_intro ^
+  }
+  (∃y)(Ͻ(T, U) = Ͻ(x, y)) ⇔ x = T       by iff_intro 1 2
+  (∀x)((∃y)(Ͻ(T, U) = Ͻ(x, y)) ⇔ x = T) by gen ^ with x
+  _                                     by tau_eq ^
+}
+
+theorem pr2_pair {T U : term} : pr2(Ͻ(T, U)) = U {
+  (∃x)(Ͻ(T, U) = Ͻ(x, y)) ⇒ y = U by assume h {
+    Ͻ(T, U) = Ͻ(x, y) ⇒ y = U by assume e {
+      Ͻ(T, U) = Ͻ(x, y) ⇒ (T = x ∧ U = y)   by pair_inj
+      T = x ∧ U = y                     by mp e ^
+      U = y                             by taut ^
+      y = U                             by T2 ^
+    }
+    (∀x)(Ͻ(T, U) = Ͻ(x, y) ⇒ y = U)     by gen ^ with x
+    y = U                               by obtain h ^
+  }
+  y = U ⇒ (∃x)(Ͻ(T, U) = Ͻ(x, y)) by assume e {
+    T = T                               by T1
+    U = y                               by T2 e
+    Ͻ(T, U) = Ͻ(T, y)                   by cong2 1 2
+    (∃x)(Ͻ(T, U) = Ͻ(x, y))             by exists_intro ^
+  }
+  (∃x)(Ͻ(T, U) = Ͻ(x, y)) ⇔ y = U       by iff_intro 1 2
+  (∀y)((∃x)(Ͻ(T, U) = Ͻ(x, y)) ⇔ y = U) by gen ^ with y
+  _                                     by tau_eq ^
+}
+
+-- Если z = (x, y), то x = pr₁ z и y = pr₂ z.
+theorem pr_of_eq {Z T U : term} (h : Z = Ͻ(T, U)) : T = pr1(Z) ∧ U = pr2(Z) {
+  pr1(Z) = pr1(Ͻ(T, U))        by cong h
+  pr1(Ͻ(T, U)) = T             by pr1_pair
+  pr1(Z) = T                   by T3 1 2
+  a. T = pr1(Z)                by T2 ^
+  pr2(Z) = pr2(Ͻ(T, U))        by cong h
+  pr2(Ͻ(T, U)) = U             by pr2_pair
+  pr2(Z) = U                   by T3 5 6
+  b. U = pr2(Z)                by T2 ^
+  _                            by C20 a b
+}
+
+-- z пара ⇔ z = (pr₁ z, pr₂ z).
+theorem pair_eta {Z : term} (h : IsPair(Z)) : Z = Ͻ(pr1(Z), pr2(Z)) {
+  Z = Ͻ(x, y) ⇒ Z = Ͻ(pr1(Z), pr2(Z)) by assume e {
+    x = pr1(Z) ∧ y = pr2(Z)             by pr_of_eq e
+    x = pr1(Z)                          by taut ^
+    y = pr2(Z)                          by taut ^^
+    Ͻ(x, y) = Ͻ(pr1(Z), pr2(Z))         by cong2 2 3
+    Z = Ͻ(pr1(Z), pr2(Z))               by T3 e ^
+  }
+  (∀y)(Z = Ͻ(x, y) ⇒ Z = Ͻ(pr1(Z), pr2(Z)))       by gen ^ with y
+  (∀x)(∀y)(Z = Ͻ(x, y) ⇒ Z = Ͻ(pr1(Z), pr2(Z)))   by gen ^ with x
+  _                                               by obtain2 h ^
+}
+
+theorem is_pair_iff {Z : term} : IsPair(Z) ⇔ Z = Ͻ(pr1(Z), pr2(Z)) {
+  IsPair(Z) ⇒ Z = Ͻ(pr1(Z), pr2(Z)) by assume h {
+    Z = Ͻ(pr1(Z), pr2(Z))               by pair_eta h
+  }
+  Z = Ͻ(pr1(Z), pr2(Z)) ⇒ IsPair(Z) by assume e {
+    (∃y)(Z = Ͻ(pr1(Z), y))              by exists_intro e
+    IsPair(Z)                           by exists_intro ^
+  }
+  _                                     by iff_intro 1 2
+}
+
+-- Стр. 82: z = (x, y) ⇔ "z пара и x = pr₁ z и y = pr₂ z".
+theorem eq_pair_iff {Z T U : term} : Z = Ͻ(T, U) ⇔ (IsPair(Z) ∧ (T = pr1(Z) ∧ U = pr2(Z))) {
+  Z = Ͻ(T, U) ⇒ (IsPair(Z) ∧ (T = pr1(Z) ∧ U = pr2(Z))) by assume e {
+    (∃y)(Z = Ͻ(T, y))                   by exists_intro e
+    IsPair(Z)                           by exists_intro ^
+    T = pr1(Z) ∧ U = pr2(Z)             by pr_of_eq e
+    IsPair(Z) ∧ (T = pr1(Z) ∧ U = pr2(Z))   by C20 2 3
+  }
+  (IsPair(Z) ∧ (T = pr1(Z) ∧ U = pr2(Z))) ⇒ Z = Ͻ(T, U) by assume h {
+    IsPair(Z)                           by taut h
+    Z = Ͻ(pr1(Z), pr2(Z))               by pair_eta ^
+    a. T = pr1(Z)                       by taut h
+    b. U = pr2(Z)                       by taut h
+    pr1(Z) = T                          by T2 a
+    pr2(Z) = U                          by T2 b
+    Ͻ(pr1(Z), pr2(Z)) = Ͻ(T, U)         by cong2 5 6
+    Z = Ͻ(T, U)                         by T3 2 ^
+  }
+  _                                     by iff_intro 1 2
+}
+
+-- Стр. 83: S{z} = (∃x)(∃y)(z = (x, y) и R{x, y}) эквивалентно "z пара и R{pr₁ z, pr₂ z}".
+theorem exists_pair {R : rel 2} {Z : term} : (∃x)(∃y)(Z = Ͻ(x, y) ∧ R(x, y)) ⇔ (IsPair(Z) ∧ R(pr1(Z), pr2(Z))) {
+  (∃x)(∃y)(Z = Ͻ(x, y) ∧ R(x, y)) ⇒ (IsPair(Z) ∧ R(pr1(Z), pr2(Z))) by assume h {
+    (Z = Ͻ(x, y) ∧ R(x, y)) ⇒ (IsPair(Z) ∧ R(pr1(Z), pr2(Z))) by assume a {
+      e. Z = Ͻ(x, y)                                 by taut a
+      Z = Ͻ(x, y) ⇔ (IsPair(Z) ∧ (x = pr1(Z) ∧ y = pr2(Z)))   by eq_pair_iff
+      p. IsPair(Z) ∧ (x = pr1(Z) ∧ y = pr2(Z))       by iff_mp ^ e
+      x = pr1(Z)                                     by taut p
+      y = pr2(Z)                                     by taut p
+      R(x, y) ⇔ R(pr1(Z), pr2(Z))                    by rcong2 4 5
+      IsPair(Z) ∧ R(pr1(Z), pr2(Z))                  by taut a p ^
+    }
+    (∀y)((Z = Ͻ(x, y) ∧ R(x, y)) ⇒ (IsPair(Z) ∧ R(pr1(Z), pr2(Z))))       by gen ^ with y
+    (∀x)(∀y)((Z = Ͻ(x, y) ∧ R(x, y)) ⇒ (IsPair(Z) ∧ R(pr1(Z), pr2(Z))))   by gen ^ with x
+    IsPair(Z) ∧ R(pr1(Z), pr2(Z))                    by obtain2 h ^
+  }
+  (IsPair(Z) ∧ R(pr1(Z), pr2(Z))) ⇒ (∃x)(∃y)(Z = Ͻ(x, y) ∧ R(x, y)) by assume h {
+    IsPair(Z)                                        by taut h
+    Z = Ͻ(pr1(Z), pr2(Z))                            by pair_eta ^
+    Z = Ͻ(pr1(Z), pr2(Z)) ∧ R(pr1(Z), pr2(Z))        by taut ^ h
+    (∃y)(Z = Ͻ(pr1(Z), y) ∧ R(pr1(Z), y))            by exists_intro ^
+    (∃x)(∃y)(Z = Ͻ(x, y) ∧ R(x, y))                  by exists_intro ^
+  }
+  _                                                  by iff_intro 1 2
+}
+
+-- n° 2. Теорема 1 (стр. 83): Coll_z((∃x)(∃y)(z = (x, y) и x ∈ X и y ∈ Y)).
+-- План книги: A_y = {(x, y) : x ∈ X} существует по C53, затем S8 для R = "z ∈ A_y".
+theorem prod_coll {X Y : term} : Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ (x ∈ X ∧ y ∈ Y))) {
+  c53. Coll_z((∃x)(z = Ͻ(x, y) ∧ x ∈ X))                            by C53 with T(t) := Ͻ(t, y); A := X
+  m. z ∈ ℰ_z((∃x)(z = Ͻ(x, y) ∧ x ∈ X)) ⇔ (∃x)(z = Ͻ(x, y) ∧ x ∈ X)   by mem_E c53
+  (∃x)(z = Ͻ(x, y) ∧ x ∈ X) ⇒ z ∈ ℰ_z((∃x)(z = Ͻ(x, y) ∧ x ∈ X))   by taut m
+  (∀z)((∃x)(z = Ͻ(x, y) ∧ x ∈ X) ⇒ z ∈ ℰ_z((∃x)(z = Ͻ(x, y) ∧ x ∈ X)))   by gen ^ with z
+  (∃W)(∀z)((∃x)(z = Ͻ(x, y) ∧ x ∈ X) ⇒ z ∈ W)                       by exists_intro ^
+  s8. (∀y)(∃W)(∀z)((∃x)(z = Ͻ(x, y) ∧ x ∈ X) ⇒ z ∈ W)               by gen ^ with y
+  (∀y)(∃W)(∀z)((∃x)(z = Ͻ(x, y) ∧ x ∈ X) ⇒ z ∈ W) ⇒ (∀V)Coll_z((∃y)(y ∈ V ∧ (∃x)(z = Ͻ(x, y) ∧ x ∈ X)))   by S8 with R(s, t) := (∃x)(s = Ͻ(x, t) ∧ x ∈ X)
+  (∀V)Coll_z((∃y)(y ∈ V ∧ (∃x)(z = Ͻ(x, y) ∧ x ∈ X)))               by mp s8 ^
+  coll. Coll_z((∃y)(y ∈ Y ∧ (∃x)(z = Ͻ(x, y) ∧ x ∈ X)))             by inst ^
+  -- переставим кванторы и члены конъюнкции
+  a. (∃x)(y ∈ Y ∧ (z = Ͻ(x, y) ∧ x ∈ X)) ⇔ (y ∈ Y ∧ (∃x)(z = Ͻ(x, y) ∧ x ∈ X))   by C33'
+  (y ∈ Y ∧ (z = Ͻ(x, y) ∧ x ∈ X)) ⇔ (z = Ͻ(x, y) ∧ (x ∈ X ∧ y ∈ Y))   by taut
+  (∀x)((y ∈ Y ∧ (z = Ͻ(x, y) ∧ x ∈ X)) ⇔ (z = Ͻ(x, y) ∧ (x ∈ X ∧ y ∈ Y)))   by gen ^ with x
+  b. (∃x)(y ∈ Y ∧ (z = Ͻ(x, y) ∧ x ∈ X)) ⇔ (∃x)(z = Ͻ(x, y) ∧ (x ∈ X ∧ y ∈ Y))   by C31_exists_iff ^
+  (y ∈ Y ∧ (∃x)(z = Ͻ(x, y) ∧ x ∈ X)) ⇔ (∃x)(z = Ͻ(x, y) ∧ (x ∈ X ∧ y ∈ Y))   by taut a b
+  (∀y)((y ∈ Y ∧ (∃x)(z = Ͻ(x, y) ∧ x ∈ X)) ⇔ (∃x)(z = Ͻ(x, y) ∧ (x ∈ X ∧ y ∈ Y)))   by gen ^ with y
+  c. (∃y)(y ∈ Y ∧ (∃x)(z = Ͻ(x, y) ∧ x ∈ X)) ⇔ (∃y)(∃x)(z = Ͻ(x, y) ∧ (x ∈ X ∧ y ∈ Y))   by C31_exists_iff ^
+  d. (∃x)(∃y)(z = Ͻ(x, y) ∧ (x ∈ X ∧ y ∈ Y)) ⇔ (∃y)(∃x)(z = Ͻ(x, y) ∧ (x ∈ X ∧ y ∈ Y))   by C34'
+  (∃y)(y ∈ Y ∧ (∃x)(z = Ͻ(x, y) ∧ x ∈ X)) ⇔ (∃x)(∃y)(z = Ͻ(x, y) ∧ (x ∈ X ∧ y ∈ Y))   by taut c d
+  (∀z)((∃y)(y ∈ Y ∧ (∃x)(z = Ͻ(x, y) ∧ x ∈ X)) ⇔ (∃x)(∃y)(z = Ͻ(x, y) ∧ (x ∈ X ∧ y ∈ Y)))   by gen ^ with z
+  Coll_z((∃y)(y ∈ Y ∧ (∃x)(z = Ͻ(x, y) ∧ x ∈ X))) ⇔ Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ (x ∈ X ∧ y ∈ Y)))   by coll_iff ^
+  _                                                                by iff_mp ^ coll
+}
+
+-- Определение 1: X × Y = ℰ_z(...) (сокращение × в 10_sets.bk). z ∈ X × Y ⇔ "z пара и
+-- pr₁ z ∈ X и pr₂ z ∈ Y".
+theorem mem_prod {Z X Y : term} : Z ∈ X × Y ⇔ (IsPair(Z) ∧ (pr1(Z) ∈ X ∧ pr2(Z) ∈ Y)) {
+  Coll_z((∃x)(∃y)(z = Ͻ(x, y) ∧ (x ∈ X ∧ y ∈ Y)))                       by prod_coll
+  a. Z ∈ X × Y ⇔ (∃x)(∃y)(Z = Ͻ(x, y) ∧ (x ∈ X ∧ y ∈ Y))                by mem_E ^
+  b. (∃x)(∃y)(Z = Ͻ(x, y) ∧ (x ∈ X ∧ y ∈ Y)) ⇔ (IsPair(Z) ∧ (pr1(Z) ∈ X ∧ pr2(Z) ∈ Y))   by exists_pair with R(s, t) := s ∈ X ∧ t ∈ Y
+  _                                                                     by C22' a b
+}
+
+theorem pair_mem_prod {T U X Y : term} : Ͻ(T, U) ∈ X × Y ⇔ (T ∈ X ∧ U ∈ Y) {
+  a. Ͻ(T, U) ∈ X × Y ⇔ (IsPair(Ͻ(T, U)) ∧ (pr1(Ͻ(T, U)) ∈ X ∧ pr2(Ͻ(T, U)) ∈ Y))   by mem_prod
+  b. IsPair(Ͻ(T, U))                                   by pair_is_pair
+  pr1(Ͻ(T, U)) = T                                     by pr1_pair
+  c. pr1(Ͻ(T, U)) ∈ X ⇔ T ∈ X                          by rcong ^
+  pr2(Ͻ(T, U)) = U                                     by pr2_pair
+  d. pr2(Ͻ(T, U)) ∈ Y ⇔ U ∈ Y                          by rcong ^
+  _                                                    by taut a b c d
+}
+
+-- A ≠ ∅ ⇔ в A есть элемент.
+theorem nonempty {A : term} : A ≠ ∅ ⇔ (∃x)(x ∈ A) {
+  a. (∀x)(x ∉ A) ⇔ A = ∅               by empty_iff
+  b. ¬(∃x)(x ∈ A) ⇔ (∀x)(x ∉ A)        by C29
+  _                                    by taut a b
+}
+
+-- Предложение 1 (стр. 83): если A', B' непусты, то A' × B' ⊂ A × B ⇔ (A' ⊂ A и B' ⊂ B).
+theorem prod_sub {A B A' B' : term} (ha : A' ≠ ∅) (hb : B' ≠ ∅) : A' × B' ⊂ A × B ⇔ (A' ⊂ A ∧ B' ⊂ B) {
+  -- ⇐ верно без предположений
+  (A' ⊂ A ∧ B' ⊂ B) ⇒ A' × B' ⊂ A × B by assume h {
+    z ∈ A' × B' ⇒ z ∈ A × B by assume m {
+      p. z ∈ A' × B' ⇔ (IsPair(z) ∧ (pr1(z) ∈ A' ∧ pr2(z) ∈ B'))   by mem_prod
+      q. z ∈ A × B ⇔ (IsPair(z) ∧ (pr1(z) ∈ A ∧ pr2(z) ∈ B))       by mem_prod
+      A' ⊂ A                                                      by taut h
+      r. pr1(z) ∈ A' ⇒ pr1(z) ∈ A                                 by inst ^
+      B' ⊂ B                                                      by taut h
+      s. pr2(z) ∈ B' ⇒ pr2(z) ∈ B                                 by inst ^
+      z ∈ A × B                                                   by taut m p q r s
+    }
+    A' × B' ⊂ A × B                                               by gen ^ with z
+  }
+  -- ⇒: возьмём b ∈ B'; тогда для x ∈ A' пара (x, b) ∈ A' × B' ⊂ A × B, значит x ∈ A
+  A' × B' ⊂ A × B ⇒ (A' ⊂ A ∧ B' ⊂ B) by assume h {
+    A' ≠ ∅ ⇔ (∃x)(x ∈ A')                                         by nonempty
+    ea. (∃x)(x ∈ A')                                              by iff_mp ^ ha
+    B' ≠ ∅ ⇔ (∃x)(x ∈ B')                                         by nonempty
+    eb. (∃x)(x ∈ B')                                              by iff_mp ^ hb
+    y ∈ B' ⇒ A' ⊂ A by assume yb {
+      x ∈ A' ⇒ x ∈ A by assume xa {
+        Ͻ(x, y) ∈ A' × B' ⇔ (x ∈ A' ∧ y ∈ B')                     by pair_mem_prod
+        Ͻ(x, y) ∈ A' × B'                                         by taut xa yb ^
+        Ͻ(x, y) ∈ A' × B' ⇒ Ͻ(x, y) ∈ A × B                       by inst h
+        Ͻ(x, y) ∈ A × B                                           by mp 2 3
+        Ͻ(x, y) ∈ A × B ⇔ (x ∈ A ∧ y ∈ B)                         by pair_mem_prod
+        x ∈ A                                                     by taut 4 5
+      }
+      A' ⊂ A                                                      by gen ^ with x
+    }
+    (∀y)(y ∈ B' ⇒ A' ⊂ A)                                         by gen ^ with y
+    l. A' ⊂ A                                                     by obtain eb ^
+    x ∈ A' ⇒ B' ⊂ B by assume xa {
+      y ∈ B' ⇒ y ∈ B by assume yb {
+        Ͻ(x, y) ∈ A' × B' ⇔ (x ∈ A' ∧ y ∈ B')                     by pair_mem_prod
+        Ͻ(x, y) ∈ A' × B'                                         by taut xa yb ^
+        Ͻ(x, y) ∈ A' × B' ⇒ Ͻ(x, y) ∈ A × B                       by inst h
+        Ͻ(x, y) ∈ A × B                                           by mp 2 3
+        Ͻ(x, y) ∈ A × B ⇔ (x ∈ A ∧ y ∈ B)                         by pair_mem_prod
+        y ∈ B                                                     by taut 4 5
+      }
+      B' ⊂ B                                                      by gen ^ with y
+    }
+    (∀x)(x ∈ A' ⇒ B' ⊂ B)                                         by gen ^ with x
+    r. B' ⊂ B                                                     by obtain ea ^
+    A' ⊂ A ∧ B' ⊂ B                                               by C20 l r
+  }
+  _                                                               by iff_intro 2 1
+}
+
+-- Предложение 2 (стр. 84): A × B = ∅ ⇔ (A = ∅ или B = ∅).
+theorem prod_empty {A B : term} : A × B = ∅ ⇔ (A = ∅ ∨ B = ∅) {
+  -- A × B непусто ⇔ A и B непусты
+  (∃z)(z ∈ A × B) ⇒ ((∃x)(x ∈ A) ∧ (∃y)(y ∈ B)) by assume h {
+    z ∈ A × B ⇒ ((∃x)(x ∈ A) ∧ (∃y)(y ∈ B)) by assume m {
+      z ∈ A × B ⇔ (IsPair(z) ∧ (pr1(z) ∈ A ∧ pr2(z) ∈ B))       by mem_prod
+      pr1(z) ∈ A                                                by taut m ^
+      (∃x)(x ∈ A)                                               by exists_intro ^
+      pr2(z) ∈ B                                                by taut m 1
+      (∃y)(y ∈ B)                                               by exists_intro ^
+      (∃x)(x ∈ A) ∧ (∃y)(y ∈ B)                                 by C20 3 5
+    }
+    (∀z)(z ∈ A × B ⇒ ((∃x)(x ∈ A) ∧ (∃y)(y ∈ B)))               by gen ^ with z
+    (∃x)(x ∈ A) ∧ (∃y)(y ∈ B)                                   by obtain h ^
+  }
+  ((∃x)(x ∈ A) ∧ (∃y)(y ∈ B)) ⇒ (∃z)(z ∈ A × B) by assume h {
+    ea. (∃x)(x ∈ A)                                             by taut h
+    eb. (∃y)(y ∈ B)                                             by taut h
+    x ∈ A ⇒ (∃z)(z ∈ A × B) by assume xa {
+      y ∈ B ⇒ (∃z)(z ∈ A × B) by assume yb {
+        Ͻ(x, y) ∈ A × B ⇔ (x ∈ A ∧ y ∈ B)                       by pair_mem_prod
+        Ͻ(x, y) ∈ A × B                                         by taut xa yb ^
+        (∃z)(z ∈ A × B)                                         by exists_intro ^
+      }
+      (∀y)(y ∈ B ⇒ (∃z)(z ∈ A × B))                             by gen ^ with y
+      (∃z)(z ∈ A × B)                                           by obtain eb ^
+    }
+    (∀x)(x ∈ A ⇒ (∃z)(z ∈ A × B))                               by gen ^ with x
+    (∃z)(z ∈ A × B)                                             by obtain ea ^
+  }
+  a. A × B ≠ ∅ ⇔ (∃z)(z ∈ A × B)                                by nonempty
+  b. A ≠ ∅ ⇔ (∃x)(x ∈ A)                                        by nonempty
+  c. B ≠ ∅ ⇔ (∃x)(x ∈ B)                                        by nonempty
+  _                                                             by taut 1 2 a b c
+}
+
+-- Тройки (стр. 84): (x, y, z) = ((x, y), z), A × B × C = (A × B) × C.
+abbrev triple (X Y Z : term) := Ͻ(Ͻ(X, Y), Z)
+
+theorem triple_mem {T U V A B C : term} : triple(T, U, V) ∈ (A × B) × C ⇔ (T ∈ A ∧ (U ∈ B ∧ V ∈ C)) {
+  a. Ͻ(Ͻ(T, U), V) ∈ (A × B) × C ⇔ (Ͻ(T, U) ∈ A × B ∧ V ∈ C)   by pair_mem_prod
+  b. Ͻ(T, U) ∈ A × B ⇔ (T ∈ A ∧ U ∈ B)                         by pair_mem_prod
+  _                                                            by taut a b
+}
+
+end

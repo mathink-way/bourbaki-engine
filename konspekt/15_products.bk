@@ -1,0 +1,1723 @@
+-- Глава II, § 5. Произведение семейства множеств (стр. 112-124).
+--
+-- Задача: множество частей, множество отображений F^E, произведение ∏ X_ι семейства,
+-- проектирования, ассоциативность и дистрибутивность, распространение отображений.
+-- Проблема: все эти множества строятся из графиков, а графики лежат в 𝔓(E × F), так что
+-- нужна аксиома A4 (через сокращение 𝔓 и теорему mem_P из 10_sets.bk).
+-- Решение: F^E это Maps(E, F) = ℰ_G(Map(G, E, F) и G ∈ 𝔓(E × F)), произведение это
+-- ∏_i(I, X(i)) = ℰ_F((Map(F, I, ⋃X) и F(ι) ∈ X_ι) и F ∈ 𝔓(I × ⋃X)); оба коллективизирующие
+-- по C51. Отображения по-прежнему записаны графиками (§ 3, 13_functions.bk).
+-- Что осталось: 𝔉(E, F) (множество троек (G, E, F)) не вводится: оно в каноническом
+-- взаимно однозначном соответствии с F^E, и все утверждения о нём это утверждения о F^E.
+-- Не записаны: следствие предложения 8, следствия 1-2 предложения 9 (разбиение и
+-- семейства с индексами из I × K), вторая формула следствия предложения 10, биекция ∏ X_ι^E → (∏ X_ι)^E
+-- в конце n° 7, упражнения.
+
+import "00_prelude.bk"
+open base
+import "14_unions.bk"
+open ch1
+open sets
+
+-- n° 1: каноническое распространение Γ^: 𝔓(A) → 𝔓(B), X → Γ⟨X⟩.
+abbrev ext (G A : term) := fn_X(𝔓(A), img(G, X))
+-- n° 2: множество F^E графиков отображений E в F.
+abbrev Maps (E F : term) := ℰ_G(Map(G, E, F) ∧ G ∈ 𝔓(E × F))
+-- Предложение 3: f → f~, f~(y) = f(·, y).
+abbrev cur (F B C : term) := fn_y(C, fn_x(B, ap(F, Ͻ(x, y))))
+-- n° 3, определение 1: произведение семейства.
+abbrev ∏ [\prod] (I : term) (X : term 1) := ℰ_F((Map(F, I, ⋃_i(I, X(i))) ∧ (∀i)(i ∈ I ⇒ ap(F, i) ∈ X(i))) ∧ F ∈ 𝔓(I × ⋃_i(I, X(i))))
+
+namespace ch2
+in Set
+
+-- n° 1. A4 (стр. 112): если X ⊂ X', то 𝔓(X) ⊂ 𝔓(X').
+theorem P_mono {X X' : term} (h : X ⊂ X') : 𝔓(X) ⊂ 𝔓(X') {
+  Y ∈ 𝔓(X) ⇒ Y ∈ 𝔓(X') by assume m {
+    Y ∈ 𝔓(X) ⇔ Y ⊂ X                                          by mem_P
+    Y ⊂ X                                                     by iff_mp ^ m
+    Y ⊂ X'                                                    by subset_trans ^ h
+    Y ∈ 𝔓(X') ⇔ Y ⊂ X'                                        by mem_P
+    Y ∈ 𝔓(X')                                                 by iff_mpr ^ ^^
+  }
+  _                                                           by gen ^ with Y
+}
+
+-- A × B монотонно (без предположений о непустоте).
+theorem prod_mono {A B A' B' : term} (ha : A ⊂ A') (hb : B ⊂ B') : A × B ⊂ A' × B' {
+  z ∈ A × B ⇒ z ∈ A' × B' by assume m {
+    a. z ∈ A × B ⇔ (IsPair(z) ∧ (pr1(z) ∈ A ∧ pr2(z) ∈ B))    by mem_prod
+    b. z ∈ A' × B' ⇔ (IsPair(z) ∧ (pr1(z) ∈ A' ∧ pr2(z) ∈ B'))   by mem_prod
+    c. pr1(z) ∈ A ⇒ pr1(z) ∈ A'                               by inst ha
+    d. pr2(z) ∈ B ⇒ pr2(z) ∈ B'                               by inst hb
+    z ∈ A' × B'                                               by taut m a b c d
+  }
+  _                                                           by gen ^ with z
+}
+
+-- График отображения A в B лежит в A × B.
+theorem map_sub_prod {F A B : term} (hm : Map(F, A, B)) : F ⊂ A × B {
+  Graph(F)                                                    by taut hm
+  F ⊂ proj1(F) × proj2(F)                                     by graph_sub_prod ^
+  proj1(F) = A                                                by taut hm
+  proj1(F) ⊂ A                                                by eq_subset ^
+  proj2(F) ⊂ B                                                by taut hm
+  proj1(F) × proj2(F) ⊂ A × B                                 by prod_mono 4 5
+  _                                                           by subset_trans 2 ^
+}
+
+-- Отображение A в B есть отображение A в C тогда и только тогда, когда все значения в C.
+theorem map_into_iff {F A B C : term} (hm : Map(F, A, B)) : Map(F, A, C) ⇔ (∀x)(x ∈ A ⇒ ap(F, x) ∈ C) {
+  Map(F, A, C) ⇒ (∀x)(x ∈ A ⇒ ap(F, x) ∈ C) by assume mc {
+    x ∈ A ⇒ ap(F, x) ∈ C by assume a {
+      ap(F, x) ∈ C                                            by ap_mem mc a
+    }
+    (∀x)(x ∈ A ⇒ ap(F, x) ∈ C)                                by gen ^ with x
+  }
+  (∀x)(x ∈ A ⇒ ap(F, x) ∈ C) ⇒ Map(F, A, C) by assume h {
+    y ∈ proj2(F) ⇒ y ∈ C by assume m {
+      y ∈ proj2(F) ⇔ (∃x)(Ͻ(x, y) ∈ F)                        by mem_proj2
+      e. (∃x)(Ͻ(x, y) ∈ F)                                    by iff_mp ^ m
+      Ͻ(x, y) ∈ F ⇒ y ∈ C by assume p {
+        Ͻ(x, y) ∈ F ⇔ (x ∈ A ∧ y = ap(F, x))                  by map_mem hm
+        x ∈ A                                                 by taut p ^
+        x ∈ A ⇒ ap(F, x) ∈ C                                  by inst h
+        ap(F, x) ∈ C                                          by mp 2 ^
+        y = ap(F, x)                                          by taut p 1
+        y ∈ C ⇔ ap(F, x) ∈ C                                  by rcong ^
+        y ∈ C                                                 by taut 4 ^
+      }
+      (∀x)(Ͻ(x, y) ∈ F ⇒ y ∈ C)                               by gen ^ with x
+      y ∈ C                                                   by obtain e ^
+    }
+    proj2(F) ⊂ C                                              by gen ^ with y
+    Map(F, A, C)                                              by taut hm ^
+  }
+  _                                                           by iff_intro 1 2
+}
+
+-- Каноническое распространение отображения F: A → B есть отображение 𝔓(A) в 𝔓(B).
+theorem ext_map {F A B : term} (hm : Map(F, A, B)) : Map(ext(F, A), 𝔓(A), 𝔓(B)) {
+  X ∈ 𝔓(A) ⇒ img(F, X) ∈ 𝔓(B) by assume m {
+    img(F, X) ⊂ proj2(F)                                      by img_sub_proj2
+    proj2(F) ⊂ B                                              by taut hm
+    img(F, X) ⊂ B                                             by subset_trans 1 2
+    img(F, X) ∈ 𝔓(B) ⇔ img(F, X) ⊂ B                          by mem_P
+    img(F, X) ∈ 𝔓(B)                                          by iff_mpr ^ ^^
+  }
+  (∀X)(X ∈ 𝔓(A) ⇒ img(F, X) ∈ 𝔓(B))                          by gen ^ with X
+  _                                                           by fn_map_into ^
+}
+
+theorem ap_ext {F A X : term} (h : X ⊂ A) : ap(ext(F, A), X) = img(F, X) {
+  X ∈ 𝔓(A) ⇔ X ⊂ A                                            by mem_P
+  X ∈ 𝔓(A)                                                    by iff_mpr ^ h
+  _                                                           by ap_fn ^
+}
+
+-- (Γ' ∘ Γ)^ = Γ'^ ∘ Γ^ (стр. 113, из предложения 5 § 3).
+theorem ext_comp {F G A B C : term} (hf : Map(F, A, B)) (hg : Map(G, B, C)) : ext(G ∘ F, A) = ext(G, B) ∘ ext(F, A) {
+  mgf. Map(G ∘ F, A, C)                                       by comp_map hf hg
+  m1. Map(ext(G ∘ F, A), 𝔓(A), 𝔓(C))                          by ext_map mgf
+  ef. Map(ext(F, A), 𝔓(A), 𝔓(B))                              by ext_map hf
+  eg. Map(ext(G, B), 𝔓(B), 𝔓(C))                              by ext_map hg
+  m2. Map(ext(G, B) ∘ ext(F, A), 𝔓(A), 𝔓(C))                  by comp_map ef eg
+  X ∈ 𝔓(A) ⇒ ap(ext(G ∘ F, A), X) = ap(ext(G, B) ∘ ext(F, A), X) by assume m {
+    X ∈ 𝔓(A) ⇔ X ⊂ A                                          by mem_P
+    xa. X ⊂ A                                                 by iff_mp ^ m
+    p. ap(ext(G ∘ F, A), X) = img(G ∘ F, X)                   by ap_ext xa
+    q. img(G ∘ F, X) = img(G, img(F, X))                      by img_comp
+    r. ap(ext(G, B) ∘ ext(F, A), X) = ap(ext(G, B), ap(ext(F, A), X))   by ap_comp ef eg m
+    s. ap(ext(F, A), X) = img(F, X)                           by ap_ext xa
+    t. ap(ext(G, B), ap(ext(F, A), X)) = ap(ext(G, B), img(F, X))   by cong s
+    img(F, X) ⊂ proj2(F)                                      by img_sub_proj2
+    proj2(F) ⊂ B                                              by taut hf
+    img(F, X) ⊂ B                                             by subset_trans 8 9
+    u. ap(ext(G, B), img(F, X)) = img(G, img(F, X))           by ap_ext ^
+    ap(ext(G ∘ F, A), X) = ap(ext(G, B) ∘ ext(F, A), X)       by chain p q u t r
+  }
+  (∀X)(X ∈ 𝔓(A) ⇒ ap(ext(G ∘ F, A), X) = ap(ext(G, B) ∘ ext(F, A), X))   by gen ^ with X
+  _                                                           by map_ext m1 m2 ^
+}
+
+-- Предложение 1 (стр. 113). 1° f сюръекция ⇒ f^ сюръекция; 2° f инъекция ⇒ f^ инъекция.
+theorem ext_surj {F A B : term} (hs : Surj(F, A, B)) : Surj(ext(F, A), 𝔓(A), 𝔓(B)) {
+  hm. Map(F, A, B)                                            by taut hs
+  me. Map(ext(F, A), 𝔓(A), 𝔓(B))                              by ext_map hm
+  Y ∈ 𝔓(B) ⇒ (∃X)(X ∈ 𝔓(A) ∧ Y = ap(ext(F, A), X)) by assume m {
+    Y ∈ 𝔓(B) ⇔ Y ⊂ B                                          by mem_P
+    yb. Y ⊂ B                                                 by iff_mp ^ m
+    e. img(F, img(inv(F), Y)) = Y                             by img_preimg_surj hs yb
+    img(inv(F), Y) ⊂ proj2(inv(F))                            by img_sub_proj2
+    proj2(inv(F)) = proj1(F)                                  by proj2_inv
+    proj1(F) = A                                              by taut hm
+    proj2(inv(F)) = A                                         by T3 ^^ ^
+    proj2(inv(F)) ⊂ A                                         by eq_subset ^
+    pa. img(inv(F), Y) ⊂ A                                    by subset_trans 4 ^
+    img(inv(F), Y) ∈ 𝔓(A) ⇔ img(inv(F), Y) ⊂ A                by mem_P
+    pp. img(inv(F), Y) ∈ 𝔓(A)                                 by iff_mpr ^ pa
+    q. ap(ext(F, A), img(inv(F), Y)) = img(F, img(inv(F), Y)) by ap_ext pa
+    Y = ap(ext(F, A), img(inv(F), Y))                         by chain e q
+    img(inv(F), Y) ∈ 𝔓(A) ∧ Y = ap(ext(F, A), img(inv(F), Y)) by C20 pp ^
+    (∃X)(X ∈ 𝔓(A) ∧ Y = ap(ext(F, A), X))                     by exists_intro ^
+  }
+  (∀Y)(Y ∈ 𝔓(B) ⇒ (∃X)(X ∈ 𝔓(A) ∧ Y = ap(ext(F, A), X)))     by gen ^ with Y
+  Surj(ext(F, A), 𝔓(A), 𝔓(B)) ⇔ (∀Y)(Y ∈ 𝔓(B) ⇒ (∃X)(X ∈ 𝔓(A) ∧ Y = ap(ext(F, A), X)))   by surj_iff me
+  _                                                           by iff_mpr ^ ^^
+}
+
+theorem ext_inj {F A B : term} (hi : Inj(F, A, B)) : Inj(ext(F, A), 𝔓(A), 𝔓(B)) {
+  hm. Map(F, A, B)                                            by taut hi
+  me. Map(ext(F, A), 𝔓(A), 𝔓(B))                              by ext_map hm
+  (X ∈ 𝔓(A) ∧ (Y ∈ 𝔓(A) ∧ ap(ext(F, A), X) = ap(ext(F, A), Y))) ⇒ X = Y by assume m {
+    X ∈ 𝔓(A) ⇔ X ⊂ A                                          by mem_P
+    xa. X ⊂ A                                                 by taut m ^
+    Y ∈ 𝔓(A) ⇔ Y ⊂ A                                          by mem_P
+    ya. Y ⊂ A                                                 by taut m ^
+    p. ap(ext(F, A), X) = img(F, X)                           by ap_ext xa
+    q. ap(ext(F, A), Y) = img(F, Y)                           by ap_ext ya
+    r. ap(ext(F, A), X) = ap(ext(F, A), Y)                    by taut m
+    img(F, X) = img(F, Y)                                     by chain p r q
+    s. img(inv(F), img(F, X)) = img(inv(F), img(F, Y))        by cong ^
+    t. img(inv(F), img(F, X)) = X                             by preimg_img_inj hi xa
+    u. img(inv(F), img(F, Y)) = Y                             by preimg_img_inj hi ya
+    X = Y                                                     by chain t s u
+  }
+  (∀Y)((X ∈ 𝔓(A) ∧ (Y ∈ 𝔓(A) ∧ ap(ext(F, A), X) = ap(ext(F, A), Y))) ⇒ X = Y)       by gen ^ with Y
+  (∀X)(∀Y)((X ∈ 𝔓(A) ∧ (Y ∈ 𝔓(A) ∧ ap(ext(F, A), X) = ap(ext(F, A), Y))) ⇒ X = Y)   by gen ^ with X
+  _                                                           by C20 me ^
+}
+
+-- n° 2 (стр. 113). F^E: G ∈ Maps(E, F) ⇔ G график отображения E в F.
+theorem maps_coll {E F : term} : Coll_G(Map(G, E, F) ∧ G ∈ 𝔓(E × F)) {
+  _                                                           by C51 with P(G) := Map(G, E, F); A := 𝔓(E × F)
+}
+
+theorem mem_maps {T E F : term} : T ∈ Maps(E, F) ⇔ Map(T, E, F) {
+  Coll_G(Map(G, E, F) ∧ G ∈ 𝔓(E × F))                        by maps_coll
+  a. T ∈ Maps(E, F) ⇔ (Map(T, E, F) ∧ T ∈ 𝔓(E × F))          by mem_E ^
+  Map(T, E, F) ⇒ T ∈ 𝔓(E × F) by assume m {
+    T ⊂ E × F                                                 by map_sub_prod m
+    T ∈ 𝔓(E × F) ⇔ T ⊂ E × F                                  by mem_P
+    T ∈ 𝔓(E × F)                                              by iff_mpr ^ ^^
+  }
+  _                                                           by taut a ^
+}
+
+-- Отображение f → v ∘ f ∘ u множества F^E в F'^E' (стр. 113).
+theorem conj_map {U V E E' F F' : term} (hu : Map(U, E', E)) (hv : Map(V, F, F')) : Map(fn_f(Maps(E, F), V ∘ (f ∘ U)), Maps(E, F), Maps(E', F')) {
+  f ∈ Maps(E, F) ⇒ V ∘ (f ∘ U) ∈ Maps(E', F') by assume m {
+    f ∈ Maps(E, F) ⇔ Map(f, E, F)                             by mem_maps
+    Map(f, E, F)                                              by iff_mp ^ m
+    Map(f ∘ U, E', F)                                         by comp_map hu ^
+    Map(V ∘ (f ∘ U), E', F')                                  by comp_map ^ hv
+    V ∘ (f ∘ U) ∈ Maps(E', F') ⇔ Map(V ∘ (f ∘ U), E', F')     by mem_maps
+    V ∘ (f ∘ U) ∈ Maps(E', F')                                by iff_mpr ^ ^^
+  }
+  (∀f)(f ∈ Maps(E, F) ⇒ V ∘ (f ∘ U) ∈ Maps(E', F'))           by gen ^ with f
+  _                                                           by fn_map_into ^
+}
+
+-- Предложение 2 (стр. 113). 1° u сюръекция E' на E, v инъекция ⇒ f → v ∘ f ∘ u инъективно.
+theorem conj_inj {U V E E' F F' : term} (hu : Surj(U, E', E)) (hv : Inj(V, F, F')) : Inj(fn_f(Maps(E, F), V ∘ (f ∘ U)), Maps(E, F), Maps(E', F')) {
+  mu. Map(U, E', E)                                           by taut hu
+  mv. Map(V, F, F')                                           by taut hv
+  mc. Map(fn_f(Maps(E, F), V ∘ (f ∘ U)), Maps(E, F), Maps(E', F'))   by conj_map mu mv
+  (f ∈ Maps(E, F) ∧ (g ∈ Maps(E, F) ∧ ap(fn_f(Maps(E, F), V ∘ (f ∘ U)), f) = ap(fn_f(Maps(E, F), V ∘ (f ∘ U)), g))) ⇒ f = g by assume m {
+    f ∈ Maps(E, F) ⇔ Map(f, E, F)                             by mem_maps
+    mf. Map(f, E, F)                                          by taut m ^
+    g ∈ Maps(E, F) ⇔ Map(g, E, F)                             by mem_maps
+    mg. Map(g, E, F)                                          by taut m ^
+    f ∈ Maps(E, F)                                            by taut m
+    p. ap(fn_f(Maps(E, F), V ∘ (f ∘ U)), f) = V ∘ (f ∘ U)     by ap_fn ^
+    g ∈ Maps(E, F)                                            by taut m
+    q. ap(fn_f(Maps(E, F), V ∘ (f ∘ U)), g) = V ∘ (g ∘ U)     by ap_fn ^
+    r. ap(fn_f(Maps(E, F), V ∘ (f ∘ U)), f) = ap(fn_f(Maps(E, F), V ∘ (f ∘ U)), g)   by taut m
+    e. V ∘ (f ∘ U) = V ∘ (g ∘ U)                              by chain p r q
+    mfu. Map(f ∘ U, E', F)                                    by comp_map mu mf
+    mgu. Map(g ∘ U, E', F)                                    by comp_map mu mg
+    x ∈ E ⇒ ap(f, x) = ap(g, x) by assume a {
+      ex. (∃x')(x' ∈ E' ∧ x = ap(U, x'))                      by surj_ap hu a
+      (x' ∈ E' ∧ x = ap(U, x')) ⇒ ap(f, x) = ap(g, x) by assume b {
+        xa. x' ∈ E'                                           by taut b
+        xu. x = ap(U, x')                                     by taut b
+        p1. ap(V ∘ (f ∘ U), x') = ap(V, ap(f ∘ U, x'))        by ap_comp mfu mv xa
+        p2. ap(f ∘ U, x') = ap(f, ap(U, x'))                  by ap_comp mu mf xa
+        p3. ap(V, ap(f ∘ U, x')) = ap(V, ap(f, ap(U, x')))    by cong p2
+        q1. ap(V ∘ (g ∘ U), x') = ap(V, ap(g ∘ U, x'))        by ap_comp mgu mv xa
+        q2. ap(g ∘ U, x') = ap(g, ap(U, x'))                  by ap_comp mu mg xa
+        q3. ap(V, ap(g ∘ U, x')) = ap(V, ap(g, ap(U, x')))    by cong q2
+        r1. ap(V ∘ (f ∘ U), x') = ap(V ∘ (g ∘ U), x')         by cong e
+        vv. ap(V, ap(f, ap(U, x'))) = ap(V, ap(g, ap(U, x'))) by chain p3 p1 r1 q1 q3
+        ux. ap(U, x') ∈ E                                     by ap_mem mu xa
+        ap(f, ap(U, x')) ∈ F                                  by ap_mem mf ux
+        ap(g, ap(U, x')) ∈ F                                  by ap_mem mg ux
+        w. ap(f, ap(U, x')) = ap(g, ap(U, x'))                by inj_ap hv 12 13 vv
+        s1. ap(f, x) = ap(f, ap(U, x'))                       by cong xu
+        s2. ap(g, x) = ap(g, ap(U, x'))                       by cong xu
+        ap(f, x) = ap(g, x)                                   by chain s1 w s2
+      }
+      (∀x')((x' ∈ E' ∧ x = ap(U, x')) ⇒ ap(f, x) = ap(g, x))  by gen ^ with x'
+      ap(f, x) = ap(g, x)                                     by obtain ex ^
+    }
+    (∀x)(x ∈ E ⇒ ap(f, x) = ap(g, x))                         by gen ^ with x
+    f = g                                                     by map_ext mf mg ^
+  }
+  (∀g)((f ∈ Maps(E, F) ∧ (g ∈ Maps(E, F) ∧ ap(fn_f(Maps(E, F), V ∘ (f ∘ U)), f) = ap(fn_f(Maps(E, F), V ∘ (f ∘ U)), g))) ⇒ f = g)       by gen ^ with g
+  (∀f)(∀g)((f ∈ Maps(E, F) ∧ (g ∈ Maps(E, F) ∧ ap(fn_f(Maps(E, F), V ∘ (f ∘ U)), f) = ap(fn_f(Maps(E, F), V ∘ (f ∘ U)), g))) ⇒ f = g)   by gen ^ with f
+  _                                                           by C20 mc ^
+}
+
+-- 2° u инъекция, v сюръекция F на F', E' ≠ ∅ ⇒ f → v ∘ f ∘ u сюръективно
+-- (f' = v ∘ (s ∘ f' ∘ r) ∘ u, r ретракция для u, s сечение для v).
+theorem conj_surj {U V E E' F F' : term} (hu : Inj(U, E', E)) (hv : Surj(V, F, F')) (hne : E' ≠ ∅) : Surj(fn_f(Maps(E, F), V ∘ (f ∘ U)), Maps(E, F), Maps(E', F')) {
+  mu. Map(U, E', E)                                           by taut hu
+  mv. Map(V, F, F')                                           by taut hv
+  mc. Map(fn_f(Maps(E, F), V ∘ (f ∘ U)), Maps(E, F), Maps(E', F'))   by conj_map mu mv
+  er. (∃R)Retr(R, U, E', E)                                   by inj_retr hu hne
+  es. (∃S)Sect(S, V, F, F')                                   by surj_sect hv
+  h ∈ Maps(E', F') ⇒ (∃f)(f ∈ Maps(E, F) ∧ h = ap(fn_f(Maps(E, F), V ∘ (f ∘ U)), f)) by assume m {
+    h ∈ Maps(E', F') ⇔ Map(h, E', F')                         by mem_maps
+    mh. Map(h, E', F')                                        by iff_mp ^ m
+    Retr(R, U, E', E) ⇒ (∃f)(f ∈ Maps(E, F) ∧ h = ap(fn_f(Maps(E, F), V ∘ (f ∘ U)), f)) by assume hr {
+      Sect(S, V, F, F') ⇒ (∃f)(f ∈ Maps(E, F) ∧ h = ap(fn_f(Maps(E, F), V ∘ (f ∘ U)), f)) by assume hs {
+        mr. Map(R, E, E')                                     by taut hr
+        ms. Map(S, F', F)                                     by taut hs
+        mhr. Map(h ∘ R, E, F')                                by comp_map mr mh
+        mf. Map(S ∘ (h ∘ R), E, F)                            by comp_map mhr ms
+        mfu. Map((S ∘ (h ∘ R)) ∘ U, E', F)                    by comp_map mu mf
+        mvf. Map(V ∘ ((S ∘ (h ∘ R)) ∘ U), E', F')             by comp_map mfu mv
+        x ∈ E' ⇒ ap(h, x) = ap(V ∘ ((S ∘ (h ∘ R)) ∘ U), x) by assume a {
+          ux. ap(U, x) ∈ E                                    by ap_mem mu a
+          rx. ap(R, ap(U, x)) ∈ E'                            by ap_mem mr ux
+          hx. ap(h, ap(R, ap(U, x))) ∈ F'                     by ap_mem mh rx
+          a1. ap(V ∘ ((S ∘ (h ∘ R)) ∘ U), x) = ap(V, ap((S ∘ (h ∘ R)) ∘ U, x))   by ap_comp mfu mv a
+          a2. ap((S ∘ (h ∘ R)) ∘ U, x) = ap(S ∘ (h ∘ R), ap(U, x))   by ap_comp mu mf a
+          a3. ap(S ∘ (h ∘ R), ap(U, x)) = ap(S, ap(h ∘ R, ap(U, x)))   by ap_comp mhr ms ux
+          a4. ap(h ∘ R, ap(U, x)) = ap(h, ap(R, ap(U, x)))    by ap_comp mr mh ux
+          a5. ap(R, ap(U, x)) = x                             by retr_ap mu hr a
+          b4. ap(h, ap(R, ap(U, x))) = ap(h, x)               by cong a5
+          b3. ap(S, ap(h ∘ R, ap(U, x))) = ap(S, ap(h, ap(R, ap(U, x))))   by cong a4
+          c3. ap((S ∘ (h ∘ R)) ∘ U, x) = ap(S, ap(h, ap(R, ap(U, x))))   by chain a2 a3 b3
+          d3. ap(V, ap((S ∘ (h ∘ R)) ∘ U, x)) = ap(V, ap(S, ap(h, ap(R, ap(U, x)))))   by cong c3
+          e3. ap(V, ap(S, ap(h, ap(R, ap(U, x))))) = ap(h, ap(R, ap(U, x)))   by sect_ap mv hs hx
+          ap(h, x) = ap(V ∘ ((S ∘ (h ∘ R)) ∘ U), x)           by chain b4 e3 d3 a1
+        }
+        (∀x)(x ∈ E' ⇒ ap(h, x) = ap(V ∘ ((S ∘ (h ∘ R)) ∘ U), x))   by gen ^ with x
+        he. h = V ∘ ((S ∘ (h ∘ R)) ∘ U)                       by map_ext mh mvf ^
+        S ∘ (h ∘ R) ∈ Maps(E, F) ⇔ Map(S ∘ (h ∘ R), E, F)     by mem_maps
+        fm. S ∘ (h ∘ R) ∈ Maps(E, F)                          by iff_mpr ^ mf
+        ap(fn_f(Maps(E, F), V ∘ (f ∘ U)), S ∘ (h ∘ R)) = V ∘ ((S ∘ (h ∘ R)) ∘ U)   by ap_fn fm
+        h = ap(fn_f(Maps(E, F), V ∘ (f ∘ U)), S ∘ (h ∘ R))    by chain he ^
+        S ∘ (h ∘ R) ∈ Maps(E, F) ∧ h = ap(fn_f(Maps(E, F), V ∘ (f ∘ U)), S ∘ (h ∘ R))   by C20 fm ^
+        (∃f)(f ∈ Maps(E, F) ∧ h = ap(fn_f(Maps(E, F), V ∘ (f ∘ U)), f))   by exists_intro ^
+      }
+      (∀S)(Sect(S, V, F, F') ⇒ (∃f)(f ∈ Maps(E, F) ∧ h = ap(fn_f(Maps(E, F), V ∘ (f ∘ U)), f)))   by gen ^ with S
+      (∃f)(f ∈ Maps(E, F) ∧ h = ap(fn_f(Maps(E, F), V ∘ (f ∘ U)), f))   by obtain es ^
+    }
+    (∀R)(Retr(R, U, E', E) ⇒ (∃f)(f ∈ Maps(E, F) ∧ h = ap(fn_f(Maps(E, F), V ∘ (f ∘ U)), f)))   by gen ^ with R
+    (∃f)(f ∈ Maps(E, F) ∧ h = ap(fn_f(Maps(E, F), V ∘ (f ∘ U)), f))   by obtain er ^
+  }
+  (∀h)(h ∈ Maps(E', F') ⇒ (∃f)(f ∈ Maps(E, F) ∧ h = ap(fn_f(Maps(E, F), V ∘ (f ∘ U)), f)))   by gen ^ with h
+  Surj(fn_f(Maps(E, F), V ∘ (f ∘ U)), Maps(E, F), Maps(E', F')) ⇔ (∀h)(h ∈ Maps(E', F') ⇒ (∃f)(f ∈ Maps(E, F) ∧ h = ap(fn_f(Maps(E, F), V ∘ (f ∘ U)), f)))   by surj_iff mc
+  _                                                           by iff_mpr ^ ^^
+}
+
+-- Следствие (стр. 114): u, v биекции (E' ≠ ∅) ⇒ f → v ∘ f ∘ u биекция.
+theorem conj_bij {U V E E' F F' : term} (hu : Bij(U, E', E)) (hv : Bij(V, F, F')) (hne : E' ≠ ∅) : Bij(fn_f(Maps(E, F), V ∘ (f ∘ U)), Maps(E, F), Maps(E', F')) {
+  Surj(U, E', E)                                              by taut hu
+  Inj(V, F, F')                                               by taut hv
+  Inj(fn_f(Maps(E, F), V ∘ (f ∘ U)), Maps(E, F), Maps(E', F'))   by conj_inj 1 2
+  Inj(U, E', E)                                               by taut hu
+  Surj(V, F, F')                                              by taut hv
+  Surj(fn_f(Maps(E, F), V ∘ (f ∘ U)), Maps(E, F), Maps(E', F'))   by conj_surj 4 5 hne
+  _                                                           by taut 3 6
+}
+
+-- Предложение 3 (стр. 114): f → f~ (f~(y) = f(·, y)) есть биекция A^{B×C} на (A^B)^C.
+theorem cur_map {F A B C : term} (hm : Map(F, B × C, A)) : Map(cur(F, B, C), C, Maps(B, A)) {
+  y ∈ C ⇒ fn_x(B, ap(F, Ͻ(x, y))) ∈ Maps(B, A) by assume c {
+    x ∈ B ⇒ ap(F, Ͻ(x, y)) ∈ A by assume b {
+      Ͻ(x, y) ∈ B × C ⇔ (x ∈ B ∧ y ∈ C)                       by pair_mem_prod
+      Ͻ(x, y) ∈ B × C                                         by taut b c ^
+      ap(F, Ͻ(x, y)) ∈ A                                      by ap_mem hm ^
+    }
+    (∀x)(x ∈ B ⇒ ap(F, Ͻ(x, y)) ∈ A)                          by gen ^ with x
+    Map(fn_x(B, ap(F, Ͻ(x, y))), B, A)                        by fn_map_into ^
+    fn_x(B, ap(F, Ͻ(x, y))) ∈ Maps(B, A) ⇔ Map(fn_x(B, ap(F, Ͻ(x, y))), B, A)   by mem_maps
+    fn_x(B, ap(F, Ͻ(x, y))) ∈ Maps(B, A)                      by iff_mpr ^ ^^
+  }
+  (∀y)(y ∈ C ⇒ fn_x(B, ap(F, Ͻ(x, y))) ∈ Maps(B, A))          by gen ^ with y
+  _                                                           by fn_map_into ^
+}
+
+theorem ap_cur {F B C X Y : term} (hx : X ∈ B) (hy : Y ∈ C) : ap(ap(cur(F, B, C), Y), X) = ap(F, Ͻ(X, Y)) {
+  ap(cur(F, B, C), Y) = fn_x(B, ap(F, Ͻ(x, Y)))               by ap_fn hy
+  a. ap(ap(cur(F, B, C), Y), X) = ap(fn_x(B, ap(F, Ͻ(x, Y))), X)   by cong ^
+  b. ap(fn_x(B, ap(F, Ͻ(x, Y))), X) = ap(F, Ͻ(X, Y))          by ap_fn hx
+  _                                                           by chain a b
+}
+
+theorem cur_bij {A B C : term} : Bij(fn_f(Maps(B × C, A), cur(f, B, C)), Maps(B × C, A), Maps(C, Maps(B, A))) {
+  f ∈ Maps(B × C, A) ⇒ cur(f, B, C) ∈ Maps(C, Maps(B, A)) by assume m {
+    f ∈ Maps(B × C, A) ⇔ Map(f, B × C, A)                     by mem_maps
+    Map(f, B × C, A)                                          by iff_mp ^ m
+    Map(cur(f, B, C), C, Maps(B, A))                          by cur_map ^
+    cur(f, B, C) ∈ Maps(C, Maps(B, A)) ⇔ Map(cur(f, B, C), C, Maps(B, A))   by mem_maps
+    cur(f, B, C) ∈ Maps(C, Maps(B, A))                        by iff_mpr ^ ^^
+  }
+  (∀f)(f ∈ Maps(B × C, A) ⇒ cur(f, B, C) ∈ Maps(C, Maps(B, A)))   by gen ^ with f
+  mc. Map(fn_f(Maps(B × C, A), cur(f, B, C)), Maps(B × C, A), Maps(C, Maps(B, A)))   by fn_map_into ^
+  -- инъективность: f(x, y) = f~(y)(x)
+  (f ∈ Maps(B × C, A) ∧ (g ∈ Maps(B × C, A) ∧ ap(fn_f(Maps(B × C, A), cur(f, B, C)), f) = ap(fn_f(Maps(B × C, A), cur(f, B, C)), g))) ⇒ f = g by assume m {
+    f ∈ Maps(B × C, A) ⇔ Map(f, B × C, A)                     by mem_maps
+    mf. Map(f, B × C, A)                                      by taut m ^
+    g ∈ Maps(B × C, A) ⇔ Map(g, B × C, A)                     by mem_maps
+    mg. Map(g, B × C, A)                                      by taut m ^
+    f ∈ Maps(B × C, A)                                        by taut m
+    p. ap(fn_f(Maps(B × C, A), cur(f, B, C)), f) = cur(f, B, C)   by ap_fn ^
+    g ∈ Maps(B × C, A)                                        by taut m
+    q. ap(fn_f(Maps(B × C, A), cur(f, B, C)), g) = cur(g, B, C)   by ap_fn ^
+    r. ap(fn_f(Maps(B × C, A), cur(f, B, C)), f) = ap(fn_f(Maps(B × C, A), cur(f, B, C)), g)   by taut m
+    e. cur(f, B, C) = cur(g, B, C)                            by chain p r q
+    z ∈ B × C ⇒ ap(f, z) = ap(g, z) by assume a {
+      pe. z = Ͻ(pr1(z), pr2(z)) ∧ (pr1(z) ∈ B ∧ pr2(z) ∈ C)   by prod_eta a
+      zb. pr1(z) ∈ B                                          by taut pe
+      zc. pr2(z) ∈ C                                          by taut pe
+      ze. z = Ͻ(pr1(z), pr2(z))                               by taut pe
+      a1. ap(f, z) = ap(f, Ͻ(pr1(z), pr2(z)))                 by cong ze
+      a2. ap(ap(cur(f, B, C), pr2(z)), pr1(z)) = ap(f, Ͻ(pr1(z), pr2(z)))   by ap_cur zb zc
+      a3. ap(ap(cur(f, B, C), pr2(z)), pr1(z)) = ap(ap(cur(g, B, C), pr2(z)), pr1(z))   by cong e
+      a4. ap(ap(cur(g, B, C), pr2(z)), pr1(z)) = ap(g, Ͻ(pr1(z), pr2(z)))   by ap_cur zb zc
+      a5. ap(g, z) = ap(g, Ͻ(pr1(z), pr2(z)))                 by cong ze
+      ap(f, z) = ap(g, z)                                     by chain a1 a2 a3 a4 a5
+    }
+    (∀z)(z ∈ B × C ⇒ ap(f, z) = ap(g, z))                     by gen ^ with z
+    f = g                                                     by map_ext mf mg ^
+  }
+  (∀g)((f ∈ Maps(B × C, A) ∧ (g ∈ Maps(B × C, A) ∧ ap(fn_f(Maps(B × C, A), cur(f, B, C)), f) = ap(fn_f(Maps(B × C, A), cur(f, B, C)), g))) ⇒ f = g)       by gen ^ with g
+  inj. (∀f)(∀g)((f ∈ Maps(B × C, A) ∧ (g ∈ Maps(B × C, A) ∧ ap(fn_f(Maps(B × C, A), cur(f, B, C)), f) = ap(fn_f(Maps(B × C, A), cur(f, B, C)), g))) ⇒ f = g)   by gen ^ with f
+  -- сюръективность: для g строим f(x, y) = g(y)(x)
+  g ∈ Maps(C, Maps(B, A)) ⇒ (∃f)(f ∈ Maps(B × C, A) ∧ g = ap(fn_f(Maps(B × C, A), cur(f, B, C)), f)) by assume m {
+    g ∈ Maps(C, Maps(B, A)) ⇔ Map(g, C, Maps(B, A))           by mem_maps
+    mg. Map(g, C, Maps(B, A))                                 by iff_mp ^ m
+    -- g(y) есть отображение B в A
+    gy. y ∈ C ⇒ Map(ap(g, y), B, A) by assume c {
+      ap(g, y) ∈ Maps(B, A)                                   by ap_mem mg c
+      ap(g, y) ∈ Maps(B, A) ⇔ Map(ap(g, y), B, A)             by mem_maps
+      Map(ap(g, y), B, A)                                     by iff_mp ^ ^^
+    }
+    z ∈ B × C ⇒ ap(ap(g, pr2(z)), pr1(z)) ∈ A by assume a {
+      pe. z = Ͻ(pr1(z), pr2(z)) ∧ (pr1(z) ∈ B ∧ pr2(z) ∈ C)   by prod_eta a
+      zc. pr2(z) ∈ C                                          by taut pe
+      zb. pr1(z) ∈ B                                          by taut pe
+      (∀y)(y ∈ C ⇒ Map(ap(g, y), B, A))                       by gen gy with y
+      pr2(z) ∈ C ⇒ Map(ap(g, pr2(z)), B, A)                   by inst ^
+      Map(ap(g, pr2(z)), B, A)                                by mp zc ^
+      ap(ap(g, pr2(z)), pr1(z)) ∈ A                           by ap_mem ^ zb
+    }
+    (∀z)(z ∈ B × C ⇒ ap(ap(g, pr2(z)), pr1(z)) ∈ A)           by gen ^ with z
+    mF. Map(fn_z(B × C, ap(ap(g, pr2(z)), pr1(z))), B × C, A) by fn_map_into ^
+    mcF. Map(cur(fn_z(B × C, ap(ap(g, pr2(z)), pr1(z))), B, C), C, Maps(B, A))   by cur_map mF
+    y ∈ C ⇒ ap(cur(fn_z(B × C, ap(ap(g, pr2(z)), pr1(z))), B, C), y) = ap(g, y) by assume c {
+      ap(cur(fn_z(B × C, ap(ap(g, pr2(z)), pr1(z))), B, C), y) ∈ Maps(B, A)                     by ap_mem mcF c
+      ap(cur(fn_z(B × C, ap(ap(g, pr2(z)), pr1(z))), B, C), y) ∈ Maps(B, A) ⇔ Map(ap(cur(fn_z(B × C, ap(ap(g, pr2(z)), pr1(z))), B, C), y), B, A)   by mem_maps
+      m1. Map(ap(cur(fn_z(B × C, ap(ap(g, pr2(z)), pr1(z))), B, C), y), B, A)                   by iff_mp ^ ^^
+      m2. Map(ap(g, y), B, A)                                 by mp c gy
+      x ∈ B ⇒ ap(ap(cur(fn_z(B × C, ap(ap(g, pr2(z)), pr1(z))), B, C), y), x) = ap(ap(g, y), x) by assume b {
+        b1. ap(ap(cur(fn_z(B × C, ap(ap(g, pr2(z)), pr1(z))), B, C), y), x) = ap(fn_z(B × C, ap(ap(g, pr2(z)), pr1(z))), Ͻ(x, y))  by ap_cur b c
+        Ͻ(x, y) ∈ B × C ⇔ (x ∈ B ∧ y ∈ C)                     by pair_mem_prod
+        Ͻ(x, y) ∈ B × C                                       by taut b c ^
+        b2. ap(fn_z(B × C, ap(ap(g, pr2(z)), pr1(z))), Ͻ(x, y)) = ap(ap(g, pr2(Ͻ(x, y))), pr1(Ͻ(x, y)))   by ap_fn ^
+        pr2(Ͻ(x, y)) = y                                      by pr2_pair
+        ap(g, pr2(Ͻ(x, y))) = ap(g, y)                        by cong ^
+        pr1(Ͻ(x, y)) = x                                      by pr1_pair
+        b3. ap(ap(g, pr2(Ͻ(x, y))), pr1(Ͻ(x, y))) = ap(ap(g, y), x)   by cong2 6 7
+        ap(ap(cur(fn_z(B × C, ap(ap(g, pr2(z)), pr1(z))), B, C), y), x) = ap(ap(g, y), x)       by chain b1 b2 b3
+      }
+      (∀x)(x ∈ B ⇒ ap(ap(cur(fn_z(B × C, ap(ap(g, pr2(z)), pr1(z))), B, C), y), x) = ap(ap(g, y), x))   by gen ^ with x
+      ap(cur(fn_z(B × C, ap(ap(g, pr2(z)), pr1(z))), B, C), y) = ap(g, y)                       by map_ext m1 m2 ^
+    }
+    (∀y)(y ∈ C ⇒ ap(cur(fn_z(B × C, ap(ap(g, pr2(z)), pr1(z))), B, C), y) = ap(g, y))   by gen ^ with y
+    ce. cur(fn_z(B × C, ap(ap(g, pr2(z)), pr1(z))), B, C) = g by map_ext mcF mg ^
+    fn_z(B × C, ap(ap(g, pr2(z)), pr1(z))) ∈ Maps(B × C, A) ⇔ Map(fn_z(B × C, ap(ap(g, pr2(z)), pr1(z))), B × C, A)   by mem_maps
+    fm. fn_z(B × C, ap(ap(g, pr2(z)), pr1(z))) ∈ Maps(B × C, A)   by iff_mpr ^ mF
+    ap(fn_f(Maps(B × C, A), cur(f, B, C)), fn_z(B × C, ap(ap(g, pr2(z)), pr1(z)))) = cur(fn_z(B × C, ap(ap(g, pr2(z)), pr1(z))), B, C)   by ap_fn fm
+    g = ap(fn_f(Maps(B × C, A), cur(f, B, C)), fn_z(B × C, ap(ap(g, pr2(z)), pr1(z))))   by chain ce ^
+    fn_z(B × C, ap(ap(g, pr2(z)), pr1(z))) ∈ Maps(B × C, A) ∧ g = ap(fn_f(Maps(B × C, A), cur(f, B, C)), fn_z(B × C, ap(ap(g, pr2(z)), pr1(z))))   by C20 fm ^
+    (∃f)(f ∈ Maps(B × C, A) ∧ g = ap(fn_f(Maps(B × C, A), cur(f, B, C)), f))   by exists_intro ^
+  }
+  (∀g)(g ∈ Maps(C, Maps(B, A)) ⇒ (∃f)(f ∈ Maps(B × C, A) ∧ g = ap(fn_f(Maps(B × C, A), cur(f, B, C)), f)))   by gen ^ with g
+  Surj(fn_f(Maps(B × C, A), cur(f, B, C)), Maps(B × C, A), Maps(C, Maps(B, A))) ⇔ (∀g)(g ∈ Maps(C, Maps(B, A)) ⇒ (∃f)(f ∈ Maps(B × C, A) ∧ g = ap(fn_f(Maps(B × C, A), cur(f, B, C)), f)))   by surj_iff mc
+  sur. Surj(fn_f(Maps(B × C, A), cur(f, B, C)), Maps(B × C, A), Maps(C, Maps(B, A)))   by iff_mpr ^ ^^
+  _                                                           by taut mc inj sur
+}
+
+-- n° 3, определение 1 (стр. 114): произведение семейства.
+theorem prodfam_coll {I : term} {X : term 1} : Coll_F((Map(F, I, ⋃_i(I, X(i))) ∧ (∀i)(i ∈ I ⇒ ap(F, i) ∈ X(i))) ∧ F ∈ 𝔓(I × ⋃_i(I, X(i)))) {
+  _                                                           by C51 with P(F) := Map(F, I, ⋃_i(I, X(i))) ∧ (∀i)(i ∈ I ⇒ ap(F, i) ∈ X(i)); A := 𝔓(I × ⋃_i(I, X(i)))
+}
+
+theorem mem_prodfam {T I : term} {X : term 1} : T ∈ ∏_i(I, X(i)) ⇔ (Map(T, I, ⋃_i(I, X(i))) ∧ (∀i)(i ∈ I ⇒ ap(T, i) ∈ X(i))) {
+  Coll_F((Map(F, I, ⋃_i(I, X(i))) ∧ (∀i)(i ∈ I ⇒ ap(F, i) ∈ X(i))) ∧ F ∈ 𝔓(I × ⋃_i(I, X(i))))   by prodfam_coll
+  a. T ∈ ∏_i(I, X(i)) ⇔ ((Map(T, I, ⋃_i(I, X(i))) ∧ (∀i)(i ∈ I ⇒ ap(T, i) ∈ X(i))) ∧ T ∈ 𝔓(I × ⋃_i(I, X(i))))   by mem_E ^
+  Map(T, I, ⋃_i(I, X(i))) ⇒ T ∈ 𝔓(I × ⋃_i(I, X(i))) by assume m {
+    T ⊂ I × ⋃_i(I, X(i))                                      by map_sub_prod m
+    T ∈ 𝔓(I × ⋃_i(I, X(i))) ⇔ T ⊂ I × ⋃_i(I, X(i))            by mem_P
+    T ∈ 𝔓(I × ⋃_i(I, X(i)))                                   by iff_mpr ^ ^^
+  }
+  _                                                           by taut a ^
+}
+
+-- Чтобы проверить F ∈ ∏ X_ι, достаточно: F отображение I куда-нибудь и F(ι) ∈ X_ι.
+theorem prodfam_intro {F I B : term} {X : term 1} (hm : Map(F, I, B)) (h : (∀i)(i ∈ I ⇒ ap(F, i) ∈ X(i))) : F ∈ ∏_i(I, X(i)) {
+  i ∈ I ⇒ ap(F, i) ∈ ⋃_i(I, X(i)) by assume m {
+    i ∈ I ⇒ ap(F, i) ∈ X(i)                                   by inst h
+    ap(F, i) ∈ X(i)                                           by mp m ^
+    X(i) ⊂ ⋃_i(I, X(i))                                       by sub_union m
+    ap(F, i) ∈ X(i) ⇒ ap(F, i) ∈ ⋃_i(I, X(i))                 by inst ^
+    ap(F, i) ∈ ⋃_i(I, X(i))                                   by mp 2 ^
+  }
+  (∀i)(i ∈ I ⇒ ap(F, i) ∈ ⋃_i(I, X(i)))                       by gen ^ with i
+  Map(F, I, ⋃_i(I, X(i))) ⇔ (∀i)(i ∈ I ⇒ ap(F, i) ∈ ⋃_i(I, X(i)))   by map_into_iff hm
+  Map(F, I, ⋃_i(I, X(i)))                                     by iff_mpr ^ ^^
+  F ∈ ∏_i(I, X(i)) ⇔ (Map(F, I, ⋃_i(I, X(i))) ∧ (∀i)(i ∈ I ⇒ ap(F, i) ∈ X(i)))   by mem_prodfam
+  _                                                           by taut ^^ h ^
+}
+
+theorem prodfam_map {F I : term} {X : term 1} (h : F ∈ ∏_i(I, X(i))) : Map(F, I, ⋃_i(I, X(i))) {
+  F ∈ ∏_i(I, X(i)) ⇔ (Map(F, I, ⋃_i(I, X(i))) ∧ (∀i)(i ∈ I ⇒ ap(F, i) ∈ X(i)))   by mem_prodfam
+  _                                                           by taut h ^
+}
+
+theorem prodfam_ap {F I T : term} {X : term 1} (h : F ∈ ∏_i(I, X(i))) (ht : T ∈ I) : ap(F, T) ∈ X(T) {
+  F ∈ ∏_i(I, X(i)) ⇔ (Map(F, I, ⋃_i(I, X(i))) ∧ (∀i)(i ∈ I ⇒ ap(F, i) ∈ X(i)))   by mem_prodfam
+  (∀i)(i ∈ I ⇒ ap(F, i) ∈ X(i))                               by taut h ^
+  T ∈ I ⇒ ap(F, T) ∈ X(T)                                     by inst ^
+  _                                                           by mp ht ^
+}
+
+-- Отображение с пустой областью определения есть ∅.
+theorem proj1_empty : proj1(∅) = ∅ {
+  x ∈ proj1(∅) ⇔ (∃y)(Ͻ(x, y) ∈ ∅)                            by mem_proj1
+  Ͻ(x, y) ∉ ∅                                                 by not_mem_empty
+  (∀y)(Ͻ(x, y) ∉ ∅)                                           by gen ^ with y
+  ¬(∃y)(Ͻ(x, y) ∈ ∅) ⇔ (∀y)¬(Ͻ(x, y) ∈ ∅)                     by C29
+  x ∉ proj1(∅)                                                by taut 1 3 4
+  (∀x)(x ∉ proj1(∅))                                          by gen ^ with x
+  (∀x)(x ∉ proj1(∅)) ⇔ proj1(∅) = ∅                           by empty_iff
+  _                                                           by iff_mp ^ ^^
+}
+
+theorem map_empty_dom {F B : term} : Map(F, ∅, B) ⇔ F = ∅ {
+  Map(F, ∅, B) ⇒ F = ∅ by assume m {
+    z ∈ F ⇒ z ∈ ∅ by assume p {
+      Graph(F)                                                by taut m
+      z ∈ F ⇒ IsPair(z)                                       by inst ^
+      IsPair(z)                                               by mp p ^
+      ze. z = Ͻ(pr1(z), pr2(z))                               by pair_eta ^
+      z ∈ F ⇔ Ͻ(pr1(z), pr2(z)) ∈ F                           by rcong ze
+      Ͻ(pr1(z), pr2(z)) ∈ F                                   by taut p ^
+      pr1(z) ∈ proj1(F) ∧ pr2(z) ∈ proj2(F)                   by pair_proj ^
+      proj1(F) = ∅                                            by taut m
+      pr1(z) ∈ proj1(F) ⇔ pr1(z) ∈ ∅                          by eq_mem ^
+      pr1(z) ∉ ∅                                              by not_mem_empty
+      z ∈ ∅                                                   by taut 7 9 10
+    }
+    F ⊂ ∅                                                     by gen ^ with z
+    F ⊂ ∅ ⇔ F = ∅                                             by sub_empty
+    F = ∅                                                     by iff_mp ^ ^^
+  }
+  F = ∅ ⇒ Map(F, ∅, B) by assume e {
+    fg. FunGraph(∅)                                           by empty_fungraph
+    p1. proj1(∅) = ∅                                          by proj1_empty
+    a. y ∈ proj2(∅) ⇔ (∃x)(Ͻ(x, y) ∈ ∅)                       by mem_proj2
+    Ͻ(x, y) ∉ ∅                                               by not_mem_empty
+    b. (∀x)(Ͻ(x, y) ∉ ∅)                                      by gen ^ with x
+    c. ¬(∃x)(Ͻ(x, y) ∈ ∅) ⇔ (∀x)¬(Ͻ(x, y) ∈ ∅)                 by C29
+    y ∈ proj2(∅) ⇒ y ∈ B                                      by taut a b c
+    p2. proj2(∅) ⊂ B                                          by gen ^ with y
+    Map(∅, ∅, B)                                              by taut fg p1 p2
+    Map(F, ∅, B) ⇔ Map(∅, ∅, B)                               by rcong e
+    Map(F, ∅, B)                                              by iff_mpr ^ ^^
+  }
+  _                                                           by iff_intro 1 2
+}
+
+-- Стр. 115: при I = ∅ произведение есть {∅}.
+theorem prod_empty_index {X : term 1} : ∏_i(∅, X(i)) = set1(∅) {
+  a. F ∈ ∏_i(∅, X(i)) ⇔ (Map(F, ∅, ⋃_i(∅, X(i))) ∧ (∀i)(i ∈ ∅ ⇒ ap(F, i) ∈ X(i)))   by mem_prodfam
+  b. Map(F, ∅, ⋃_i(∅, X(i))) ⇔ F = ∅                          by map_empty_dom
+  c. (∀i)(i ∈ ∅ ⇒ ap(F, i) ∈ X(i))                            by forall_empty
+  d. F ∈ set1(∅) ⇔ F = ∅                                      by mem_set1
+  F ∈ ∏_i(∅, X(i)) ⇔ F ∈ set1(∅)                              by taut a b c d
+  (∀F)(F ∈ ∏_i(∅, X(i)) ⇔ F ∈ set1(∅))                        by gen ^ with F
+  _                                                           by ext_iff ^
+}
+
+-- Стр. 115: если все X_ι = E, то ∏ X_ι = E^I; если все X_ι ⊂ E, то ∏ X_ι ⊂ E^I.
+theorem prod_sub_maps {I E : term} {X : term 1} (h : (∀i)(i ∈ I ⇒ X(i) ⊂ E)) : ∏_i(I, X(i)) ⊂ Maps(I, E) {
+  F ∈ ∏_i(I, X(i)) ⇒ F ∈ Maps(I, E) by assume m {
+    mf. Map(F, I, ⋃_i(I, X(i)))                               by prodfam_map m
+    i ∈ I ⇒ ap(F, i) ∈ E by assume a {
+      ap(F, i) ∈ X(i)                                         by prodfam_ap m a
+      i ∈ I ⇒ X(i) ⊂ E                                        by inst h
+      X(i) ⊂ E                                                by mp a ^
+      ap(F, i) ∈ X(i) ⇒ ap(F, i) ∈ E                          by inst ^
+      ap(F, i) ∈ E                                            by mp 1 ^
+    }
+    (∀i)(i ∈ I ⇒ ap(F, i) ∈ E)                                by gen ^ with i
+    Map(F, I, E) ⇔ (∀i)(i ∈ I ⇒ ap(F, i) ∈ E)                 by map_into_iff mf
+    Map(F, I, E)                                              by iff_mpr ^ ^^
+    F ∈ Maps(I, E) ⇔ Map(F, I, E)                             by mem_maps
+    F ∈ Maps(I, E)                                            by iff_mpr ^ ^^
+  }
+  _                                                           by gen ^ with F
+}
+
+theorem prod_const {I E : term} {X : term 1} (h : (∀i)(i ∈ I ⇒ X(i) = E)) : ∏_i(I, X(i)) = Maps(I, E) {
+  i ∈ I ⇒ X(i) ⊂ E by assume a {
+    i ∈ I ⇒ X(i) = E                                          by inst h
+    X(i) = E                                                  by mp a ^
+    X(i) ⊂ E                                                  by eq_subset ^
+  }
+  (∀i)(i ∈ I ⇒ X(i) ⊂ E)                                      by gen ^ with i
+  l. ∏_i(I, X(i)) ⊂ Maps(I, E)                                by prod_sub_maps ^
+  F ∈ Maps(I, E) ⇒ F ∈ ∏_i(I, X(i)) by assume m {
+    F ∈ Maps(I, E) ⇔ Map(F, I, E)                             by mem_maps
+    mf. Map(F, I, E)                                          by iff_mp ^ m
+    i ∈ I ⇒ ap(F, i) ∈ X(i) by assume a {
+      ap(F, i) ∈ E                                            by ap_mem mf a
+      i ∈ I ⇒ X(i) = E                                        by inst h
+      X(i) = E                                                by mp a ^
+      ap(F, i) ∈ X(i) ⇔ ap(F, i) ∈ E                          by eq_mem ^
+      ap(F, i) ∈ X(i)                                         by taut 1 ^
+    }
+    (∀i)(i ∈ I ⇒ ap(F, i) ∈ X(i))                             by gen ^ with i
+    F ∈ ∏_i(I, X(i))                                          by prodfam_intro mf ^
+  }
+  r. Maps(I, E) ⊂ ∏_i(I, X(i))                                by gen ^ with F
+  _                                                           by ext l r
+}
+
+-- Стр. 115: при I = {α} отображение F → F(α) есть биекция ∏ X_ι на X_α.
+theorem prod_singleton_bij {A : term} {X : term 1} : Bij(fn_F(∏_i(set1(A), X(i)), ap(F, A)), ∏_i(set1(A), X(i)), X(A)) {
+  A ∈ set1(A) ⇔ A = A                                         by mem_set1
+  A = A                                                       by T1
+  aa. A ∈ set1(A)                                             by taut 1 2
+  F ∈ ∏_i(set1(A), X(i)) ⇒ ap(F, A) ∈ X(A) by assume m {
+    ap(F, A) ∈ X(A)                                           by prodfam_ap m aa
+  }
+  (∀F)(F ∈ ∏_i(set1(A), X(i)) ⇒ ap(F, A) ∈ X(A))                             by gen ^ with F
+  mp. Map(fn_F(∏_i(set1(A), X(i)), ap(F, A)), ∏_i(set1(A), X(i)), X(A))                                   by fn_map_into ^
+  (F ∈ ∏_i(set1(A), X(i)) ∧ (G ∈ ∏_i(set1(A), X(i)) ∧ ap(fn_F(∏_i(set1(A), X(i)), ap(F, A)), F) = ap(fn_F(∏_i(set1(A), X(i)), ap(F, A)), G))) ⇒ F = G by assume m {
+    fp. F ∈ ∏_i(set1(A), X(i))                                               by taut m
+    p. ap(fn_F(∏_i(set1(A), X(i)), ap(F, A)), F) = ap(F, A)                                by ap_fn fp
+    gp. G ∈ ∏_i(set1(A), X(i))                                               by taut m
+    q. ap(fn_F(∏_i(set1(A), X(i)), ap(F, A)), G) = ap(G, A)                                by ap_fn gp
+    r. ap(fn_F(∏_i(set1(A), X(i)), ap(F, A)), F) = ap(fn_F(∏_i(set1(A), X(i)), ap(F, A)), G)                            by taut m
+    e. ap(F, A) = ap(G, A)                                    by chain p r q
+    mf. Map(F, set1(A), ⋃_i(set1(A), X(i)))                   by prodfam_map fp
+    mg. Map(G, set1(A), ⋃_i(set1(A), X(i)))                   by prodfam_map gp
+    i ∈ set1(A) ⇒ ap(F, i) = ap(G, i) by assume a {
+      i ∈ set1(A) ⇔ i = A                                     by mem_set1
+      ia. i = A                                               by iff_mp ^ a
+      c1. ap(F, i) = ap(F, A)                                 by cong ia
+      c2. ap(G, i) = ap(G, A)                                 by cong ia
+      ap(F, i) = ap(G, i)                                     by chain c1 e c2
+    }
+    (∀i)(i ∈ set1(A) ⇒ ap(F, i) = ap(G, i))                   by gen ^ with i
+    F = G                                                     by map_ext mf mg ^
+  }
+  (∀G)((F ∈ ∏_i(set1(A), X(i)) ∧ (G ∈ ∏_i(set1(A), X(i)) ∧ ap(fn_F(∏_i(set1(A), X(i)), ap(F, A)), F) = ap(fn_F(∏_i(set1(A), X(i)), ap(F, A)), G))) ⇒ F = G)       by gen ^ with G
+  inj. (∀F)(∀G)((F ∈ ∏_i(set1(A), X(i)) ∧ (G ∈ ∏_i(set1(A), X(i)) ∧ ap(fn_F(∏_i(set1(A), X(i)), ap(F, A)), F) = ap(fn_F(∏_i(set1(A), X(i)), ap(F, A)), G))) ⇒ F = G)   by gen ^ with F
+  x ∈ X(A) ⇒ (∃F)(F ∈ ∏_i(set1(A), X(i)) ∧ x = ap(fn_F(∏_i(set1(A), X(i)), ap(F, A)), F)) by assume m {
+    xi. i ∈ set1(A) ⇒ x ∈ X(i) by assume a {
+      i ∈ set1(A) ⇔ i = A                                     by mem_set1
+      i = A                                                   by iff_mp ^ a
+      X(i) = X(A)                                             by cong ^
+      x ∈ X(i) ⇔ x ∈ X(A)                                     by eq_mem ^
+      x ∈ X(i)                                                by taut m ^
+    }
+    i ∈ set1(A) ⇒ x ∈ X(A)                                    by taut m
+    (∀i)(i ∈ set1(A) ⇒ x ∈ X(A))                              by gen ^ with i
+    mc. Map(fn_i(set1(A), x), set1(A), X(A))                  by fn_map_into ^
+    i ∈ set1(A) ⇒ ap(fn_i(set1(A), x), i) ∈ X(i) by assume a {
+      ap(fn_i(set1(A), x), i) = x                             by ap_fn a
+      ap(fn_i(set1(A), x), i) ∈ X(i) ⇔ x ∈ X(i)               by rcong ^
+      x ∈ X(i)                                                by mp a xi
+      ap(fn_i(set1(A), x), i) ∈ X(i)                          by taut 2 3
+    }
+    (∀i)(i ∈ set1(A) ⇒ ap(fn_i(set1(A), x), i) ∈ X(i))        by gen ^ with i
+    fm. fn_i(set1(A), x) ∈ ∏_i(set1(A), X(i))                                by prodfam_intro mc ^
+    c1. ap(fn_F(∏_i(set1(A), X(i)), ap(F, A)), fn_i(set1(A), x)) = ap(fn_i(set1(A), x), A) by ap_fn fm
+    c2. ap(fn_i(set1(A), x), A) = x                           by ap_fn aa
+    x = ap(fn_F(∏_i(set1(A), X(i)), ap(F, A)), fn_i(set1(A), x))                           by chain c2 c1
+    fn_i(set1(A), x) ∈ ∏_i(set1(A), X(i)) ∧ x = ap(fn_F(∏_i(set1(A), X(i)), ap(F, A)), fn_i(set1(A), x))  by C20 fm ^
+    (∃F)(F ∈ ∏_i(set1(A), X(i)) ∧ x = ap(fn_F(∏_i(set1(A), X(i)), ap(F, A)), F))                          by exists_intro ^
+  }
+  (∀x)(x ∈ X(A) ⇒ (∃F)(F ∈ ∏_i(set1(A), X(i)) ∧ x = ap(fn_F(∏_i(set1(A), X(i)), ap(F, A)), F)))           by gen ^ with x
+  Surj(fn_F(∏_i(set1(A), X(i)), ap(F, A)), ∏_i(set1(A), X(i)), X(A)) ⇔ (∀x)(x ∈ X(A) ⇒ (∃F)(F ∈ ∏_i(set1(A), X(i)) ∧ x = ap(fn_F(∏_i(set1(A), X(i)), ap(F, A)), F)))   by surj_iff mp
+  sur. Surj(fn_F(∏_i(set1(A), X(i)), ap(F, A)), ∏_i(set1(A), X(i)), X(A))                                 by iff_mpr ^ ^^
+  _                                                           by taut mp inj sur
+}
+
+-- Предложение 4 (стр. 116): если u биекция K на I, то F → F ∘ u есть биекция
+-- ∏_{ι∈I} X_ι на ∏_{κ∈K} X_{u(κ)}.
+theorem prod_reindex_bij {U K I : term} {X : term 1} (hb : Bij(U, K, I)) : Bij(fn_F(∏_i(I, X(i)), F ∘ U), ∏_i(I, X(i)), ∏_k(K, X(ap(U, k)))) {
+  mu. Map(U, K, I)                                            by taut hb
+  su. Surj(U, K, I)                                           by taut hb
+  F ∈ ∏_i(I, X(i)) ⇒ F ∘ U ∈ ∏_k(K, X(ap(U, k))) by assume m {
+    mf. Map(F, I, ⋃_i(I, X(i)))                               by prodfam_map m
+    mfu. Map(F ∘ U, K, ⋃_i(I, X(i)))                          by comp_map mu mf
+    k ∈ K ⇒ ap(F ∘ U, k) ∈ X(ap(U, k)) by assume a {
+      uk. ap(U, k) ∈ I                                        by ap_mem mu a
+      ap(F, ap(U, k)) ∈ X(ap(U, k))                           by prodfam_ap m uk
+      ap(F ∘ U, k) = ap(F, ap(U, k))                          by ap_comp mu mf a
+      ap(F ∘ U, k) ∈ X(ap(U, k)) ⇔ ap(F, ap(U, k)) ∈ X(ap(U, k))   by rcong ^
+      ap(F ∘ U, k) ∈ X(ap(U, k))                              by taut 2 ^
+    }
+    (∀k)(k ∈ K ⇒ ap(F ∘ U, k) ∈ X(ap(U, k)))                  by gen ^ with k
+    F ∘ U ∈ ∏_k(K, X(ap(U, k)))                                               by prodfam_intro mfu ^
+  }
+  (∀F)(F ∈ ∏_i(I, X(i)) ⇒ F ∘ U ∈ ∏_k(K, X(ap(U, k))))                                 by gen ^ with F
+  mp. Map(fn_F(∏_i(I, X(i)), F ∘ U), ∏_i(I, X(i)), ∏_k(K, X(ap(U, k))))                                     by fn_map_into ^
+  (F ∈ ∏_i(I, X(i)) ∧ (G ∈ ∏_i(I, X(i)) ∧ ap(fn_F(∏_i(I, X(i)), F ∘ U), F) = ap(fn_F(∏_i(I, X(i)), F ∘ U), G))) ⇒ F = G by assume m {
+    fp. F ∈ ∏_i(I, X(i))                                               by taut m
+    gp. G ∈ ∏_i(I, X(i))                                               by taut m
+    p. ap(fn_F(∏_i(I, X(i)), F ∘ U), F) = F ∘ U                                    by ap_fn fp
+    q. ap(fn_F(∏_i(I, X(i)), F ∘ U), G) = G ∘ U                                    by ap_fn gp
+    r. ap(fn_F(∏_i(I, X(i)), F ∘ U), F) = ap(fn_F(∏_i(I, X(i)), F ∘ U), G)                              by taut m
+    e. F ∘ U = G ∘ U                                          by chain p r q
+    mf. Map(F, I, ⋃_i(I, X(i)))                               by prodfam_map fp
+    mg. Map(G, I, ⋃_i(I, X(i)))                               by prodfam_map gp
+    F = G                                                     by factor_surj_uniq su mf mg e
+  }
+  (∀G)((F ∈ ∏_i(I, X(i)) ∧ (G ∈ ∏_i(I, X(i)) ∧ ap(fn_F(∏_i(I, X(i)), F ∘ U), F) = ap(fn_F(∏_i(I, X(i)), F ∘ U), G))) ⇒ F = G)       by gen ^ with G
+  inj. (∀F)(∀G)((F ∈ ∏_i(I, X(i)) ∧ (G ∈ ∏_i(I, X(i)) ∧ ap(fn_F(∏_i(I, X(i)), F ∘ U), F) = ap(fn_F(∏_i(I, X(i)), F ∘ U), G))) ⇒ F = G)   by gen ^ with F
+  Map(inv(U), I, K) ⇔ Bij(U, K, I)                            by inv_map_iff mu
+  mi. Map(inv(U), I, K)                                       by iff_mpr ^ hb
+  H ∈ ∏_k(K, X(ap(U, k))) ⇒ (∃F)(F ∈ ∏_i(I, X(i)) ∧ H = ap(fn_F(∏_i(I, X(i)), F ∘ U), F)) by assume m {
+    mh. Map(H, K, ⋃_k(K, X(ap(U, k))))                        by prodfam_map m
+    mf. Map(H ∘ inv(U), I, ⋃_k(K, X(ap(U, k))))               by comp_map mi mh
+    i ∈ I ⇒ ap(H ∘ inv(U), i) ∈ X(i) by assume a {
+      ik. ap(inv(U), i) ∈ K                                   by ap_mem mi a
+      ap(H, ap(inv(U), i)) ∈ X(ap(U, ap(inv(U), i)))          by prodfam_ap m ik
+      ap(U, ap(inv(U), i)) = i                                by ap_ap_inv hb a
+      X(ap(U, ap(inv(U), i))) = X(i)                          by cong ^
+      ap(H, ap(inv(U), i)) ∈ X(ap(U, ap(inv(U), i))) ⇔ ap(H, ap(inv(U), i)) ∈ X(i)   by eq_mem ^
+      ap(H ∘ inv(U), i) = ap(H, ap(inv(U), i))                by ap_comp mi mh a
+      ap(H ∘ inv(U), i) ∈ X(i) ⇔ ap(H, ap(inv(U), i)) ∈ X(i)  by rcong ^
+      ap(H ∘ inv(U), i) ∈ X(i)                                by taut 2 5 7
+    }
+    (∀i)(i ∈ I ⇒ ap(H ∘ inv(U), i) ∈ X(i))                    by gen ^ with i
+    fp. H ∘ inv(U) ∈ ∏_i(I, X(i))                                      by prodfam_intro mf ^
+    mfu. Map((H ∘ inv(U)) ∘ U, K, ⋃_k(K, X(ap(U, k))))        by comp_map mu mf
+    k ∈ K ⇒ ap(H, k) = ap((H ∘ inv(U)) ∘ U, k) by assume a {
+      uk. ap(U, k) ∈ I                                        by ap_mem mu a
+      c1. ap((H ∘ inv(U)) ∘ U, k) = ap(H ∘ inv(U), ap(U, k))  by ap_comp mu mf a
+      c2. ap(H ∘ inv(U), ap(U, k)) = ap(H, ap(inv(U), ap(U, k)))   by ap_comp mi mh uk
+      ap(inv(U), ap(U, k)) = k                                by ap_inv_ap hb a
+      c3. ap(H, ap(inv(U), ap(U, k))) = ap(H, k)              by cong ^
+      ap(H, k) = ap((H ∘ inv(U)) ∘ U, k)                      by chain c3 c2 c1
+    }
+    (∀k)(k ∈ K ⇒ ap(H, k) = ap((H ∘ inv(U)) ∘ U, k))          by gen ^ with k
+    he. H = (H ∘ inv(U)) ∘ U                                  by map_ext mh mfu ^
+    ap(fn_F(∏_i(I, X(i)), F ∘ U), H ∘ inv(U)) = (H ∘ inv(U)) ∘ U                   by ap_fn fp
+    H = ap(fn_F(∏_i(I, X(i)), F ∘ U), H ∘ inv(U))                                  by chain he ^
+    H ∘ inv(U) ∈ ∏_i(I, X(i)) ∧ H = ap(fn_F(∏_i(I, X(i)), F ∘ U), H ∘ inv(U))               by C20 fp ^
+    (∃F)(F ∈ ∏_i(I, X(i)) ∧ H = ap(fn_F(∏_i(I, X(i)), F ∘ U), F))                           by exists_intro ^
+  }
+  (∀H)(H ∈ ∏_k(K, X(ap(U, k))) ⇒ (∃F)(F ∈ ∏_i(I, X(i)) ∧ H = ap(fn_F(∏_i(I, X(i)), F ∘ U), F)))             by gen ^ with H
+  Surj(fn_F(∏_i(I, X(i)), F ∘ U), ∏_i(I, X(i)), ∏_k(K, X(ap(U, k)))) ⇔ (∀H)(H ∈ ∏_k(K, X(ap(U, k))) ⇒ (∃F)(F ∈ ∏_i(I, X(i)) ∧ H = ap(fn_F(∏_i(I, X(i)), F ∘ U), F)))   by surj_iff mp
+  sur. Surj(fn_F(∏_i(I, X(i)), F ∘ U), ∏_i(I, X(i)), ∏_k(K, X(ap(U, k))))                                   by iff_mpr ^ ^^
+  _                                                           by taut mp inj sur
+}
+
+-- n° 4. Частичное произведение (стр. 116): pr_J(F) = F ∘ Δ_J есть сужение F на J.
+theorem restr_prodfam {F I J T : term} {X : term 1} (hf : F ∈ ∏_i(I, X(i))) (hj : J ⊂ I) : F ∘ Δ(J) ∈ ∏_i(J, X(i)) ∧ (T ∈ J ⇒ ap(F ∘ Δ(J), T) = ap(F, T)) {
+  mf. Map(F, I, ⋃_i(I, X(i)))                                 by prodfam_map hf
+  Map(Δ(J), J, J)                                             by diag_map
+  md. Map(Δ(J), J, I)                                         by map_target ^ hj
+  mc. Map(F ∘ Δ(J), J, ⋃_i(I, X(i)))                          by comp_map md mf
+  val. j ∈ J ⇒ ap(F ∘ Δ(J), j) = ap(F, j) by assume a {
+    c1. ap(F ∘ Δ(J), j) = ap(F, ap(Δ(J), j))                  by ap_comp md mf a
+    ap(Δ(J), j) = j                                           by ap_diag a
+    c2. ap(F, ap(Δ(J), j)) = ap(F, j)                         by cong ^
+    ap(F ∘ Δ(J), j) = ap(F, j)                                by chain c1 c2
+  }
+  j ∈ J ⇒ ap(F ∘ Δ(J), j) ∈ X(j) by assume a {
+    j ∈ J ⇒ j ∈ I                                             by inst hj
+    j ∈ I                                                     by mp a ^
+    ap(F, j) ∈ X(j)                                           by prodfam_ap hf ^
+    ap(F ∘ Δ(J), j) = ap(F, j)                                by mp a val
+    ap(F ∘ Δ(J), j) ∈ X(j) ⇔ ap(F, j) ∈ X(j)                  by rcong ^
+    ap(F ∘ Δ(J), j) ∈ X(j)                                    by taut 3 ^
+  }
+  (∀j)(j ∈ J ⇒ ap(F ∘ Δ(J), j) ∈ X(j))                        by gen ^ with j
+  pp. F ∘ Δ(J) ∈ ∏_i(J, X(i))                                 by prodfam_intro mc ^
+  (∀j)(j ∈ J ⇒ ap(F ∘ Δ(J), j) = ap(F, j))                    by gen val with j
+  T ∈ J ⇒ ap(F ∘ Δ(J), T) = ap(F, T)                          by inst ^
+  _                                                           by C20 pp ^
+}
+
+-- Предложение 6 (стр. 117): если все X_ι ≠ ∅, то всякая g ∈ ∏_{ι∈J} X_ι продолжается до
+-- f ∈ ∏_{ι∈I} X_ι: f(ι) = τy(y ∈ X_ι и (ι ∈ J ⇒ y = g(ι))).
+theorem prod_extend {G I J : term} {X : term 1} (hg : G ∈ ∏_i(J, X(i))) (hj : J ⊂ I) (hne : (∀i)(i ∈ I ⇒ X(i) ≠ ∅)) : (∃F)(F ∈ ∏_i(I, X(i)) ∧ F ∘ Δ(J) = G) {
+  -- для каждого ι ∈ I подходящий y есть
+  ex. i ∈ I ⇒ (∃y)(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i))) by assume a {
+    i ∈ J ⇒ (∃y)(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i))) by assume b {
+      ap(G, i) ∈ X(i)                                         by prodfam_ap hg b
+      ap(G, i) = ap(G, i)                                     by T1
+      ap(G, i) ∈ X(i) ∧ (i ∈ J ⇒ ap(G, i) = ap(G, i))         by taut 1 2
+      (∃y)(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))                 by exists_intro ^
+    }
+    i ∉ J ⇒ (∃y)(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i))) by assume b {
+      i ∈ I ⇒ X(i) ≠ ∅                                        by inst hne
+      X(i) ≠ ∅                                                by mp a ^
+      X(i) ≠ ∅ ⇔ (∃x)(x ∈ X(i))                               by nonempty
+      e. (∃y)(y ∈ X(i))                                       by iff_mp ^ ^^
+      y ∈ X(i) ⇒ (y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))          by taut b
+      (∀y)(y ∈ X(i) ⇒ (y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i))))    by gen ^ with y
+      (∃y)(y ∈ X(i)) ⇒ (∃y)(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))   by C31_exists ^
+      (∃y)(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))                 by mp e ^
+    }
+    (∃y)(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))                   by taut 1 2
+  }
+  exa. (∀i)(i ∈ I ⇒ (∃y)(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i))))  by gen ex with i
+  -- f(ι) лежит в X_ι
+  i ∈ I ⇒ τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i))) ∈ X(i) by assume a {
+    (∃y)(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))                   by mp a ex
+    τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i))) ∈ X(i)              by taut ^
+  }
+  vals. (∀i)(i ∈ I ⇒ τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i))) ∈ X(i))   by gen ^ with i
+  i ∈ I ⇒ τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i))) ∈ ⋃_i(I, X(i)) by assume a {
+    (∃y)(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))                   by mp a ex
+    τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i))) ∈ X(i)              by taut ^
+    X(i) ⊂ ⋃_i(I, X(i))                                       by sub_union a
+    τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i))) ∈ X(i) ⇒ τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i))) ∈ ⋃_i(I, X(i))   by inst ^
+    τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i))) ∈ ⋃_i(I, X(i))      by mp 2 ^
+  }
+  (∀i)(i ∈ I ⇒ τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i))) ∈ ⋃_i(I, X(i)))   by gen ^ with i
+  mf. Map(fn_i(I, τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))), I, ⋃_i(I, X(i)))   by fn_map_into ^
+  i ∈ I ⇒ ap(fn_i(I, τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))), i) ∈ X(i) by assume a {
+    ap(fn_i(I, τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))), i) = τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))   by ap_fn a
+    ap(fn_i(I, τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))), i) ∈ X(i) ⇔ τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i))) ∈ X(i)   by rcong ^
+    i ∈ I ⇒ τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i))) ∈ X(i)      by inst vals
+    ap(fn_i(I, τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))), i) ∈ X(i)   by taut a 2 3
+  }
+  (∀i)(i ∈ I ⇒ ap(fn_i(I, τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))), i) ∈ X(i))   by gen ^ with i
+  fp. fn_i(I, τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))) ∈ ∏_i(I, X(i))   by prodfam_intro mf ^
+  -- сужение на J есть g
+  mg. Map(G, J, ⋃_i(J, X(i)))                                 by prodfam_map hg
+  r. fn_i(I, τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))) ∘ Δ(J) ∈ ∏_i(J, X(i)) ∧ (j ∈ J ⇒ ap(fn_i(I, τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))) ∘ Δ(J), j) = ap(fn_i(I, τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))), j))   by restr_prodfam fp hj
+  rp. fn_i(I, τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))) ∘ Δ(J) ∈ ∏_i(J, X(i))   by taut r
+  mr. Map(fn_i(I, τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))) ∘ Δ(J), J, ⋃_i(J, X(i)))   by prodfam_map rp
+  j ∈ J ⇒ ap(fn_i(I, τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))) ∘ Δ(J), j) = ap(G, j) by assume a {
+    c1. ap(fn_i(I, τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))) ∘ Δ(J), j) = ap(fn_i(I, τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))), j)   by taut r a
+    j ∈ J ⇒ j ∈ I                                             by inst hj
+    ji. j ∈ I                                                 by mp a ^
+    c2. ap(fn_i(I, τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))), j) = τy(y ∈ X(j) ∧ (j ∈ J ⇒ y = ap(G, j)))   by ap_fn ji
+    j ∈ I ⇒ (∃y)(y ∈ X(j) ∧ (j ∈ J ⇒ y = ap(G, j)))           by inst exa
+    (∃y)(y ∈ X(j) ∧ (j ∈ J ⇒ y = ap(G, j)))                   by mp ji ^
+    c3. τy(y ∈ X(j) ∧ (j ∈ J ⇒ y = ap(G, j))) = ap(G, j)      by taut a ^
+    ap(fn_i(I, τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))) ∘ Δ(J), j) = ap(G, j)   by chain c1 c2 c3
+  }
+  (∀j)(j ∈ J ⇒ ap(fn_i(I, τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))) ∘ Δ(J), j) = ap(G, j))   by gen ^ with j
+  fn_i(I, τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))) ∘ Δ(J) = G   by map_ext mr mg ^
+  fn_i(I, τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))) ∈ ∏_i(I, X(i)) ∧ fn_i(I, τy(y ∈ X(i) ∧ (i ∈ J ⇒ y = ap(G, i)))) ∘ Δ(J) = G   by C20 fp ^
+  _                                                           by exists_intro ^
+}
+
+-- Предложение 5 (стр. 116): если все X_ι ≠ ∅, то проектирование pr_J есть отображение
+-- ∏_{ι∈I} X_ι на ∏_{ι∈J} X_ι.
+theorem prJ_surj {I J : term} {X : term 1} (hj : J ⊂ I) (hne : (∀i)(i ∈ I ⇒ X(i) ≠ ∅)) : Surj(fn_F(∏_i(I, X(i)), F ∘ Δ(J)), ∏_i(I, X(i)), ∏_i(J, X(i))) {
+  F ∈ ∏_i(I, X(i)) ⇒ F ∘ Δ(J) ∈ ∏_i(J, X(i)) by assume m {
+    F ∘ Δ(J) ∈ ∏_i(J, X(i)) ∧ (j ∈ J ⇒ ap(F ∘ Δ(J), j) = ap(F, j))     by restr_prodfam m hj
+    F ∘ Δ(J) ∈ ∏_i(J, X(i))                                            by taut ^
+  }
+  (∀F)(F ∈ ∏_i(I, X(i)) ⇒ F ∘ Δ(J) ∈ ∏_i(J, X(i)))                               by gen ^ with F
+  mp. Map(fn_F(∏_i(I, X(i)), F ∘ Δ(J)), ∏_i(I, X(i)), ∏_i(J, X(i)))                                      by fn_map_into ^
+  G ∈ ∏_i(J, X(i)) ⇒ (∃F)(F ∈ ∏_i(I, X(i)) ∧ G = ap(fn_F(∏_i(I, X(i)), F ∘ Δ(J)), F)) by assume m {
+    e. (∃F)(F ∈ ∏_i(I, X(i)) ∧ F ∘ Δ(J) = G)                            by prod_extend m hj hne
+    (F ∈ ∏_i(I, X(i)) ∧ F ∘ Δ(J) = G) ⇒ (F ∈ ∏_i(I, X(i)) ∧ G = ap(fn_F(∏_i(I, X(i)), F ∘ Δ(J)), F)) by assume a {
+      fp. F ∈ ∏_i(I, X(i))                                              by taut a
+      p. ap(fn_F(∏_i(I, X(i)), F ∘ Δ(J)), F) = F ∘ Δ(J)                               by ap_fn fp
+      q. F ∘ Δ(J) = G                                         by taut a
+      G = ap(fn_F(∏_i(I, X(i)), F ∘ Δ(J)), F)                                         by chain q p
+      F ∈ ∏_i(I, X(i)) ∧ G = ap(fn_F(∏_i(I, X(i)), F ∘ Δ(J)), F)                                by C20 fp ^
+    }
+    (∀F)((F ∈ ∏_i(I, X(i)) ∧ F ∘ Δ(J) = G) ⇒ (F ∈ ∏_i(I, X(i)) ∧ G = ap(fn_F(∏_i(I, X(i)), F ∘ Δ(J)), F)))   by gen ^ with F
+    (∃F)(F ∈ ∏_i(I, X(i)) ∧ F ∘ Δ(J) = G) ⇒ (∃F)(F ∈ ∏_i(I, X(i)) ∧ G = ap(fn_F(∏_i(I, X(i)), F ∘ Δ(J)), F))   by C31_exists ^
+    (∃F)(F ∈ ∏_i(I, X(i)) ∧ G = ap(fn_F(∏_i(I, X(i)), F ∘ Δ(J)), F))                            by mp e ^
+  }
+  (∀G)(G ∈ ∏_i(J, X(i)) ⇒ (∃F)(F ∈ ∏_i(I, X(i)) ∧ G = ap(fn_F(∏_i(I, X(i)), F ∘ Δ(J)), F)))             by gen ^ with G
+  Surj(fn_F(∏_i(I, X(i)), F ∘ Δ(J)), ∏_i(I, X(i)), ∏_i(J, X(i))) ⇔ (∀G)(G ∈ ∏_i(J, X(i)) ⇒ (∃F)(F ∈ ∏_i(I, X(i)) ∧ G = ap(fn_F(∏_i(I, X(i)), F ∘ Δ(J)), F)))   by surj_iff mp
+  _                                                           by iff_mpr ^ ^^
+}
+
+-- Следствие 1 (стр. 117): если все X_ι ≠ ∅, то pr_α есть отображение ∏ X_ι на X_α.
+theorem pr_index_surj {A I : term} {X : term 1} (ha : A ∈ I) (hne : (∀i)(i ∈ I ⇒ X(i) ≠ ∅)) : Surj(fn_F(∏_i(I, X(i)), ap(F, A)), ∏_i(I, X(i)), X(A)) {
+  F ∈ ∏_i(I, X(i)) ⇒ ap(F, A) ∈ X(A) by assume m {
+    ap(F, A) ∈ X(A)                                           by prodfam_ap m ha
+  }
+  (∀F)(F ∈ ∏_i(I, X(i)) ⇒ ap(F, A) ∈ X(A))                              by gen ^ with F
+  mp. Map(fn_F(∏_i(I, X(i)), ap(F, A)), ∏_i(I, X(i)), X(A))                       by fn_map_into ^
+  A ∈ set1(A) ⇔ A = A                                         by mem_set1
+  A = A                                                       by T1
+  aa. A ∈ set1(A)                                             by taut ^^ ^
+  i ∈ set1(A) ⇒ i ∈ I by assume b {
+    i ∈ set1(A) ⇔ i = A                                       by mem_set1
+    i = A                                                     by iff_mp ^ b
+    i ∈ I ⇔ A ∈ I                                             by rcong ^
+    i ∈ I                                                     by taut ha ^
+  }
+  sa. set1(A) ⊂ I                                             by gen ^ with i
+  x ∈ X(A) ⇒ (∃F)(F ∈ ∏_i(I, X(i)) ∧ x = ap(fn_F(∏_i(I, X(i)), ap(F, A)), F)) by assume m {
+    -- g = (α, x) на {α}, продолжим до F
+    i ∈ set1(A) ⇒ x ∈ X(A)                                    by taut m
+    (∀i)(i ∈ set1(A) ⇒ x ∈ X(A))                              by gen ^ with i
+    mc. Map(fn_i(set1(A), x), set1(A), X(A))                  by fn_map_into ^
+    i ∈ set1(A) ⇒ ap(fn_i(set1(A), x), i) ∈ X(i) by assume b {
+      ap(fn_i(set1(A), x), i) = x                             by ap_fn b
+      i ∈ set1(A) ⇔ i = A                                     by mem_set1
+      i = A                                                   by iff_mp ^ b
+      X(i) = X(A)                                             by cong ^
+      ap(fn_i(set1(A), x), i) ∈ X(i) ⇔ x ∈ X(i)               by rcong 1
+      x ∈ X(i) ⇔ x ∈ X(A)                                     by eq_mem 4
+      ap(fn_i(set1(A), x), i) ∈ X(i)                          by taut m 5 6
+    }
+    (∀i)(i ∈ set1(A) ⇒ ap(fn_i(set1(A), x), i) ∈ X(i))        by gen ^ with i
+    gp. fn_i(set1(A), x) ∈ ∏_i(set1(A), X(i))                 by prodfam_intro mc ^
+    e. (∃F)(F ∈ ∏_i(I, X(i)) ∧ F ∘ Δ(set1(A)) = fn_i(set1(A), x))       by prod_extend gp sa hne
+    (F ∈ ∏_i(I, X(i)) ∧ F ∘ Δ(set1(A)) = fn_i(set1(A), x)) ⇒ (F ∈ ∏_i(I, X(i)) ∧ x = ap(fn_F(∏_i(I, X(i)), ap(F, A)), F)) by assume a {
+      fp. F ∈ ∏_i(I, X(i))                                              by taut a
+      F ∘ Δ(set1(A)) ∈ ∏_i(set1(A), X(i)) ∧ (A ∈ set1(A) ⇒ ap(F ∘ Δ(set1(A)), A) = ap(F, A))   by restr_prodfam fp sa
+      c1. ap(F ∘ Δ(set1(A)), A) = ap(F, A)                    by taut aa ^
+      fe. F ∘ Δ(set1(A)) = fn_i(set1(A), x)                   by taut a
+      c2. ap(F ∘ Δ(set1(A)), A) = ap(fn_i(set1(A), x), A)     by cong fe
+      c3. ap(fn_i(set1(A), x), A) = x                         by ap_fn aa
+      c4. ap(fn_F(∏_i(I, X(i)), ap(F, A)), F) = ap(F, A)                by ap_fn fp
+      x = ap(fn_F(∏_i(I, X(i)), ap(F, A)), F)                           by chain c3 c2 c1 c4
+      F ∈ ∏_i(I, X(i)) ∧ x = ap(fn_F(∏_i(I, X(i)), ap(F, A)), F)                  by C20 fp ^
+    }
+    (∀F)((F ∈ ∏_i(I, X(i)) ∧ F ∘ Δ(set1(A)) = fn_i(set1(A), x)) ⇒ (F ∈ ∏_i(I, X(i)) ∧ x = ap(fn_F(∏_i(I, X(i)), ap(F, A)), F)))   by gen ^ with F
+    (∃F)(F ∈ ∏_i(I, X(i)) ∧ F ∘ Δ(set1(A)) = fn_i(set1(A), x)) ⇒ (∃F)(F ∈ ∏_i(I, X(i)) ∧ x = ap(fn_F(∏_i(I, X(i)), ap(F, A)), F))   by C31_exists ^
+    (∃F)(F ∈ ∏_i(I, X(i)) ∧ x = ap(fn_F(∏_i(I, X(i)), ap(F, A)), F))              by mp e ^
+  }
+  (∀x)(x ∈ X(A) ⇒ (∃F)(F ∈ ∏_i(I, X(i)) ∧ x = ap(fn_F(∏_i(I, X(i)), ap(F, A)), F)))   by gen ^ with x
+  Surj(fn_F(∏_i(I, X(i)), ap(F, A)), ∏_i(I, X(i)), X(A)) ⇔ (∀x)(x ∈ X(A) ⇒ (∃F)(F ∈ ∏_i(I, X(i)) ∧ x = ap(fn_F(∏_i(I, X(i)), ap(F, A)), F)))   by surj_iff mp
+  _                                                           by iff_mpr ^ ^^
+}
+
+-- Следствие 2 (стр. 117): ∏ X_ι = ∅ ⇔ некоторое X_ι пусто.
+theorem prod_empty_iff {I : term} {X : term 1} : ∏_i(I, X(i)) = ∅ ⇔ (∃i)(i ∈ I ∧ X(i) = ∅) {
+  l. (∃i)(i ∈ I ∧ X(i) = ∅) ⇒ ∏_i(I, X(i)) = ∅ by assume e {
+    (i ∈ I ∧ X(i) = ∅) ⇒ ∏_i(I, X(i)) = ∅ by assume a {
+      F ∈ ∏_i(I, X(i)) ⇒ F ∈ ∅ by assume m {
+        i ∈ I                                                 by taut a
+        ap(F, i) ∈ X(i)                                       by prodfam_ap m ^
+        X(i) = ∅                                              by taut a
+        ap(F, i) ∈ X(i) ⇔ ap(F, i) ∈ ∅                        by eq_mem ^
+        ap(F, i) ∉ ∅                                          by not_mem_empty
+        F ∈ ∅                                                 by taut 2 4 5
+      }
+      ∏_i(I, X(i)) ⊂ ∅                                                 by gen ^ with F
+      ∏_i(I, X(i)) ⊂ ∅ ⇔ ∏_i(I, X(i)) = ∅                                       by sub_empty
+      ∏_i(I, X(i)) = ∅                                                 by iff_mp ^ ^^
+    }
+    (∀i)((i ∈ I ∧ X(i) = ∅) ⇒ ∏_i(I, X(i)) = ∅)                        by gen ^ with i
+    ∏_i(I, X(i)) = ∅                                                   by obtain e ^
+  }
+  -- если все X_ι непусты, то продолжим ∅ ∈ ∏_{ι∈∅} X_ι (предложение 6)
+  r. ¬(∃i)(i ∈ I ∧ X(i) = ∅) ⇒ ∏_i(I, X(i)) ≠ ∅ by assume h {
+    ¬(∃i)(i ∈ I ∧ X(i) = ∅) ⇔ (∀i)¬(i ∈ I ∧ X(i) = ∅)          by C29
+    h2. (∀i)¬(i ∈ I ∧ X(i) = ∅)                               by iff_mp ^ h
+    i ∈ I ⇒ X(i) ≠ ∅ by assume a {
+      ¬(i ∈ I ∧ X(i) = ∅)                                     by inst h2
+      X(i) ≠ ∅                                                by taut a ^
+    }
+    hne. (∀i)(i ∈ I ⇒ X(i) ≠ ∅)                               by gen ^ with i
+    se. ∅ ⊂ I                                                 by empty_sub
+    ∏_i(∅, X(i)) = set1(∅)                                    by prod_empty_index
+    ∅ ∈ ∏_i(∅, X(i)) ⇔ ∅ ∈ set1(∅)                            by eq_mem ^
+    ∅ ∈ set1(∅) ⇔ ∅ = ∅                                       by mem_set1
+    ∅ = ∅                                                     by T1
+    ge. ∅ ∈ ∏_i(∅, X(i))                                      by taut 7 8 9
+    e. (∃F)(F ∈ ∏_i(I, X(i)) ∧ F ∘ Δ(∅) = ∅)                           by prod_extend ge se hne
+    (F ∈ ∏_i(I, X(i)) ∧ F ∘ Δ(∅) = ∅) ⇒ F ∈ ∏_i(I, X(i))                        by C21
+    (∀F)((F ∈ ∏_i(I, X(i)) ∧ F ∘ Δ(∅) = ∅) ⇒ F ∈ ∏_i(I, X(i)))                  by gen ^ with F
+    (∃F)(F ∈ ∏_i(I, X(i)) ∧ F ∘ Δ(∅) = ∅) ⇒ (∃F)(F ∈ ∏_i(I, X(i)))              by C31_exists ^
+    (∃F)(F ∈ ∏_i(I, X(i)))                                             by mp e ^
+    ∏_i(I, X(i)) ≠ ∅ ⇔ (∃x)(x ∈ ∏_i(I, X(i)))                                   by nonempty
+    ∏_i(I, X(i)) ≠ ∅                                                   by iff_mpr ^ ^^
+  }
+  _                                                           by taut l r
+}
+
+-- Следствие 3 (стр. 117-118): X_ι ⊂ Y_ι влечёт ∏ X_ι ⊂ ∏ Y_ι; обратно, если ∏ X_ι ⊂ ∏ Y_ι
+-- и все X_ι ≠ ∅, то X_ι ⊂ Y_ι.
+theorem prod_mono_fam {I : term} {X Y : term 1} (h : (∀i)(i ∈ I ⇒ X(i) ⊂ Y(i))) : ∏_i(I, X(i)) ⊂ ∏_i(I, Y(i)) {
+  F ∈ ∏_i(I, X(i)) ⇒ F ∈ ∏_i(I, Y(i)) by assume m {
+    mf. Map(F, I, ⋃_i(I, X(i)))                               by prodfam_map m
+    i ∈ I ⇒ ap(F, i) ∈ Y(i) by assume a {
+      ap(F, i) ∈ X(i)                                         by prodfam_ap m a
+      i ∈ I ⇒ X(i) ⊂ Y(i)                                     by inst h
+      X(i) ⊂ Y(i)                                             by mp a ^
+      ap(F, i) ∈ X(i) ⇒ ap(F, i) ∈ Y(i)                       by inst ^
+      ap(F, i) ∈ Y(i)                                         by mp 1 ^
+    }
+    (∀i)(i ∈ I ⇒ ap(F, i) ∈ Y(i))                             by gen ^ with i
+    F ∈ ∏_i(I, Y(i))                                          by prodfam_intro mf ^
+  }
+  _                                                           by gen ^ with F
+}
+
+theorem prod_mono_fam_rev {I : term} {X Y : term 1} (h : ∏_i(I, X(i)) ⊂ ∏_i(I, Y(i))) (hne : (∀i)(i ∈ I ⇒ X(i) ≠ ∅)) : (∀i)(i ∈ I ⇒ X(i) ⊂ Y(i)) {
+  a ∈ I ⇒ X(a) ⊂ Y(a) by assume ma {
+    s. Surj(fn_F(∏_i(I, X(i)), ap(F, a)), ∏_i(I, X(i)), X(a))                   by pr_index_surj ma hne
+    x ∈ X(a) ⇒ x ∈ Y(a) by assume m {
+      e. (∃F)(F ∈ ∏_i(I, X(i)) ∧ x = ap(fn_F(∏_i(I, X(i)), ap(F, a)), F))       by surj_ap s m
+      (F ∈ ∏_i(I, X(i)) ∧ x = ap(fn_F(∏_i(I, X(i)), ap(F, a)), F)) ⇒ x ∈ Y(a) by assume b {
+        fp. F ∈ ∏_i(I, X(i))                                           by taut b
+        F ∈ ∏_i(I, X(i)) ⇒ F ∈ ∏_i(I, Y(i))                            by inst h
+        fy. F ∈ ∏_i(I, Y(i))                                  by mp fp ^
+        ap(F, a) ∈ Y(a)                                       by prodfam_ap fy ma
+        c1. x = ap(fn_F(∏_i(I, X(i)), ap(F, a)), F)                    by taut b
+        c2. ap(fn_F(∏_i(I, X(i)), ap(F, a)), F) = ap(F, a)             by ap_fn fp
+        x = ap(F, a)                                          by chain c1 c2
+        x ∈ Y(a) ⇔ ap(F, a) ∈ Y(a)                            by rcong ^
+        x ∈ Y(a)                                              by taut 4 ^
+      }
+      (∀F)((F ∈ ∏_i(I, X(i)) ∧ x = ap(fn_F(∏_i(I, X(i)), ap(F, a)), F)) ⇒ x ∈ Y(a))   by gen ^ with F
+      x ∈ Y(a)                                                by obtain e ^
+    }
+    X(a) ⊂ Y(a)                                               by gen ^ with x
+  }
+  _                                                           by gen ^ with a
+}
+
+-- n° 5, предложение 7 (стр. 118): для разбиения (J_λ) множества I отображение
+-- f → (pr_{J_λ} f)_λ есть биекция ∏_{ι∈I} X_ι на ∏_λ ∏_{ι∈J_λ} X_ι.
+theorem prod_assoc_bij {I L : term} {J X : term 1} (hp : Partition_l(L, I, J(l))) : Bij(fn_F(∏_i(I, X(i)), fn_l(L, F ∘ Δ(J(l)))), ∏_i(I, X(i)), ∏_l(L, ∏_i(J(l), X(i)))) {
+  hs. (∀l)(l ∈ L ⇒ (J(l) ≠ ∅ ∧ J(l) ⊂ I))                    by taut hp
+  hd. Disj_l(L, J(l))                                         by taut hp
+  hc. I ⊂ ⋃_l(L, J(l))                                                by taut hp
+  sub. l ∈ L ⇒ J(l) ⊂ I by assume a {
+    l ∈ L ⇒ (J(l) ≠ ∅ ∧ J(l) ⊂ I)                             by inst hs
+    J(l) ⊂ I                                                  by taut a ^
+  }
+  -- I есть объединение J_λ
+  x ∈ ⋃_l(L, J(l)) ⇒ x ∈ I by assume m {
+    x ∈ ⋃_l(L, J(l)) ⇔ (∃l)(l ∈ L ∧ x ∈ J(l))                         by mem_union
+    e. (∃l)(l ∈ L ∧ x ∈ J(l))                                 by iff_mp ^ m
+    (l ∈ L ∧ x ∈ J(l)) ⇒ x ∈ I by assume a {
+      J(l) ⊂ I                                                by taut a sub
+      x ∈ J(l) ⇒ x ∈ I                                        by inst ^
+      x ∈ I                                                   by taut a ^
+    }
+    (∀l)((l ∈ L ∧ x ∈ J(l)) ⇒ x ∈ I)                          by gen ^ with l
+    x ∈ I                                                     by obtain e ^
+  }
+  ⋃_l(L, J(l)) ⊂ I                                                    by gen ^ with x
+  iu. ⋃_l(L, J(l)) = I                                                by ext ^ hc
+  -- отображение
+  F ∈ ∏_i(I, X(i)) ⇒ fn_l(L, F ∘ Δ(J(l))) ∈ ∏_l(L, ∏_i(J(l), X(i))) by assume m {
+    l ∈ L ⇒ F ∘ Δ(J(l)) ∈ ∏_i(J(l), X(i)) by assume a {
+      J(l) ⊂ I                                                by taut a sub
+      F ∘ Δ(J(l)) ∈ ∏_i(J(l), X(i)) ∧ (i ∈ J(l) ⇒ ap(F ∘ Δ(J(l)), i) = ap(F, i))   by restr_prodfam m ^
+      F ∘ Δ(J(l)) ∈ ∏_i(J(l), X(i))                           by taut ^
+    }
+    vl. (∀l)(l ∈ L ⇒ F ∘ Δ(J(l)) ∈ ∏_i(J(l), X(i)))           by gen ^ with l
+    l ∈ L ⇒ F ∘ Δ(J(l)) ∈ ⋃_l(L, ∏_i(J(l), X(i))) by assume a {
+      l ∈ L ⇒ F ∘ Δ(J(l)) ∈ ∏_i(J(l), X(i))                   by inst vl
+      F ∘ Δ(J(l)) ∈ ∏_i(J(l), X(i))                           by mp a ^
+      ∏_i(J(l), X(i)) ⊂ ⋃_l(L, ∏_i(J(l), X(i)))                                  by sub_union a
+      F ∘ Δ(J(l)) ∈ ∏_i(J(l), X(i)) ⇒ F ∘ Δ(J(l)) ∈ ⋃_l(L, ∏_i(J(l), X(i)))      by inst ^
+      F ∘ Δ(J(l)) ∈ ⋃_l(L, ∏_i(J(l), X(i)))                                      by mp 2 ^
+    }
+    (∀l)(l ∈ L ⇒ F ∘ Δ(J(l)) ∈ ⋃_l(L, ∏_i(J(l), X(i))))                          by gen ^ with l
+    mm. Map(fn_l(L, F ∘ Δ(J(l))), L, ⋃_l(L, ∏_i(J(l), X(i))))                              by fn_map_into ^
+    l ∈ L ⇒ ap(fn_l(L, F ∘ Δ(J(l))), l) ∈ ∏_i(J(l), X(i)) by assume a {
+      ap(fn_l(L, F ∘ Δ(J(l))), l) = F ∘ Δ(J(l))                         by ap_fn a
+      ap(fn_l(L, F ∘ Δ(J(l))), l) ∈ ∏_i(J(l), X(i)) ⇔ F ∘ Δ(J(l)) ∈ ∏_i(J(l), X(i))   by rcong ^
+      l ∈ L ⇒ F ∘ Δ(J(l)) ∈ ∏_i(J(l), X(i))                   by inst vl
+      ap(fn_l(L, F ∘ Δ(J(l))), l) ∈ ∏_i(J(l), X(i))                     by taut a 2 3
+    }
+    (∀l)(l ∈ L ⇒ ap(fn_l(L, F ∘ Δ(J(l))), l) ∈ ∏_i(J(l), X(i)))         by gen ^ with l
+    fn_l(L, F ∘ Δ(J(l))) ∈ ∏_l(L, ∏_i(J(l), X(i)))                                          by prodfam_intro mm ^
+  }
+  mapq. (∀F)(F ∈ ∏_i(I, X(i)) ⇒ fn_l(L, F ∘ Δ(J(l))) ∈ ∏_l(L, ∏_i(J(l), X(i))))                      by gen ^ with F
+  mp. Map(fn_F(∏_i(I, X(i)), fn_l(L, F ∘ Δ(J(l)))), ∏_i(I, X(i)), ∏_l(L, ∏_i(J(l), X(i))))                                    by fn_map_into ^
+  -- инъективность
+  (F ∈ ∏_i(I, X(i)) ∧ (G ∈ ∏_i(I, X(i)) ∧ ap(fn_F(∏_i(I, X(i)), fn_l(L, F ∘ Δ(J(l)))), F) = ap(fn_F(∏_i(I, X(i)), fn_l(L, F ∘ Δ(J(l)))), G))) ⇒ F = G by assume m {
+    fp. F ∈ ∏_i(I, X(i))                                               by taut m
+    gp. G ∈ ∏_i(I, X(i))                                               by taut m
+    p. ap(fn_F(∏_i(I, X(i)), fn_l(L, F ∘ Δ(J(l)))), F) = fn_l(L, F ∘ Δ(J(l)))                              by ap_fn fp
+    q. ap(fn_F(∏_i(I, X(i)), fn_l(L, F ∘ Δ(J(l)))), G) = fn_l(L, G ∘ Δ(J(l)))                              by ap_fn gp
+    r. ap(fn_F(∏_i(I, X(i)), fn_l(L, F ∘ Δ(J(l)))), F) = ap(fn_F(∏_i(I, X(i)), fn_l(L, F ∘ Δ(J(l)))), G)                            by taut m
+    e. fn_l(L, F ∘ Δ(J(l))) = fn_l(L, G ∘ Δ(J(l)))                                by chain p r q
+    mf. Map(F, I, ⋃_i(I, X(i)))                                       by prodfam_map fp
+    mg. Map(G, I, ⋃_i(I, X(i)))                                       by prodfam_map gp
+    i ∈ I ⇒ ap(F, i) = ap(G, i) by assume a {
+      i ∈ I ⇒ i ∈ ⋃_l(L, J(l))                                        by inst hc
+      i ∈ ⋃_l(L, J(l))                                                by mp a ^
+      i ∈ ⋃_l(L, J(l)) ⇔ (∃l)(l ∈ L ∧ i ∈ J(l))                       by mem_union
+      el. (∃l)(l ∈ L ∧ i ∈ J(l))                              by iff_mp ^ ^^
+      (l ∈ L ∧ i ∈ J(l)) ⇒ ap(F, i) = ap(G, i) by assume b {
+        lb. l ∈ L                                             by taut b
+        ib. i ∈ J(l)                                          by taut b
+        jl. J(l) ⊂ I                                          by mp lb sub
+        F ∘ Δ(J(l)) ∈ ∏_i(J(l), X(i)) ∧ (i ∈ J(l) ⇒ ap(F ∘ Δ(J(l)), i) = ap(F, i))   by restr_prodfam fp jl
+        c1. ap(F ∘ Δ(J(l)), i) = ap(F, i)                     by taut ib ^
+        G ∘ Δ(J(l)) ∈ ∏_i(J(l), X(i)) ∧ (i ∈ J(l) ⇒ ap(G ∘ Δ(J(l)), i) = ap(G, i))   by restr_prodfam gp jl
+        c2. ap(G ∘ Δ(J(l)), i) = ap(G, i)                     by taut ib ^
+        d1. ap(fn_l(L, F ∘ Δ(J(l))), l) = F ∘ Δ(J(l))                   by ap_fn lb
+        d2. ap(fn_l(L, G ∘ Δ(J(l))), l) = G ∘ Δ(J(l))                   by ap_fn lb
+        d3. ap(fn_l(L, F ∘ Δ(J(l))), l) = ap(fn_l(L, G ∘ Δ(J(l))), l)             by cong e
+        fg. F ∘ Δ(J(l)) = G ∘ Δ(J(l))                         by chain d1 d3 d2
+        c3. ap(F ∘ Δ(J(l)), i) = ap(G ∘ Δ(J(l)), i)           by cong fg
+        ap(F, i) = ap(G, i)                                   by chain c1 c3 c2
+      }
+      (∀l)((l ∈ L ∧ i ∈ J(l)) ⇒ ap(F, i) = ap(G, i))          by gen ^ with l
+      ap(F, i) = ap(G, i)                                     by obtain el ^
+    }
+    (∀i)(i ∈ I ⇒ ap(F, i) = ap(G, i))                         by gen ^ with i
+    F = G                                                     by map_ext mf mg ^
+  }
+  (∀G)((F ∈ ∏_i(I, X(i)) ∧ (G ∈ ∏_i(I, X(i)) ∧ ap(fn_F(∏_i(I, X(i)), fn_l(L, F ∘ Δ(J(l)))), F) = ap(fn_F(∏_i(I, X(i)), fn_l(L, F ∘ Δ(J(l)))), G))) ⇒ F = G)       by gen ^ with G
+  inj. (∀F)(∀G)((F ∈ ∏_i(I, X(i)) ∧ (G ∈ ∏_i(I, X(i)) ∧ ap(fn_F(∏_i(I, X(i)), fn_l(L, F ∘ Δ(J(l)))), F) = ap(fn_F(∏_i(I, X(i)), fn_l(L, F ∘ Δ(J(l)))), G))) ⇒ F = G)   by gen ^ with F
+  -- сюръективность: склейка (предложение 8 § 4)
+  h ∈ ∏_l(L, ∏_i(J(l), X(i))) ⇒ (∃F)(F ∈ ∏_i(I, X(i)) ∧ h = ap(fn_F(∏_i(I, X(i)), fn_l(L, F ∘ Δ(J(l)))), F)) by assume m {
+    mh. Map(h, L, ⋃_l(L, ∏_i(J(l), X(i))))                                       by prodfam_map m
+    hm. l ∈ L ⇒ Map(ap(h, l), J(l), ⋃_i(I, X(i))) by assume a {
+      hl. ap(h, l) ∈ ∏_i(J(l), X(i))                          by prodfam_ap m a
+      Map(ap(h, l), J(l), ⋃_i(J(l), X(i)))                    by prodfam_map hl
+      J(l) ⊂ I                                                by mp a sub
+      ⋃_i(J(l), X(i)) ⊂ ⋃_i(I, X(i))                                  by union_sub_index ^
+      Map(ap(h, l), J(l), ⋃_i(I, X(i)))                               by map_target 2 ^
+    }
+    hma. (∀l)(l ∈ L ⇒ Map(ap(h, l), J(l), ⋃_i(I, X(i))))              by gen ^ with l
+    ha. (∀l)(∀j)((l ∈ L ∧ j ∈ L) ⇒ (∀x)((x ∈ J(l) ∧ x ∈ J(j)) ⇒ ap(ap(h, l), x) = ap(ap(h, j), x)))   by disj_agree hd
+    mg. Map(⋃_l(L, ap(h, l)), ⋃_l(L, J(l)), ⋃_i(I, X(i)))                                  by glue_map hma ha
+    Map(⋃_l(L, ap(h, l)), ⋃_l(L, J(l)), ⋃_i(I, X(i))) ⇔ Map(⋃_l(L, ap(h, l)), I, ⋃_i(I, X(i)))                  by rcong iu
+    mgi. Map(⋃_l(L, ap(h, l)), I, ⋃_i(I, X(i)))                                    by iff_mp ^ mg
+    -- значение склейки
+    gv. (l ∈ L ∧ i ∈ J(l)) ⇒ ap(⋃_l(L, ap(h, l)), i) = ap(ap(h, l), i) by assume b {
+      l ∈ L                                                   by taut b
+      i ∈ J(l)                                                by taut b
+      ap(⋃_l(L, ap(h, l)), i) = ap(ap(h, l), i)                            by ap_glue hma ha 1 2
+    }
+    i ∈ I ⇒ ap(⋃_l(L, ap(h, l)), i) ∈ X(i) by assume a {
+      i ∈ I ⇒ i ∈ ⋃_l(L, J(l))                                        by inst hc
+      i ∈ ⋃_l(L, J(l))                                                by mp a ^
+      i ∈ ⋃_l(L, J(l)) ⇔ (∃l)(l ∈ L ∧ i ∈ J(l))                       by mem_union
+      el. (∃l)(l ∈ L ∧ i ∈ J(l))                              by iff_mp ^ ^^
+      (l ∈ L ∧ i ∈ J(l)) ⇒ ap(⋃_l(L, ap(h, l)), i) ∈ X(i) by assume b {
+        lb. l ∈ L                                             by taut b
+        ib. i ∈ J(l)                                          by taut b
+        hl. ap(h, l) ∈ ∏_i(J(l), X(i))                        by prodfam_ap m lb
+        ap(ap(h, l), i) ∈ X(i)                                by prodfam_ap hl ib
+        ap(⋃_l(L, ap(h, l)), i) = ap(ap(h, l), i)                          by mp b gv
+        ap(⋃_l(L, ap(h, l)), i) ∈ X(i) ⇔ ap(ap(h, l), i) ∈ X(i)            by rcong ^
+        ap(⋃_l(L, ap(h, l)), i) ∈ X(i)                                     by taut 4 ^
+      }
+      (∀l)((l ∈ L ∧ i ∈ J(l)) ⇒ ap(⋃_l(L, ap(h, l)), i) ∈ X(i))            by gen ^ with l
+      ap(⋃_l(L, ap(h, l)), i) ∈ X(i)                                       by obtain el ^
+    }
+    (∀i)(i ∈ I ⇒ ap(⋃_l(L, ap(h, l)), i) ∈ X(i))                           by gen ^ with i
+    fp. ⋃_l(L, ap(h, l)) ∈ ∏_i(I, X(i))                                             by prodfam_intro mgi ^
+    -- образ склейки есть h
+    ⋃_l(L, ap(h, l)) ∈ ∏_i(I, X(i)) ⇒ fn_l(L, ⋃_l(L, ap(h, l)) ∘ Δ(J(l))) ∈ ∏_l(L, ∏_i(J(l), X(i)))                                by inst mapq
+    fq. fn_l(L, ⋃_l(L, ap(h, l)) ∘ Δ(J(l))) ∈ ∏_l(L, ∏_i(J(l), X(i)))                                        by mp fp ^
+    mq. Map(fn_l(L, ⋃_l(L, ap(h, l)) ∘ Δ(J(l))), L, ⋃_l(L, ∏_i(J(l), X(i))))                                by prodfam_map fq
+    l ∈ L ⇒ ap(fn_l(L, ⋃_l(L, ap(h, l)) ∘ Δ(J(l))), l) = ap(h, l) by assume a {
+      c1. ap(fn_l(L, ⋃_l(L, ap(h, l)) ∘ Δ(J(l))), l) = ⋃_l(L, ap(h, l)) ∘ Δ(J(l))                     by ap_fn a
+      jl. J(l) ⊂ I                                            by mp a sub
+      rr. ⋃_l(L, ap(h, l)) ∘ Δ(J(l)) ∈ ∏_i(J(l), X(i)) ∧ (i ∈ J(l) ⇒ ap(⋃_l(L, ap(h, l)) ∘ Δ(J(l)), i) = ap(⋃_l(L, ap(h, l)), i))   by restr_prodfam fp jl
+      ⋃_l(L, ap(h, l)) ∘ Δ(J(l)) ∈ ∏_i(J(l), X(i))                         by taut rr
+      m1. Map(⋃_l(L, ap(h, l)) ∘ Δ(J(l)), J(l), ⋃_i(J(l), X(i)))           by prodfam_map ^
+      ap(h, l) ∈ ∏_i(J(l), X(i))                              by prodfam_ap m a
+      m2. Map(ap(h, l), J(l), ⋃_i(J(l), X(i)))                by prodfam_map ^
+      i ∈ J(l) ⇒ ap(⋃_l(L, ap(h, l)) ∘ Δ(J(l)), i) = ap(ap(h, l), i) by assume b {
+        e1. ap(⋃_l(L, ap(h, l)) ∘ Δ(J(l)), i) = ap(⋃_l(L, ap(h, l)), i)                 by taut b rr
+        l ∈ L ∧ i ∈ J(l)                                      by C20 a b
+        e2. ap(⋃_l(L, ap(h, l)), i) = ap(ap(h, l), i)                      by mp ^ gv
+        ap(⋃_l(L, ap(h, l)) ∘ Δ(J(l)), i) = ap(ap(h, l), i)                by chain e1 e2
+      }
+      (∀i)(i ∈ J(l) ⇒ ap(⋃_l(L, ap(h, l)) ∘ Δ(J(l)), i) = ap(ap(h, l), i)) by gen ^ with i
+      c2. ⋃_l(L, ap(h, l)) ∘ Δ(J(l)) = ap(h, l)                            by map_ext m1 m2 ^
+      ap(fn_l(L, ⋃_l(L, ap(h, l)) ∘ Δ(J(l))), l) = ap(h, l)                              by chain c1 c2
+    }
+    (∀l)(l ∈ L ⇒ ap(fn_l(L, ⋃_l(L, ap(h, l)) ∘ Δ(J(l))), l) = ap(h, l))                  by gen ^ with l
+    he. fn_l(L, ⋃_l(L, ap(h, l)) ∘ Δ(J(l))) = h                                          by map_ext mq mh ^
+    ap(fn_F(∏_i(I, X(i)), fn_l(L, F ∘ Δ(J(l)))), ⋃_l(L, ap(h, l))) = fn_l(L, ⋃_l(L, ap(h, l)) ∘ Δ(J(l)))                                 by ap_fn fp
+    h = ap(fn_F(∏_i(I, X(i)), fn_l(L, F ∘ Δ(J(l)))), ⋃_l(L, ap(h, l)))                                        by chain he ^
+    ⋃_l(L, ap(h, l)) ∈ ∏_i(I, X(i)) ∧ h = ap(fn_F(∏_i(I, X(i)), fn_l(L, F ∘ Δ(J(l)))), ⋃_l(L, ap(h, l)))                            by C20 fp ^
+    (∃F)(F ∈ ∏_i(I, X(i)) ∧ h = ap(fn_F(∏_i(I, X(i)), fn_l(L, F ∘ Δ(J(l)))), F))                          by exists_intro ^
+  }
+  (∀h)(h ∈ ∏_l(L, ∏_i(J(l), X(i))) ⇒ (∃F)(F ∈ ∏_i(I, X(i)) ∧ h = ap(fn_F(∏_i(I, X(i)), fn_l(L, F ∘ Δ(J(l)))), F)))            by gen ^ with h
+  Surj(fn_F(∏_i(I, X(i)), fn_l(L, F ∘ Δ(J(l)))), ∏_i(I, X(i)), ∏_l(L, ∏_i(J(l), X(i)))) ⇔ (∀h)(h ∈ ∏_l(L, ∏_i(J(l), X(i))) ⇒ (∃F)(F ∈ ∏_i(I, X(i)) ∧ h = ap(fn_F(∏_i(I, X(i)), fn_l(L, F ∘ Δ(J(l)))), F)))   by surj_iff mp
+  sur. Surj(fn_F(∏_i(I, X(i)), fn_l(L, F ∘ Δ(J(l)))), ∏_i(I, X(i)), ∏_l(L, ∏_i(J(l), X(i))))                                  by iff_mpr ^ ^^
+  _                                                           by taut mp inj sur
+}
+
+-- n° 6 (стр. 119-122). Дистрибутивность. Семейство X_{λ,ι} записано X(l, i), I = ∏ J_λ.
+theorem prodJ_nonempty {L : term} {J : term 1} (hj : (∀l)(l ∈ L ⇒ J(l) ≠ ∅)) : ∏_l(L, J(l)) ≠ ∅ {
+  pe. ∏_l(L, J(l)) = ∅ ⇔ (∃l)(l ∈ L ∧ J(l) = ∅)                        by prod_empty_iff
+  c. ¬(∃l)(l ∈ L ∧ J(l) = ∅) ⇔ (∀l)¬(l ∈ L ∧ J(l) = ∅)                 by C29
+  l ∈ L ⇒ J(l) ≠ ∅                                                    by inst hj
+  ¬(l ∈ L ∧ J(l) = ∅)                                                 by taut ^
+  a. (∀l)¬(l ∈ L ∧ J(l) = ∅)                                          by gen ^ with l
+  _                                                                   by taut pe c a
+}
+
+-- Выбор (стр. 117, замечание): если при каждом λ ∈ L есть ι ∈ J_λ с P{λ, ι}, то
+-- λ → τι(ι ∈ J_λ и P{λ, ι}) есть элемент ∏ J_λ с P{λ, f(λ)}.
+theorem choice_fn {L : term} {J : term 1} {P : rel 2} (h : (∀l)(l ∈ L ⇒ (∃i)(i ∈ J(l) ∧ P(l, i)))) : fn_l(L, τi(i ∈ J(l) ∧ P(l, i))) ∈ ∏_l(L, J(l)) ∧ (∀l)(l ∈ L ⇒ P(l, ap(fn_l(L, τi(i ∈ J(l) ∧ P(l, i))), l))) {
+  vj. l ∈ L ⇒ (τi(i ∈ J(l) ∧ P(l, i)) ∈ J(l) ∧ P(l, τi(i ∈ J(l) ∧ P(l, i)))) by assume m {
+    l ∈ L ⇒ (∃i)(i ∈ J(l) ∧ P(l, i))                                  by inst h
+    (∃i)(i ∈ J(l) ∧ P(l, i))                                          by mp m ^
+    τi(i ∈ J(l) ∧ P(l, i)) ∈ J(l) ∧ P(l, τi(i ∈ J(l) ∧ P(l, i)))      by ^
+  }
+  l ∈ L ⇒ τi(i ∈ J(l) ∧ P(l, i)) ∈ ⋃_l(L, J(l)) by assume m {
+    τi(i ∈ J(l) ∧ P(l, i)) ∈ J(l) ∧ P(l, τi(i ∈ J(l) ∧ P(l, i)))      by mp m vj
+    τi(i ∈ J(l) ∧ P(l, i)) ∈ J(l)                                     by taut ^
+    J(l) ⊂ ⋃_l(L, J(l))                                               by sub_union m
+    τi(i ∈ J(l) ∧ P(l, i)) ∈ J(l) ⇒ τi(i ∈ J(l) ∧ P(l, i)) ∈ ⋃_l(L, J(l))   by inst ^
+    τi(i ∈ J(l) ∧ P(l, i)) ∈ ⋃_l(L, J(l))                             by mp 2 ^
+  }
+  (∀l)(l ∈ L ⇒ τi(i ∈ J(l) ∧ P(l, i)) ∈ ⋃_l(L, J(l)))                 by gen ^ with l
+  mf. Map(fn_l(L, τi(i ∈ J(l) ∧ P(l, i))), L, ⋃_l(L, J(l)))           by fn_map_into ^
+  l ∈ L ⇒ ap(fn_l(L, τi(i ∈ J(l) ∧ P(l, i))), l) = τi(i ∈ J(l) ∧ P(l, i)) by assume m {
+    ap(fn_l(L, τi(i ∈ J(l) ∧ P(l, i))), l) = τi(i ∈ J(l) ∧ P(l, i))   by ap_fn m
+  }
+  ev. (∀l)(l ∈ L ⇒ ap(fn_l(L, τi(i ∈ J(l) ∧ P(l, i))), l) = τi(i ∈ J(l) ∧ P(l, i)))   by gen ^ with l
+  l ∈ L ⇒ (ap(fn_l(L, τi(i ∈ J(l) ∧ P(l, i))), l) ∈ J(l) ∧ P(l, ap(fn_l(L, τi(i ∈ J(l) ∧ P(l, i))), l))) by assume m {
+    l ∈ L ⇒ ap(fn_l(L, τi(i ∈ J(l) ∧ P(l, i))), l) = τi(i ∈ J(l) ∧ P(l, i))   by inst ev
+    e. ap(fn_l(L, τi(i ∈ J(l) ∧ P(l, i))), l) = τi(i ∈ J(l) ∧ P(l, i))   by mp m ^
+    a1. ap(fn_l(L, τi(i ∈ J(l) ∧ P(l, i))), l) ∈ J(l) ⇔ τi(i ∈ J(l) ∧ P(l, i)) ∈ J(l)   by rcong e
+    a2. P(l, ap(fn_l(L, τi(i ∈ J(l) ∧ P(l, i))), l)) ⇔ P(l, τi(i ∈ J(l) ∧ P(l, i)))   by rcong e
+    τi(i ∈ J(l) ∧ P(l, i)) ∈ J(l) ∧ P(l, τi(i ∈ J(l) ∧ P(l, i)))      by mp m vj
+    ap(fn_l(L, τi(i ∈ J(l) ∧ P(l, i))), l) ∈ J(l) ∧ P(l, ap(fn_l(L, τi(i ∈ J(l) ∧ P(l, i))), l))   by taut a1 a2 ^
+  }
+  both. (∀l)(l ∈ L ⇒ (ap(fn_l(L, τi(i ∈ J(l) ∧ P(l, i))), l) ∈ J(l) ∧ P(l, ap(fn_l(L, τi(i ∈ J(l) ∧ P(l, i))), l))))   by gen ^ with l
+  l ∈ L ⇒ ap(fn_l(L, τi(i ∈ J(l) ∧ P(l, i))), l) ∈ J(l) by assume m {
+    l ∈ L ⇒ (ap(fn_l(L, τi(i ∈ J(l) ∧ P(l, i))), l) ∈ J(l) ∧ P(l, ap(fn_l(L, τi(i ∈ J(l) ∧ P(l, i))), l)))   by inst both
+    ap(fn_l(L, τi(i ∈ J(l) ∧ P(l, i))), l) ∈ J(l)                     by taut m ^
+  }
+  (∀l)(l ∈ L ⇒ ap(fn_l(L, τi(i ∈ J(l) ∧ P(l, i))), l) ∈ J(l))         by gen ^ with l
+  fp. fn_l(L, τi(i ∈ J(l) ∧ P(l, i))) ∈ ∏_l(L, J(l))                  by prodfam_intro mf ^
+  l ∈ L ⇒ P(l, ap(fn_l(L, τi(i ∈ J(l) ∧ P(l, i))), l)) by assume m {
+    l ∈ L ⇒ (ap(fn_l(L, τi(i ∈ J(l) ∧ P(l, i))), l) ∈ J(l) ∧ P(l, ap(fn_l(L, τi(i ∈ J(l) ∧ P(l, i))), l)))   by inst both
+    P(l, ap(fn_l(L, τi(i ∈ J(l) ∧ P(l, i))), l))                      by taut m ^
+  }
+  (∀l)(l ∈ L ⇒ P(l, ap(fn_l(L, τi(i ∈ J(l) ∧ P(l, i))), l)))          by gen ^ with l
+  _                                                                   by C20 fp ^
+}
+
+-- Предложение 8 (стр. 119): при L ≠ ∅ и J_λ ≠ ∅
+-- ⋃_λ ⋂_{ι∈J_λ} X_{λ,ι} = ⋂_{f∈I} ⋃_λ X_{λ,f(λ)}, где I = ∏ J_λ.
+theorem union_inter_distrib {L : term} {J : term 1} {X : term 2} (hj : (∀l)(l ∈ L ⇒ J(l) ≠ ∅)) : ⋃_l(L, ⋂_i(J(l), X(l, i))) = ⋂_f(∏_l(L, J(l)), ⋃_l(L, X(l, ap(f, l)))) {
+  hI. ∏_l(L, J(l)) ≠ ∅                                                        by prodJ_nonempty hj
+  a. x ∈ ⋃_l(L, ⋂_i(J(l), X(l, i))) ⇔ (∃l)(l ∈ L ∧ x ∈ ⋂_i(J(l), X(l, i)))                   by mem_union
+  b. x ∈ ⋂_f(∏_l(L, J(l)), ⋃_l(L, X(l, ap(f, l)))) ⇔ (∀f)(f ∈ ∏_l(L, J(l)) ⇒ x ∈ ⋃_l(L, X(l, ap(f, l))))            by mem_inter hI
+  il. l ∈ L ⇒ (x ∈ ⋂_i(J(l), X(l, i)) ⇔ (∀i)(i ∈ J(l) ⇒ x ∈ X(l, i))) by assume m {
+    l ∈ L ⇒ J(l) ≠ ∅                                                  by inst hj
+    J(l) ≠ ∅                                                          by mp m ^
+    x ∈ ⋂_i(J(l), X(l, i)) ⇔ (∀i)(i ∈ J(l) ⇒ x ∈ X(l, i))             by mem_inter ^
+  }
+  ila. (∀l)(l ∈ L ⇒ (x ∈ ⋂_i(J(l), X(l, i)) ⇔ (∀i)(i ∈ J(l) ⇒ x ∈ X(l, i))))   by gen il with l
+  le. (∃l)(l ∈ L ∧ x ∈ ⋂_i(J(l), X(l, i))) ⇒ (∀f)(f ∈ ∏_l(L, J(l)) ⇒ x ∈ ⋃_l(L, X(l, ap(f, l)))) by assume e {
+    f ∈ ∏_l(L, J(l)) ⇒ x ∈ ⋃_l(L, X(l, ap(f, l))) by assume fp {
+      (l ∈ L ∧ x ∈ ⋂_i(J(l), X(l, i))) ⇒ x ∈ ⋃_l(L, X(l, ap(f, l))) by assume p {
+        lb. l ∈ L                                                     by taut p
+        l ∈ L ⇒ (x ∈ ⋂_i(J(l), X(l, i)) ⇔ (∀i)(i ∈ J(l) ⇒ x ∈ X(l, i)))   by inst ila
+        q. (∀i)(i ∈ J(l) ⇒ x ∈ X(l, i))                               by taut p ^
+        fl. ap(f, l) ∈ J(l)                                           by prodfam_ap fp lb
+        ap(f, l) ∈ J(l) ⇒ x ∈ X(l, ap(f, l))                          by inst q
+        x ∈ X(l, ap(f, l))                                            by mp fl ^
+        l ∈ L ∧ x ∈ X(l, ap(f, l))                                    by C20 lb ^
+        (∃l)(l ∈ L ∧ x ∈ X(l, ap(f, l)))                              by exists_intro ^
+        x ∈ ⋃_l(L, X(l, ap(f, l))) ⇔ (∃l)(l ∈ L ∧ x ∈ X(l, ap(f, l)))   by mem_union
+        x ∈ ⋃_l(L, X(l, ap(f, l)))                                    by iff_mpr ^ ^^
+      }
+      (∀l)((l ∈ L ∧ x ∈ ⋂_i(J(l), X(l, i))) ⇒ x ∈ ⋃_l(L, X(l, ap(f, l))))   by gen ^ with l
+      x ∈ ⋃_l(L, X(l, ap(f, l)))                                      by obtain e ^
+    }
+    (∀f)(f ∈ ∏_l(L, J(l)) ⇒ x ∈ ⋃_l(L, X(l, ap(f, l))))                       by gen ^ with f
+  }
+  -- обратно: если x не в левой части, выберем f(λ) с x ∉ X_{λ,f(λ)}
+  ri. ¬(∃l)(l ∈ L ∧ x ∈ ⋂_i(J(l), X(l, i))) ⇒ ¬(∀f)(f ∈ ∏_l(L, J(l)) ⇒ x ∈ ⋃_l(L, X(l, ap(f, l)))) by assume g {
+    ¬(∃l)(l ∈ L ∧ x ∈ ⋂_i(J(l), X(l, i))) ⇔ (∀l)¬(l ∈ L ∧ x ∈ ⋂_i(J(l), X(l, i)))   by C29
+    ng. (∀l)¬(l ∈ L ∧ x ∈ ⋂_i(J(l), X(l, i)))                         by iff_mp ^ g
+    ex. l ∈ L ⇒ (∃i)(i ∈ J(l) ∧ x ∉ X(l, i)) by assume m {
+      ¬(l ∈ L ∧ x ∈ ⋂_i(J(l), X(l, i)))                               by inst ng
+      l ∈ L ⇒ (x ∈ ⋂_i(J(l), X(l, i)) ⇔ (∀i)(i ∈ J(l) ⇒ x ∈ X(l, i)))   by inst ila
+      nf. ¬(∀i)(i ∈ J(l) ⇒ x ∈ X(l, i))                               by taut m 1 2
+      ¬(∀i)(i ∈ J(l) ⇒ x ∈ X(l, i)) ⇔ (∃i)¬(i ∈ J(l) ⇒ x ∈ X(l, i))   by C28
+      e1. (∃i)¬(i ∈ J(l) ⇒ x ∈ X(l, i))                               by iff_mp ^ nf
+      ¬(i ∈ J(l) ⇒ x ∈ X(l, i)) ⇒ (i ∈ J(l) ∧ x ∉ X(l, i))            by taut
+      (∀i)(¬(i ∈ J(l) ⇒ x ∈ X(l, i)) ⇒ (i ∈ J(l) ∧ x ∉ X(l, i)))      by gen ^ with i
+      (∃i)¬(i ∈ J(l) ⇒ x ∈ X(l, i)) ⇒ (∃i)(i ∈ J(l) ∧ x ∉ X(l, i))    by C31_exists ^
+      (∃i)(i ∈ J(l) ∧ x ∉ X(l, i))                                    by mp e1 ^
+    }
+    (∀l)(l ∈ L ⇒ (∃i)(i ∈ J(l) ∧ x ∉ X(l, i)))                        by gen ex with l
+    ch. fn_l(L, τi(i ∈ J(l) ∧ x ∉ X(l, i))) ∈ ∏_l(L, J(l)) ∧ (∀l)(l ∈ L ⇒ x ∉ X(l, ap(fn_l(L, τi(i ∈ J(l) ∧ x ∉ X(l, i))), l)))             by choice_fn ^
+    fp. fn_l(L, τi(i ∈ J(l) ∧ x ∉ X(l, i))) ∈ ∏_l(L, J(l))                                                   by taut ch
+    nx. (∀l)(l ∈ L ⇒ x ∉ X(l, ap(fn_l(L, τi(i ∈ J(l) ∧ x ∉ X(l, i))), l)))                           by taut ch
+    u1. x ∈ ⋃_l(L, X(l, ap(fn_l(L, τi(i ∈ J(l) ∧ x ∉ X(l, i))), l))) ⇔ (∃l)(l ∈ L ∧ x ∈ X(l, ap(fn_l(L, τi(i ∈ J(l) ∧ x ∉ X(l, i))), l)))   by mem_union
+    u2. ¬(∃l)(l ∈ L ∧ x ∈ X(l, ap(fn_l(L, τi(i ∈ J(l) ∧ x ∉ X(l, i))), l))) ⇔ (∀l)¬(l ∈ L ∧ x ∈ X(l, ap(fn_l(L, τi(i ∈ J(l) ∧ x ∉ X(l, i))), l)))   by C29
+    l ∈ L ⇒ x ∉ X(l, ap(fn_l(L, τi(i ∈ J(l) ∧ x ∉ X(l, i))), l))                                     by inst nx
+    ¬(l ∈ L ∧ x ∈ X(l, ap(fn_l(L, τi(i ∈ J(l) ∧ x ∉ X(l, i))), l)))                                  by taut ^
+    u3. (∀l)¬(l ∈ L ∧ x ∈ X(l, ap(fn_l(L, τi(i ∈ J(l) ∧ x ∉ X(l, i))), l)))                          by gen ^ with l
+    nu. x ∉ ⋃_l(L, X(l, ap(fn_l(L, τi(i ∈ J(l) ∧ x ∉ X(l, i))), l)))                                 by taut u1 u2 u3
+    (∀f)(f ∈ ∏_l(L, J(l)) ⇒ x ∈ ⋃_l(L, X(l, ap(f, l)))) ⇒ (fn_l(L, τi(i ∈ J(l) ∧ x ∉ X(l, i))) ∈ ∏_l(L, J(l)) ⇒ x ∈ ⋃_l(L, X(l, ap(fn_l(L, τi(i ∈ J(l) ∧ x ∉ X(l, i))), l))))   by C30
+    ¬(∀f)(f ∈ ∏_l(L, J(l)) ⇒ x ∈ ⋃_l(L, X(l, ap(f, l))))                      by taut fp nu ^
+  }
+  x ∈ ⋃_l(L, ⋂_i(J(l), X(l, i))) ⇔ x ∈ ⋂_f(∏_l(L, J(l)), ⋃_l(L, X(l, ap(f, l))))                                                   by taut a b le ri
+  (∀x)(x ∈ ⋃_l(L, ⋂_i(J(l), X(l, i))) ⇔ x ∈ ⋂_f(∏_l(L, J(l)), ⋃_l(L, X(l, ap(f, l)))))                                             by gen ^ with x
+  _                                                                   by ext_iff ^
+}
+
+theorem inter_union_distrib {L : term} {J : term 1} {X : term 2} (hl : L ≠ ∅) : ⋂_l(L, ⋃_i(J(l), X(l, i))) = ⋃_f(∏_l(L, J(l)), ⋂_l(L, X(l, ap(f, l)))) {
+  a. x ∈ ⋂_l(L, ⋃_i(J(l), X(l, i))) ⇔ (∀l)(l ∈ L ⇒ x ∈ ⋃_i(J(l), X(l, i)))                 by mem_inter hl
+  x ∈ ⋃_i(J(l), X(l, i)) ⇔ (∃i)(i ∈ J(l) ∧ x ∈ X(l, i))              by mem_union
+  (l ∈ L ⇒ x ∈ ⋃_i(J(l), X(l, i))) ⇔ (l ∈ L ⇒ (∃i)(i ∈ J(l) ∧ x ∈ X(l, i)))   by taut ^
+  (∀l)((l ∈ L ⇒ x ∈ ⋃_i(J(l), X(l, i))) ⇔ (l ∈ L ⇒ (∃i)(i ∈ J(l) ∧ x ∈ X(l, i))))   by gen ^ with l
+  a2. (∀l)(l ∈ L ⇒ x ∈ ⋃_i(J(l), X(l, i))) ⇔ (∀l)(l ∈ L ⇒ (∃i)(i ∈ J(l) ∧ x ∈ X(l, i)))   by C31_iff ^
+  b. x ∈ ⋃_f(∏_l(L, J(l)), ⋂_l(L, X(l, ap(f, l)))) ⇔ (∃f)(f ∈ ∏_l(L, J(l)) ∧ x ∈ ⋂_l(L, X(l, ap(f, l))))          by mem_union
+  x ∈ ⋂_l(L, X(l, ap(f, l))) ⇔ (∀l)(l ∈ L ⇒ x ∈ X(l, ap(f, l)))       by mem_inter hl
+  (f ∈ ∏_l(L, J(l)) ∧ x ∈ ⋂_l(L, X(l, ap(f, l)))) ⇔ (f ∈ ∏_l(L, J(l)) ∧ (∀l)(l ∈ L ⇒ x ∈ X(l, ap(f, l))))   by taut ^
+  (∀f)((f ∈ ∏_l(L, J(l)) ∧ x ∈ ⋂_l(L, X(l, ap(f, l)))) ⇔ (f ∈ ∏_l(L, J(l)) ∧ (∀l)(l ∈ L ⇒ x ∈ X(l, ap(f, l)))))   by gen ^ with f
+  b2. (∃f)(f ∈ ∏_l(L, J(l)) ∧ x ∈ ⋂_l(L, X(l, ap(f, l)))) ⇔ (∃f)(f ∈ ∏_l(L, J(l)) ∧ (∀l)(l ∈ L ⇒ x ∈ X(l, ap(f, l))))   by C31_exists_iff ^
+  l1. (∀l)(l ∈ L ⇒ (∃i)(i ∈ J(l) ∧ x ∈ X(l, i))) ⇒ (∃f)(f ∈ ∏_l(L, J(l)) ∧ (∀l)(l ∈ L ⇒ x ∈ X(l, ap(f, l)))) by assume h {
+    fn_l(L, τi(i ∈ J(l) ∧ x ∈ X(l, i))) ∈ ∏_l(L, J(l)) ∧ (∀l)(l ∈ L ⇒ x ∈ X(l, ap(fn_l(L, τi(i ∈ J(l) ∧ x ∈ X(l, i))), l)))                 by choice_fn h
+    (∃f)(f ∈ ∏_l(L, J(l)) ∧ (∀l)(l ∈ L ⇒ x ∈ X(l, ap(f, l))))                 by exists_intro ^
+  }
+  l2. (∃f)(f ∈ ∏_l(L, J(l)) ∧ (∀l)(l ∈ L ⇒ x ∈ X(l, ap(f, l)))) ⇒ (∀l)(l ∈ L ⇒ (∃i)(i ∈ J(l) ∧ x ∈ X(l, i))) by assume e {
+    (f ∈ ∏_l(L, J(l)) ∧ (∀l)(l ∈ L ⇒ x ∈ X(l, ap(f, l)))) ⇒ (∀l)(l ∈ L ⇒ (∃i)(i ∈ J(l) ∧ x ∈ X(l, i))) by assume p {
+      fp. f ∈ ∏_l(L, J(l))                                                    by taut p
+      q. (∀l)(l ∈ L ⇒ x ∈ X(l, ap(f, l)))                             by taut p
+      l ∈ L ⇒ (∃i)(i ∈ J(l) ∧ x ∈ X(l, i)) by assume m {
+        ap(f, l) ∈ J(l)                                               by prodfam_ap fp m
+        l ∈ L ⇒ x ∈ X(l, ap(f, l))                                    by inst q
+        x ∈ X(l, ap(f, l))                                            by mp m ^
+        ap(f, l) ∈ J(l) ∧ x ∈ X(l, ap(f, l))                          by C20 1 3
+        (∃i)(i ∈ J(l) ∧ x ∈ X(l, i))                                  by exists_intro ^
+      }
+      (∀l)(l ∈ L ⇒ (∃i)(i ∈ J(l) ∧ x ∈ X(l, i)))                      by gen ^ with l
+    }
+    (∀f)((f ∈ ∏_l(L, J(l)) ∧ (∀l)(l ∈ L ⇒ x ∈ X(l, ap(f, l)))) ⇒ (∀l)(l ∈ L ⇒ (∃i)(i ∈ J(l) ∧ x ∈ X(l, i))))   by gen ^ with f
+    (∀l)(l ∈ L ⇒ (∃i)(i ∈ J(l) ∧ x ∈ X(l, i)))                        by obtain e ^
+  }
+  x ∈ ⋂_l(L, ⋃_i(J(l), X(l, i))) ⇔ x ∈ ⋃_f(∏_l(L, J(l)), ⋂_l(L, X(l, ap(f, l))))                                                 by taut a a2 b b2 l1 l2
+  (∀x)(x ∈ ⋂_l(L, ⋃_i(J(l), X(l, i))) ⇔ x ∈ ⋃_f(∏_l(L, J(l)), ⋂_l(L, X(l, ap(f, l)))))                                           by gen ^ with x
+  _                                                                   by ext_iff ^
+}
+
+-- Предложение 9 (стр. 120): ∏_λ ⋃_{ι∈J_λ} X_{λ,ι} = ⋃_{f∈I} ∏_λ X_{λ,f(λ)}.
+theorem prod_union_distrib {L : term} {J : term 1} {X : term 2} : ∏_l(L, ⋃_i(J(l), X(l, i))) = ⋃_f(∏_l(L, J(l)), ∏_l(L, X(l, ap(f, l)))) {
+  g ∈ ∏_l(L, ⋃_i(J(l), X(l, i))) ⇒ g ∈ ⋃_f(∏_l(L, J(l)), ∏_l(L, X(l, ap(f, l)))) by assume m {
+    mg. Map(g, L, ⋃_l(L, ⋃_i(J(l), X(l, i))))                         by prodfam_map m
+    l ∈ L ⇒ (∃i)(i ∈ J(l) ∧ ap(g, l) ∈ X(l, i)) by assume a {
+      ap(g, l) ∈ ⋃_i(J(l), X(l, i))                                   by prodfam_ap m a
+      ap(g, l) ∈ ⋃_i(J(l), X(l, i)) ⇔ (∃i)(i ∈ J(l) ∧ ap(g, l) ∈ X(l, i))   by mem_union
+      (∃i)(i ∈ J(l) ∧ ap(g, l) ∈ X(l, i))                             by iff_mp ^ ^^
+    }
+    (∀l)(l ∈ L ⇒ (∃i)(i ∈ J(l) ∧ ap(g, l) ∈ X(l, i)))                 by gen ^ with l
+    ch. fn_l(L, τi(i ∈ J(l) ∧ ap(g, l) ∈ X(l, i))) ∈ ∏_l(L, J(l)) ∧ (∀l)(l ∈ L ⇒ ap(g, l) ∈ X(l, ap(fn_l(L, τi(i ∈ J(l) ∧ ap(g, l) ∈ X(l, i))), l)))      by choice_fn ^
+    (∀l)(l ∈ L ⇒ ap(g, l) ∈ X(l, ap(fn_l(L, τi(i ∈ J(l) ∧ ap(g, l) ∈ X(l, i))), l)))                        by taut ch
+    gp. g ∈ ∏_l(L, X(l, ap(fn_l(L, τi(i ∈ J(l) ∧ ap(g, l) ∈ X(l, i))), l)))                                 by prodfam_intro mg ^
+    fp. fn_l(L, τi(i ∈ J(l) ∧ ap(g, l) ∈ X(l, i))) ∈ ∏_l(L, J(l))                                                   by taut ch
+    fn_l(L, τi(i ∈ J(l) ∧ ap(g, l) ∈ X(l, i))) ∈ ∏_l(L, J(l)) ∧ g ∈ ∏_l(L, X(l, ap(fn_l(L, τi(i ∈ J(l) ∧ ap(g, l) ∈ X(l, i))), l)))                       by C20 fp gp
+    (∃f)(f ∈ ∏_l(L, J(l)) ∧ g ∈ ∏_l(L, X(l, ap(f, l))))                       by exists_intro ^
+    g ∈ ⋃_f(∏_l(L, J(l)), ∏_l(L, X(l, ap(f, l)))) ⇔ (∃f)(f ∈ ∏_l(L, J(l)) ∧ g ∈ ∏_l(L, X(l, ap(f, l))))            by mem_union
+    g ∈ ⋃_f(∏_l(L, J(l)), ∏_l(L, X(l, ap(f, l))))                                                          by iff_mpr ^ ^^
+  }
+  l. ∏_l(L, ⋃_i(J(l), X(l, i))) ⊂ ⋃_f(∏_l(L, J(l)), ∏_l(L, X(l, ap(f, l))))                                                      by gen ^ with g
+  g ∈ ⋃_f(∏_l(L, J(l)), ∏_l(L, X(l, ap(f, l)))) ⇒ g ∈ ∏_l(L, ⋃_i(J(l), X(l, i))) by assume m {
+    g ∈ ⋃_f(∏_l(L, J(l)), ∏_l(L, X(l, ap(f, l)))) ⇔ (∃f)(f ∈ ∏_l(L, J(l)) ∧ g ∈ ∏_l(L, X(l, ap(f, l))))            by mem_union
+    e. (∃f)(f ∈ ∏_l(L, J(l)) ∧ g ∈ ∏_l(L, X(l, ap(f, l))))                    by iff_mp ^ m
+    (f ∈ ∏_l(L, J(l)) ∧ g ∈ ∏_l(L, X(l, ap(f, l)))) ⇒ g ∈ ∏_l(L, ⋃_i(J(l), X(l, i))) by assume p {
+      fp. f ∈ ∏_l(L, J(l))                                                    by taut p
+      gp. g ∈ ∏_l(L, X(l, ap(f, l)))                                  by taut p
+      mg. Map(g, L, ⋃_l(L, X(l, ap(f, l))))                           by prodfam_map gp
+      l ∈ L ⇒ ap(g, l) ∈ ⋃_i(J(l), X(l, i)) by assume a {
+        ap(f, l) ∈ J(l)                                               by prodfam_ap fp a
+        ap(g, l) ∈ X(l, ap(f, l))                                     by prodfam_ap gp a
+        ap(f, l) ∈ J(l) ∧ ap(g, l) ∈ X(l, ap(f, l))                   by C20 1 2
+        (∃i)(i ∈ J(l) ∧ ap(g, l) ∈ X(l, i))                           by exists_intro ^
+        ap(g, l) ∈ ⋃_i(J(l), X(l, i)) ⇔ (∃i)(i ∈ J(l) ∧ ap(g, l) ∈ X(l, i))   by mem_union
+        ap(g, l) ∈ ⋃_i(J(l), X(l, i))                                 by iff_mpr ^ ^^
+      }
+      (∀l)(l ∈ L ⇒ ap(g, l) ∈ ⋃_i(J(l), X(l, i)))                     by gen ^ with l
+      g ∈ ∏_l(L, ⋃_i(J(l), X(l, i)))                                                        by prodfam_intro mg ^
+    }
+    (∀f)((f ∈ ∏_l(L, J(l)) ∧ g ∈ ∏_l(L, X(l, ap(f, l)))) ⇒ g ∈ ∏_l(L, ⋃_i(J(l), X(l, i))))          by gen ^ with f
+    g ∈ ∏_l(L, ⋃_i(J(l), X(l, i)))                                                          by obtain e ^
+  }
+  r. ⋃_f(∏_l(L, J(l)), ∏_l(L, X(l, ap(f, l)))) ⊂ ∏_l(L, ⋃_i(J(l), X(l, i)))                                                      by gen ^ with g
+  _                                                                   by ext l r
+}
+
+-- Для λ ∈ L и ι ∈ J_λ (все J непусты) есть f ∈ ∏ J с f(λ) = ι: выбрать ι в λ и что угодно вне λ.
+theorem prod_point {L K A : term} {J : term 1} (hj : (∀l)(l ∈ L ⇒ J(l) ≠ ∅)) (hk : K ∈ L) (ha : A ∈ J(K)) : (∃f)(f ∈ ∏_m(L, J(m)) ∧ ap(f, K) = A) {
+  m ∈ L ⇒ (∃j)(j ∈ J(m) ∧ (m = K ⇒ j = A)) by assume a {
+    m = K ⇒ (∃j)(j ∈ J(m) ∧ (m = K ⇒ j = A)) by assume e {
+      J(m) = J(K)                                                   by cong e
+      A ∈ J(m) ⇔ A ∈ J(K)                                           by eq_mem ^
+      A ∈ J(m)                                                      by taut ^ ha
+      A = A                                                         by T1
+      A ∈ J(m) ∧ (m = K ⇒ A = A)                                    by taut ^^ ^
+      (∃j)(j ∈ J(m) ∧ (m = K ⇒ j = A))                              by exists_intro ^
+    }
+    ¬(m = K) ⇒ (∃j)(j ∈ J(m) ∧ (m = K ⇒ j = A)) by assume e {
+      m ∈ L ⇒ J(m) ≠ ∅                                              by inst hj
+      J(m) ≠ ∅                                                      by mp a ^
+      J(m) ≠ ∅ ⇔ (∃x)(x ∈ J(m))                                     by nonempty
+      ex. (∃x)(x ∈ J(m))                                            by iff_mp ^ ^^
+      x ∈ J(m) ⇒ (∃j)(j ∈ J(m) ∧ (m = K ⇒ j = A)) by assume b {
+        x ∈ J(m) ∧ (m = K ⇒ x = A)                                  by taut b e
+        (∃j)(j ∈ J(m) ∧ (m = K ⇒ j = A))                            by exists_intro ^
+      }
+      (∀x)(x ∈ J(m) ⇒ (∃j)(j ∈ J(m) ∧ (m = K ⇒ j = A)))             by gen ^ with x
+      (∃j)(j ∈ J(m) ∧ (m = K ⇒ j = A))                              by obtain ex ^
+    }
+    (∃j)(j ∈ J(m) ∧ (m = K ⇒ j = A))                                by taut 1 2
+  }
+  (∀m)(m ∈ L ⇒ (∃j)(j ∈ J(m) ∧ (m = K ⇒ j = A)))                    by gen ^ with m
+  ch. fn_m(L, τj(j ∈ J(m) ∧ (m = K ⇒ j = A))) ∈ ∏_m(L, J(m)) ∧ (∀m)(m ∈ L ⇒ (m = K ⇒ ap(fn_m(L, τj(j ∈ J(m) ∧ (m = K ⇒ j = A))), m) = A))         by choice_fn ^
+  fp. fn_m(L, τj(j ∈ J(m) ∧ (m = K ⇒ j = A))) ∈ ∏_m(L, J(m))                                                   by taut ch
+  cv. (∀m)(m ∈ L ⇒ (m = K ⇒ ap(fn_m(L, τj(j ∈ J(m) ∧ (m = K ⇒ j = A))), m) = A))                       by taut ch
+  K ∈ L ⇒ (K = K ⇒ ap(fn_m(L, τj(j ∈ J(m) ∧ (m = K ⇒ j = A))), K) = A)                                 by inst cv
+  K = K                                                             by T1
+  ap(fn_m(L, τj(j ∈ J(m) ∧ (m = K ⇒ j = A))), K) = A                                                   by taut hk ^^ ^
+  fn_m(L, τj(j ∈ J(m) ∧ (m = K ⇒ j = A))) ∈ ∏_m(L, J(m)) ∧ ap(fn_m(L, τj(j ∈ J(m) ∧ (m = K ⇒ j = A))), K) = A                                     by C20 fp ^
+  _                                                                 by exists_intro ^
+}
+
+-- Предложение 9, вторая формула: при L ≠ ∅ и J_λ ≠ ∅ ∏_λ ⋂_ι X_{λ,ι} = ⋂_{f∈I} ∏_λ X_{λ,f(λ)}.
+theorem prod_inter_distrib {L : term} {J : term 1} {X : term 2} (hl : L ≠ ∅) (hj : (∀l)(l ∈ L ⇒ J(l) ≠ ∅)) : ∏_l(L, ⋂_i(J(l), X(l, i))) = ⋂_f(∏_l(L, J(l)), ∏_l(L, X(l, ap(f, l)))) {
+  ne. ∏_l(L, J(l)) ≠ ∅                                              by prodJ_nonempty hj
+  a. g ∈ ⋂_f(∏_l(L, J(l)), ∏_l(L, X(l, ap(f, l)))) ⇔ (∀f)(f ∈ ∏_l(L, J(l)) ⇒ g ∈ ∏_l(L, X(l, ap(f, l))))   by mem_inter ne
+  inn. l ∈ L ⇒ (ap(g, l) ∈ ⋂_i(J(l), X(l, i)) ⇔ (∀i)(i ∈ J(l) ⇒ ap(g, l) ∈ X(l, i))) by assume m {
+    l ∈ L ⇒ J(l) ≠ ∅                                                by inst hj
+    J(l) ≠ ∅                                                        by mp m ^
+    ap(g, l) ∈ ⋂_i(J(l), X(l, i)) ⇔ (∀i)(i ∈ J(l) ⇒ ap(g, l) ∈ X(l, i))   by mem_inter ^
+  }
+  inna. (∀l)(l ∈ L ⇒ (ap(g, l) ∈ ⋂_i(J(l), X(l, i)) ⇔ (∀i)(i ∈ J(l) ⇒ ap(g, l) ∈ X(l, i))))   by gen inn with l
+  g ∈ ∏_l(L, ⋂_i(J(l), X(l, i))) ⇒ (∀f)(f ∈ ∏_l(L, J(l)) ⇒ g ∈ ∏_l(L, X(l, ap(f, l)))) by assume m {
+    mg. Map(g, L, ⋃_l(L, ⋂_i(J(l), X(l, i))))                       by prodfam_map m
+    f ∈ ∏_l(L, J(l)) ⇒ g ∈ ∏_l(L, X(l, ap(f, l))) by assume fp {
+      l ∈ L ⇒ ap(g, l) ∈ X(l, ap(f, l)) by assume b {
+        ap(g, l) ∈ ⋂_i(J(l), X(l, i))                               by prodfam_ap m b
+        l ∈ L ⇒ (ap(g, l) ∈ ⋂_i(J(l), X(l, i)) ⇔ (∀i)(i ∈ J(l) ⇒ ap(g, l) ∈ X(l, i)))   by inst inna
+        (∀i)(i ∈ J(l) ⇒ ap(g, l) ∈ X(l, i))                         by taut b 1 2
+        ap(f, l) ∈ J(l) ⇒ ap(g, l) ∈ X(l, ap(f, l))                 by inst ^
+        ap(f, l) ∈ J(l)                                             by prodfam_ap fp b
+        ap(g, l) ∈ X(l, ap(f, l))                                   by mp ^ ^^
+      }
+      (∀l)(l ∈ L ⇒ ap(g, l) ∈ X(l, ap(f, l)))                       by gen ^ with l
+      g ∈ ∏_l(L, X(l, ap(f, l)))                                    by prodfam_intro mg ^
+    }
+    (∀f)(f ∈ ∏_l(L, J(l)) ⇒ g ∈ ∏_l(L, X(l, ap(f, l))))             by gen ^ with f
+  }
+  (∀f)(f ∈ ∏_l(L, J(l)) ⇒ g ∈ ∏_l(L, X(l, ap(f, l)))) ⇒ g ∈ ∏_l(L, ⋂_i(J(l), X(l, i))) by assume h {
+    ∏_l(L, J(l)) ≠ ∅ ⇔ (∃x)(x ∈ ∏_l(L, J(l)))                       by nonempty
+    e0. (∃x)(x ∈ ∏_l(L, J(l)))                                      by iff_mp ^ ne
+    mx. x ∈ ∏_l(L, J(l)) ⇒ Map(g, L, ⋃_l(L, X(l, ap(x, l)))) by assume b {
+      x ∈ ∏_l(L, J(l)) ⇒ g ∈ ∏_l(L, X(l, ap(x, l)))                 by inst h
+      g ∈ ∏_l(L, X(l, ap(x, l)))                                    by mp b ^
+      Map(g, L, ⋃_l(L, X(l, ap(x, l))))                             by prodfam_map ^
+    }
+    x ∈ ∏_l(L, J(l)) ⇒ (∃B)Map(g, L, B) by assume b {
+      Map(g, L, ⋃_l(L, X(l, ap(x, l))))                             by mp b mx
+      (∃B)Map(g, L, B)                                              by exists_intro ^
+    }
+    (∀x)(x ∈ ∏_l(L, J(l)) ⇒ (∃B)Map(g, L, B))                       by gen ^ with x
+    eb. (∃B)Map(g, L, B)                                            by obtain e0 ^
+    l ∈ L ⇒ ap(g, l) ∈ ⋂_i(J(l), X(l, i)) by assume b {
+      i ∈ J(l) ⇒ ap(g, l) ∈ X(l, i) by assume c {
+        ep. (∃f)(f ∈ ∏_m(L, J(m)) ∧ ap(f, l) = i)                   by prod_point hj b c
+        (f ∈ ∏_m(L, J(m)) ∧ ap(f, l) = i) ⇒ ap(g, l) ∈ X(l, i) by assume d {
+          fp. f ∈ ∏_l(L, J(l))                                      by taut d
+          fe. ap(f, l) = i                                          by taut d
+          f ∈ ∏_l(L, J(l)) ⇒ g ∈ ∏_l(L, X(l, ap(f, l)))             by inst h
+          g ∈ ∏_l(L, X(l, ap(f, l)))                                by mp fp ^
+          ap(g, l) ∈ X(l, ap(f, l))                                 by prodfam_ap ^ b
+          ap(g, l) ∈ X(l, ap(f, l)) ⇔ ap(g, l) ∈ X(l, i)            by rcong fe
+          ap(g, l) ∈ X(l, i)                                        by taut ^^ ^
+        }
+        (∀f)((f ∈ ∏_m(L, J(m)) ∧ ap(f, l) = i) ⇒ ap(g, l) ∈ X(l, i))   by gen ^ with f
+        ap(g, l) ∈ X(l, i)                                          by obtain ep ^
+      }
+      (∀i)(i ∈ J(l) ⇒ ap(g, l) ∈ X(l, i))                           by gen ^ with i
+      l ∈ L ⇒ (ap(g, l) ∈ ⋂_i(J(l), X(l, i)) ⇔ (∀i)(i ∈ J(l) ⇒ ap(g, l) ∈ X(l, i)))   by inst inna
+      ap(g, l) ∈ ⋂_i(J(l), X(l, i))                                 by taut b ^^ ^
+    }
+    pl. (∀l)(l ∈ L ⇒ ap(g, l) ∈ ⋂_i(J(l), X(l, i)))                 by gen ^ with l
+    Map(g, L, B) ⇒ g ∈ ∏_l(L, ⋂_i(J(l), X(l, i))) by assume mb {
+      g ∈ ∏_l(L, ⋂_i(J(l), X(l, i)))                                by prodfam_intro mb pl
+    }
+    (∀B)(Map(g, L, B) ⇒ g ∈ ∏_l(L, ⋂_i(J(l), X(l, i))))             by gen ^ with B
+    g ∈ ∏_l(L, ⋂_i(J(l), X(l, i)))                                  by obtain eb ^
+  }
+  g ∈ ∏_l(L, ⋂_i(J(l), X(l, i))) ⇔ g ∈ ⋂_f(∏_l(L, J(l)), ∏_l(L, X(l, ap(f, l))))   by taut a 5 6
+  (∀g)(g ∈ ∏_l(L, ⋂_i(J(l), X(l, i))) ⇔ g ∈ ⋂_f(∏_l(L, J(l)), ∏_l(L, X(l, ap(f, l)))))   by gen ^ with g
+  _                                                                 by ext_iff ^
+}
+
+-- Предложение 10 (стр. 122): при K ≠ ∅ ⋂_κ ∏_ι X_{ι,κ} = ∏_ι ⋂_κ X_{ι,κ}.
+theorem inter_prod {I K : term} {X : term 2} (hk : K ≠ ∅) : ⋂_k(K, ∏_i(I, X(i, k))) = ∏_i(I, ⋂_k(K, X(i, k))) {
+  a. g ∈ ⋂_k(K, ∏_i(I, X(i, k))) ⇔ (∀k)(k ∈ K ⇒ g ∈ ∏_i(I, X(i, k)))  by mem_inter hk
+  inn. i ∈ I ⇒ (ap(g, i) ∈ ⋂_k(K, X(i, k)) ⇔ (∀k)(k ∈ K ⇒ ap(g, i) ∈ X(i, k))) by assume m {
+    ap(g, i) ∈ ⋂_k(K, X(i, k)) ⇔ (∀k)(k ∈ K ⇒ ap(g, i) ∈ X(i, k))     by mem_inter hk
+  }
+  inna. (∀i)(i ∈ I ⇒ (ap(g, i) ∈ ⋂_k(K, X(i, k)) ⇔ (∀k)(k ∈ K ⇒ ap(g, i) ∈ X(i, k))))   by gen inn with i
+  (∀k)(k ∈ K ⇒ g ∈ ∏_i(I, X(i, k))) ⇒ g ∈ ∏_i(I, ⋂_k(K, X(i, k))) by assume h {
+    K ≠ ∅ ⇔ (∃x)(x ∈ K)                                               by nonempty
+    ek. (∃k)(k ∈ K)                                                   by iff_mp ^ hk
+    k ∈ K ⇒ g ∈ ∏_i(I, ⋂_k(K, X(i, k))) by assume mk {
+      k ∈ K ⇒ g ∈ ∏_i(I, X(i, k))                                     by inst h
+      g ∈ ∏_i(I, X(i, k))                                             by mp mk ^
+      mg. Map(g, I, ⋃_i(I, X(i, k)))                                  by prodfam_map ^
+      i ∈ I ⇒ ap(g, i) ∈ ⋂_k(K, X(i, k)) by assume a {
+        k' ∈ K ⇒ ap(g, i) ∈ X(i, k') by assume b {
+          k' ∈ K ⇒ g ∈ ∏_i(I, X(i, k'))                               by inst h
+          g ∈ ∏_i(I, X(i, k'))                                        by mp b ^
+          ap(g, i) ∈ X(i, k')                                         by prodfam_ap ^ a
+        }
+        (∀k')(k' ∈ K ⇒ ap(g, i) ∈ X(i, k'))                           by gen ^ with k'
+        i ∈ I ⇒ (ap(g, i) ∈ ⋂_k(K, X(i, k)) ⇔ (∀k)(k ∈ K ⇒ ap(g, i) ∈ X(i, k)))   by inst inna
+        ap(g, i) ∈ ⋂_k(K, X(i, k))                                    by taut a 2 3
+      }
+      (∀i)(i ∈ I ⇒ ap(g, i) ∈ ⋂_k(K, X(i, k)))                        by gen ^ with i
+      g ∈ ∏_i(I, ⋂_k(K, X(i, k)))                                     by prodfam_intro mg ^
+    }
+    (∀k)(k ∈ K ⇒ g ∈ ∏_i(I, ⋂_k(K, X(i, k))))                         by gen ^ with k
+    g ∈ ∏_i(I, ⋂_k(K, X(i, k)))                                       by obtain ek ^
+  }
+  g ∈ ∏_i(I, ⋂_k(K, X(i, k))) ⇒ (∀k)(k ∈ K ⇒ g ∈ ∏_i(I, X(i, k))) by assume m {
+    mg. Map(g, I, ⋃_i(I, ⋂_k(K, X(i, k))))                            by prodfam_map m
+    k ∈ K ⇒ g ∈ ∏_i(I, X(i, k)) by assume mk {
+      i ∈ I ⇒ ap(g, i) ∈ X(i, k) by assume a {
+        ap(g, i) ∈ ⋂_k(K, X(i, k))                                    by prodfam_ap m a
+        i ∈ I ⇒ (ap(g, i) ∈ ⋂_k(K, X(i, k)) ⇔ (∀k)(k ∈ K ⇒ ap(g, i) ∈ X(i, k)))   by inst inna
+        (∀k)(k ∈ K ⇒ ap(g, i) ∈ X(i, k))                              by taut a 1 2
+        k ∈ K ⇒ ap(g, i) ∈ X(i, k)                                    by inst ^
+        ap(g, i) ∈ X(i, k)                                            by mp mk ^
+      }
+      (∀i)(i ∈ I ⇒ ap(g, i) ∈ X(i, k))                                by gen ^ with i
+      g ∈ ∏_i(I, X(i, k))                                             by prodfam_intro mg ^
+    }
+    (∀k)(k ∈ K ⇒ g ∈ ∏_i(I, X(i, k)))                                 by gen ^ with k
+  }
+  g ∈ ⋂_k(K, ∏_i(I, X(i, k))) ⇔ g ∈ ∏_i(I, ⋂_k(K, X(i, k)))           by taut a 4 5
+  (∀g)(g ∈ ⋂_k(K, ∏_i(I, X(i, k))) ⇔ g ∈ ∏_i(I, ⋂_k(K, X(i, k))))     by gen ^ with g
+  _                                                                   by ext_iff ^
+}
+
+-- Следствие предложения 10, первая формула: (∏ X_ι) ∩ (∏ Y_ι) = ∏ (X_ι ∩ Y_ι).
+theorem prod_cap {I : term} {X Y : term 1} : ∏_i(I, X(i)) ∩ ∏_i(I, Y(i)) = ∏_i(I, X(i) ∩ Y(i)) {
+  a. g ∈ ∏_i(I, X(i)) ∩ ∏_i(I, Y(i)) ⇔ (g ∈ ∏_i(I, X(i)) ∧ g ∈ ∏_i(I, Y(i)))   by mem_cap
+  (g ∈ ∏_i(I, X(i)) ∧ g ∈ ∏_i(I, Y(i))) ⇒ g ∈ ∏_i(I, X(i) ∩ Y(i)) by assume m {
+    gx. g ∈ ∏_i(I, X(i))                                            by taut m
+    gy. g ∈ ∏_i(I, Y(i))                                            by taut m
+    mg. Map(g, I, ⋃_i(I, X(i)))                                     by prodfam_map gx
+    i ∈ I ⇒ ap(g, i) ∈ X(i) ∩ Y(i) by assume b {
+      ap(g, i) ∈ X(i)                                               by prodfam_ap gx b
+      ap(g, i) ∈ Y(i)                                               by prodfam_ap gy b
+      ap(g, i) ∈ X(i) ∩ Y(i) ⇔ (ap(g, i) ∈ X(i) ∧ ap(g, i) ∈ Y(i))  by mem_cap
+      ap(g, i) ∈ X(i) ∩ Y(i)                                        by taut 1 2 3
+    }
+    (∀i)(i ∈ I ⇒ ap(g, i) ∈ X(i) ∩ Y(i))                            by gen ^ with i
+    g ∈ ∏_i(I, X(i) ∩ Y(i))                                         by prodfam_intro mg ^
+  }
+  g ∈ ∏_i(I, X(i) ∩ Y(i)) ⇒ (g ∈ ∏_i(I, X(i)) ∧ g ∈ ∏_i(I, Y(i))) by assume m {
+    mg. Map(g, I, ⋃_i(I, X(i) ∩ Y(i)))                              by prodfam_map m
+    i ∈ I ⇒ ap(g, i) ∈ X(i) by assume b {
+      ap(g, i) ∈ X(i) ∩ Y(i)                                        by prodfam_ap m b
+      ap(g, i) ∈ X(i) ∩ Y(i) ⇔ (ap(g, i) ∈ X(i) ∧ ap(g, i) ∈ Y(i))  by mem_cap
+      ap(g, i) ∈ X(i)                                               by taut ^^ ^
+    }
+    (∀i)(i ∈ I ⇒ ap(g, i) ∈ X(i))                                   by gen ^ with i
+    gx. g ∈ ∏_i(I, X(i))                                            by prodfam_intro mg ^
+    i ∈ I ⇒ ap(g, i) ∈ Y(i) by assume b {
+      ap(g, i) ∈ X(i) ∩ Y(i)                                        by prodfam_ap m b
+      ap(g, i) ∈ X(i) ∩ Y(i) ⇔ (ap(g, i) ∈ X(i) ∧ ap(g, i) ∈ Y(i))  by mem_cap
+      ap(g, i) ∈ Y(i)                                               by taut ^^ ^
+    }
+    (∀i)(i ∈ I ⇒ ap(g, i) ∈ Y(i))                                   by gen ^ with i
+    gy. g ∈ ∏_i(I, Y(i))                                            by prodfam_intro mg ^
+    _                                                               by C20 gx gy
+  }
+  g ∈ ∏_i(I, X(i)) ∩ ∏_i(I, Y(i)) ⇔ g ∈ ∏_i(I, X(i) ∩ Y(i))         by taut a 2 3
+  (∀g)(g ∈ ∏_i(I, X(i)) ∩ ∏_i(I, Y(i)) ⇔ g ∈ ∏_i(I, X(i) ∩ Y(i)))   by gen ^ with g
+  _                                                                 by ext_iff ^
+}
+
+-- n° 7. Распространение отображений на произведения (определение 2, стр. 122): для f_ι : X_ι → Y_ι
+-- отображение (x_ι) ↦ (f_ι(x_ι)) из ∏ X_ι в ∏ Y_ι. Запись: fn_g(∏X, fn_i(I, ap(F(i), ap(g, i)))).
+theorem prodmaps_mem {G I : term} {F X Y : term 1} (h : (∀i)(i ∈ I ⇒ Map(F(i), X(i), Y(i)))) (hg : G ∈ ∏_i(I, X(i))) : fn_i(I, ap(F(i), ap(G, i))) ∈ ∏_i(I, Y(i)) {
+  mf. Map(fn_i(I, ap(F(i), ap(G, i))), I, ℰ_y((∃i)(y = ap(F(i), ap(G, i)) ∧ i ∈ I)))     by fn_map
+  i ∈ I ⇒ ap(fn_i(I, ap(F(i), ap(G, i))), i) ∈ Y(i) by assume a {
+    e. ap(fn_i(I, ap(F(i), ap(G, i))), i) = ap(F(i), ap(G, i))                             by ap_fn a
+    xg. ap(G, i) ∈ X(i)                                             by prodfam_ap hg a
+    i ∈ I ⇒ Map(F(i), X(i), Y(i))                                   by inst h
+    Map(F(i), X(i), Y(i))                                           by mp a ^
+    ap(F(i), ap(G, i)) ∈ Y(i)                                       by ap_mem ^ xg
+    ap(fn_i(I, ap(F(i), ap(G, i))), i) ∈ Y(i) ⇔ ap(F(i), ap(G, i)) ∈ Y(i)                  by rcong e
+    ap(fn_i(I, ap(F(i), ap(G, i))), i) ∈ Y(i)                                              by taut ^^ ^
+  }
+  (∀i)(i ∈ I ⇒ ap(fn_i(I, ap(F(i), ap(G, i))), i) ∈ Y(i))                                  by gen ^ with i
+  _                                                                 by prodfam_intro mf ^
+}
+
+theorem prodmaps_map {I : term} {F X Y : term 1} (h : (∀i)(i ∈ I ⇒ Map(F(i), X(i), Y(i)))) : Map(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), ∏_i(I, X(i)), ∏_i(I, Y(i))) {
+  g ∈ ∏_i(I, X(i)) ⇒ fn_i(I, ap(F(i), ap(g, i))) ∈ ∏_i(I, Y(i)) by assume m {
+    fn_i(I, ap(F(i), ap(g, i))) ∈ ∏_i(I, Y(i))                              by prodmaps_mem h m
+  }
+  (∀g)(g ∈ ∏_i(I, X(i)) ⇒ fn_i(I, ap(F(i), ap(g, i))) ∈ ∏_i(I, Y(i)))               by gen ^ with g
+  _                                                                 by fn_map_into ^
+}
+
+-- Предложение 11 (стр. 123): распространение семейства (g'_ι ∘ g_ι) равно g' ∘ g.
+theorem prodmaps_comp {I : term} {F H X Y Z : term 1} (hf : (∀i)(i ∈ I ⇒ Map(F(i), X(i), Y(i)))) (hh : (∀i)(i ∈ I ⇒ Map(H(i), Y(i), Z(i)))) : fn_g(∏_i(I, Y(i)), fn_i(I, ap(H(i), ap(g, i)))) ∘ fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))) = fn_g(∏_i(I, X(i)), fn_i(I, ap(H(i) ∘ F(i), ap(g, i)))) {
+  mp. Map(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), ∏_i(I, X(i)), ∏_i(I, Y(i)))                                          by prodmaps_map hf
+  mp'. Map(fn_g(∏_i(I, Y(i)), fn_i(I, ap(H(i), ap(g, i)))), ∏_i(I, Y(i)), ∏_i(I, Z(i)))                                        by prodmaps_map hh
+  ml. Map(fn_g(∏_i(I, Y(i)), fn_i(I, ap(H(i), ap(g, i)))) ∘ fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), ∏_i(I, X(i)), ∏_i(I, Z(i)))                                   by comp_map mp mp'
+  i ∈ I ⇒ Map(H(i) ∘ F(i), X(i), Z(i)) by assume a {
+    i ∈ I ⇒ Map(F(i), X(i), Y(i))                                   by inst hf
+    Map(F(i), X(i), Y(i))                                           by mp a ^
+    i ∈ I ⇒ Map(H(i), Y(i), Z(i))                                   by inst hh
+    Map(H(i), Y(i), Z(i))                                           by mp a ^
+    Map(H(i) ∘ F(i), X(i), Z(i))                                    by comp_map 2 4
+  }
+  (∀i)(i ∈ I ⇒ Map(H(i) ∘ F(i), X(i), Z(i)))                        by gen ^ with i
+  mr. Map(fn_g(∏_i(I, X(i)), fn_i(I, ap(H(i) ∘ F(i), ap(g, i)))), ∏_i(I, X(i)), ∏_i(I, Z(i)))                                         by prodmaps_map ^
+  g ∈ ∏_i(I, X(i)) ⇒ ap(fn_g(∏_i(I, Y(i)), fn_i(I, ap(H(i), ap(g, i)))) ∘ fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), g) = ap(fn_g(∏_i(I, X(i)), fn_i(I, ap(H(i) ∘ F(i), ap(g, i)))), g) by assume m {
+    a. ap(fn_g(∏_i(I, Y(i)), fn_i(I, ap(H(i), ap(g, i)))) ∘ fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), g) = ap(fn_g(∏_i(I, Y(i)), fn_i(I, ap(H(i), ap(g, i)))), ap(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), g))                     by ap_comp mp mp' m
+    b. ap(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), g) = fn_i(I, ap(F(i), ap(g, i)))                                            by ap_fn m
+    c. ap(fn_g(∏_i(I, Y(i)), fn_i(I, ap(H(i), ap(g, i)))), ap(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), g)) = ap(fn_g(∏_i(I, Y(i)), fn_i(I, ap(H(i), ap(g, i)))), fn_i(I, ap(F(i), ap(g, i))))                        by cong b
+    fy. fn_i(I, ap(F(i), ap(g, i))) ∈ ∏_i(I, Y(i))                                                 by prodmaps_mem hf m
+    d. ap(fn_g(∏_i(I, Y(i)), fn_i(I, ap(H(i), ap(g, i)))), fn_i(I, ap(F(i), ap(g, i)))) = fn_i(I, ap(H(i), ap(fn_i(I, ap(F(i), ap(g, i))), i)))              by ap_fn fy
+    e. ap(fn_g(∏_i(I, X(i)), fn_i(I, ap(H(i) ∘ F(i), ap(g, i)))), g) = fn_i(I, ap(H(i) ∘ F(i), ap(g, i)))             by ap_fn m
+    m1. Map(fn_i(I, ap(H(i), ap(fn_i(I, ap(F(i), ap(g, i))), i))), I, ℰ_y((∃i)(y = ap(H(i), ap(fn_i(I, ap(F(i), ap(g, i))), i)) ∧ i ∈ I)))   by fn_map
+    m2. Map(fn_i(I, ap(H(i) ∘ F(i), ap(g, i))), I, ℰ_y((∃i)(y = ap(H(i) ∘ F(i), ap(g, i)) ∧ i ∈ I)))   by fn_map
+    i ∈ I ⇒ ap(fn_i(I, ap(H(i), ap(fn_i(I, ap(F(i), ap(g, i))), i))), i) = ap(fn_i(I, ap(H(i) ∘ F(i), ap(g, i))), i) by assume a {
+      s1. ap(fn_i(I, ap(H(i), ap(fn_i(I, ap(F(i), ap(g, i))), i))), i) = ap(H(i), ap(fn_i(I, ap(F(i), ap(g, i))), i))   by ap_fn a
+      s2. ap(fn_i(I, ap(F(i), ap(g, i))), i) = ap(F(i), ap(g, i))                          by ap_fn a
+      s3. ap(H(i), ap(fn_i(I, ap(F(i), ap(g, i))), i)) = ap(H(i), ap(F(i), ap(g, i)))      by cong s2
+      i ∈ I ⇒ Map(F(i), X(i), Y(i))                                 by inst hf
+      mf. Map(F(i), X(i), Y(i))                                     by mp a ^
+      i ∈ I ⇒ Map(H(i), Y(i), Z(i))                                 by inst hh
+      mh. Map(H(i), Y(i), Z(i))                                     by mp a ^
+      xg. ap(g, i) ∈ X(i)                                           by prodfam_ap m a
+      s4. ap(H(i) ∘ F(i), ap(g, i)) = ap(H(i), ap(F(i), ap(g, i)))  by ap_comp mf mh xg
+      s5. ap(fn_i(I, ap(H(i) ∘ F(i), ap(g, i))), i) = ap(H(i) ∘ F(i), ap(g, i))   by ap_fn a
+      ap(fn_i(I, ap(H(i), ap(fn_i(I, ap(F(i), ap(g, i))), i))), i) = ap(fn_i(I, ap(H(i) ∘ F(i), ap(g, i))), i)   by chain s1 s3 s4 s5
+    }
+    (∀i)(i ∈ I ⇒ ap(fn_i(I, ap(H(i), ap(fn_i(I, ap(F(i), ap(g, i))), i))), i) = ap(fn_i(I, ap(H(i) ∘ F(i), ap(g, i))), i))   by gen ^ with i
+    f. fn_i(I, ap(H(i), ap(fn_i(I, ap(F(i), ap(g, i))), i))) = fn_i(I, ap(H(i) ∘ F(i), ap(g, i)))   by map_ext m1 m2 ^
+    ap(fn_g(∏_i(I, Y(i)), fn_i(I, ap(H(i), ap(g, i)))) ∘ fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), g) = ap(fn_g(∏_i(I, X(i)), fn_i(I, ap(H(i) ∘ F(i), ap(g, i)))), g)                                 by chain a c d f e
+  }
+  (∀g)(g ∈ ∏_i(I, X(i)) ⇒ ap(fn_g(∏_i(I, Y(i)), fn_i(I, ap(H(i), ap(g, i)))) ∘ fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), g) = ap(fn_g(∏_i(I, X(i)), fn_i(I, ap(H(i) ∘ F(i), ap(g, i)))), g))                  by gen ^ with g
+  _                                                                 by map_ext ml mr ^
+}
+
+-- Следствие предложения 11 (стр. 123): распространение инъекций инъективно, сюръекций сюръективно.
+theorem prodmaps_inj {I : term} {F X Y : term 1} (h : (∀i)(i ∈ I ⇒ Inj(F(i), X(i), Y(i)))) : Inj(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), ∏_i(I, X(i)), ∏_i(I, Y(i))) {
+  i ∈ I ⇒ Map(F(i), X(i), Y(i)) by assume a {
+    i ∈ I ⇒ Inj(F(i), X(i), Y(i))                                   by inst h
+    Inj(F(i), X(i), Y(i))                                           by mp a ^
+    Map(F(i), X(i), Y(i))                                           by taut ^
+  }
+  hm. (∀i)(i ∈ I ⇒ Map(F(i), X(i), Y(i)))                           by gen ^ with i
+  mp. Map(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), ∏_i(I, X(i)), ∏_i(I, Y(i)))                                          by prodmaps_map hm
+  (g ∈ ∏_i(I, X(i)) ∧ (g' ∈ ∏_i(I, X(i)) ∧ ap(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), g) = ap(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), g'))) ⇒ g = g' by assume m {
+    gp. g ∈ ∏_i(I, X(i))                                                    by taut m
+    gp'. g' ∈ ∏_i(I, X(i))                                                  by taut m
+    p. ap(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), g) = fn_i(I, ap(F(i), ap(g, i)))                     by ap_fn gp
+    q. ap(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), g') = fn_i(I, ap(F(i), ap(g', i)))                   by ap_fn gp'
+    r. ap(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), g) = ap(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), g')                                     by taut m
+    e. fn_i(I, ap(F(i), ap(g, i))) = fn_i(I, ap(F(i), ap(g', i)))   by chain p r q
+    i ∈ I ⇒ ap(g, i) = ap(g', i) by assume a {
+      x1. ap(g, i) ∈ X(i)                                           by prodfam_ap gp a
+      x2. ap(g', i) ∈ X(i)                                          by prodfam_ap gp' a
+      s. ap(fn_i(I, ap(F(i), ap(g, i))), i) = ap(F(i), ap(g, i))    by ap_fn a
+      t. ap(fn_i(I, ap(F(i), ap(g', i))), i) = ap(F(i), ap(g', i))  by ap_fn a
+      u. ap(fn_i(I, ap(F(i), ap(g, i))), i) = ap(fn_i(I, ap(F(i), ap(g', i))), i)   by cong e
+      w. ap(F(i), ap(g, i)) = ap(F(i), ap(g', i))                   by chain s u t
+      i ∈ I ⇒ Inj(F(i), X(i), Y(i))                                 by inst h
+      Inj(F(i), X(i), Y(i))                                         by mp a ^
+      ap(g, i) = ap(g', i)                                          by inj_ap ^ x1 x2 w
+    }
+    (∀i)(i ∈ I ⇒ ap(g, i) = ap(g', i))                              by gen ^ with i
+    mg. Map(g, I, ⋃_i(I, X(i)))                                     by prodfam_map gp
+    mg'. Map(g', I, ⋃_i(I, X(i)))                                   by prodfam_map gp'
+    g = g'                                                          by map_ext mg mg' ^^^
+  }
+  (∀g')((g ∈ ∏_i(I, X(i)) ∧ (g' ∈ ∏_i(I, X(i)) ∧ ap(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), g) = ap(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), g'))) ⇒ g = g')   by gen ^ with g'
+  (∀g)(∀g')((g ∈ ∏_i(I, X(i)) ∧ (g' ∈ ∏_i(I, X(i)) ∧ ap(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), g) = ap(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), g'))) ⇒ g = g')   by gen ^ with g
+  _                                                                 by C20 mp ^
+}
+
+theorem prodmaps_surj {I : term} {F X Y : term 1} (h : (∀i)(i ∈ I ⇒ Surj(F(i), X(i), Y(i)))) : Surj(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), ∏_i(I, X(i)), ∏_i(I, Y(i))) {
+  i ∈ I ⇒ Map(F(i), X(i), Y(i)) by assume a {
+    i ∈ I ⇒ Surj(F(i), X(i), Y(i))                                  by inst h
+    Surj(F(i), X(i), Y(i))                                          by mp a ^
+    Map(F(i), X(i), Y(i))                                           by taut ^
+  }
+  hm. (∀i)(i ∈ I ⇒ Map(F(i), X(i), Y(i)))                           by gen ^ with i
+  mp. Map(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), ∏_i(I, X(i)), ∏_i(I, Y(i)))                                          by prodmaps_map hm
+  y ∈ ∏_i(I, Y(i)) ⇒ (∃g)(g ∈ ∏_i(I, X(i)) ∧ y = ap(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), g)) by assume m {
+    l ∈ I ⇒ (∃x)(x ∈ X(l) ∧ ap(y, l) = ap(F(l), x)) by assume a {
+      l ∈ I ⇒ Surj(F(l), X(l), Y(l))                                by inst h
+      Surj(F(l), X(l), Y(l))                                        by mp a ^
+      ap(y, l) ∈ Y(l)                                               by prodfam_ap m a
+      (∃x)(x ∈ X(l) ∧ ap(y, l) = ap(F(l), x))                       by surj_ap ^^ ^
+    }
+    (∀l)(l ∈ I ⇒ (∃x)(x ∈ X(l) ∧ ap(y, l) = ap(F(l), x)))           by gen ^ with l
+    ch. fn_l(I, τx(x ∈ X(l) ∧ ap(y, l) = ap(F(l), x))) ∈ ∏_i(I, X(i)) ∧ (∀l)(l ∈ I ⇒ ap(y, l) = ap(F(l), ap(fn_l(I, τx(x ∈ X(l) ∧ ap(y, l) = ap(F(l), x))), l)))   by choice_fn ^
+    cp. fn_l(I, τx(x ∈ X(l) ∧ ap(y, l) = ap(F(l), x))) ∈ ∏_i(I, X(i))                                                 by taut ch
+    cv. (∀l)(l ∈ I ⇒ ap(y, l) = ap(F(l), ap(fn_l(I, τx(x ∈ X(l) ∧ ap(y, l) = ap(F(l), x))), l)))              by taut ch
+    my. Map(y, I, ⋃_i(I, Y(i)))                                     by prodfam_map m
+    mf. Map(fn_i(I, ap(F(i), ap(fn_l(I, τx(x ∈ X(l) ∧ ap(y, l) = ap(F(l), x))), i))), I, ℰ_z((∃i)(z = ap(F(i), ap(fn_l(I, τx(x ∈ X(l) ∧ ap(y, l) = ap(F(l), x))), i)) ∧ i ∈ I)))   by fn_map
+    i ∈ I ⇒ ap(y, i) = ap(fn_i(I, ap(F(i), ap(fn_l(I, τx(x ∈ X(l) ∧ ap(y, l) = ap(F(l), x))), i))), i) by assume a {
+      i ∈ I ⇒ ap(y, i) = ap(F(i), ap(fn_l(I, τx(x ∈ X(l) ∧ ap(y, l) = ap(F(l), x))), i))                      by inst cv
+      s. ap(y, i) = ap(F(i), ap(fn_l(I, τx(x ∈ X(l) ∧ ap(y, l) = ap(F(l), x))), i))                           by mp a ^
+      t. ap(fn_i(I, ap(F(i), ap(fn_l(I, τx(x ∈ X(l) ∧ ap(y, l) = ap(F(l), x))), i))), i) = ap(F(i), ap(fn_l(I, τx(x ∈ X(l) ∧ ap(y, l) = ap(F(l), x))), i))                        by ap_fn a
+      ap(y, i) = ap(fn_i(I, ap(F(i), ap(fn_l(I, τx(x ∈ X(l) ∧ ap(y, l) = ap(F(l), x))), i))), i)                                        by chain s t
+    }
+    (∀i)(i ∈ I ⇒ ap(y, i) = ap(fn_i(I, ap(F(i), ap(fn_l(I, τx(x ∈ X(l) ∧ ap(y, l) = ap(F(l), x))), i))), i))                            by gen ^ with i
+    e. y = fn_i(I, ap(F(i), ap(fn_l(I, τx(x ∈ X(l) ∧ ap(y, l) = ap(F(l), x))), i)))                                                     by map_ext my mf ^
+    f. ap(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), fn_l(I, τx(x ∈ X(l) ∧ ap(y, l) = ap(F(l), x)))) = fn_i(I, ap(F(i), ap(fn_l(I, τx(x ∈ X(l) ∧ ap(y, l) = ap(F(l), x))), i)))                                         by ap_fn cp
+    y = ap(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), fn_l(I, τx(x ∈ X(l) ∧ ap(y, l) = ap(F(l), x))))                                               by chain e f
+    fn_l(I, τx(x ∈ X(l) ∧ ap(y, l) = ap(F(l), x))) ∈ ∏_i(I, X(i)) ∧ y = ap(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), fn_l(I, τx(x ∈ X(l) ∧ ap(y, l) = ap(F(l), x))))                                 by C20 cp ^
+    (∃g)(g ∈ ∏_i(I, X(i)) ∧ y = ap(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), g))                                 by exists_intro ^
+  }
+  (∀y)(y ∈ ∏_i(I, Y(i)) ⇒ (∃g)(g ∈ ∏_i(I, X(i)) ∧ y = ap(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), g)))                  by gen ^ with y
+  Surj(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), ∏_i(I, X(i)), ∏_i(I, Y(i))) ⇔ (∀y)(y ∈ ∏_i(I, Y(i)) ⇒ (∃x)(x ∈ ∏_i(I, X(i)) ∧ y = ap(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), x)))   by surj_iff mp
+  _                                                                 by iff_mpr ^ ^^
+}
+
+theorem prodmaps_bij {I : term} {F X Y : term 1} (h : (∀i)(i ∈ I ⇒ Bij(F(i), X(i), Y(i)))) : Bij(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), ∏_i(I, X(i)), ∏_i(I, Y(i))) {
+  i ∈ I ⇒ Inj(F(i), X(i), Y(i)) by assume a {
+    i ∈ I ⇒ Bij(F(i), X(i), Y(i))                                   by inst h
+    Bij(F(i), X(i), Y(i))                                           by mp a ^
+    Inj(F(i), X(i), Y(i))                                           by taut ^
+  }
+  (∀i)(i ∈ I ⇒ Inj(F(i), X(i), Y(i)))                               by gen ^ with i
+  a. Inj(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), ∏_i(I, X(i)), ∏_i(I, Y(i)))                                           by prodmaps_inj ^
+  i ∈ I ⇒ Surj(F(i), X(i), Y(i)) by assume a {
+    i ∈ I ⇒ Bij(F(i), X(i), Y(i))                                   by inst h
+    Bij(F(i), X(i), Y(i))                                           by mp a ^
+    Surj(F(i), X(i), Y(i))                                          by taut ^
+  }
+  (∀i)(i ∈ I ⇒ Surj(F(i), X(i), Y(i)))                              by gen ^ with i
+  b. Surj(fn_g(∏_i(I, X(i)), fn_i(I, ap(F(i), ap(g, i)))), ∏_i(I, X(i)), ∏_i(I, Y(i)))                                          by prodmaps_surj ^
+  _                                                                 by taut a b
+}
+
+end
