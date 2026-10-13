@@ -1,0 +1,11 @@
+/target
+/zed/bourbaki/target
+/zed/bourbaki/Cargo.lock
+/zed/bourbaki/extension.wasm
+/zed/bourbaki/grammars
+/zed/tree-sitter-bourbaki/node_modules
+# сканы книги в репозиторий не кладём
+*.pdf
+.DS_Store
+/vscode/node_modules
+/vscode/*.vsix

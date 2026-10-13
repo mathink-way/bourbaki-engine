@@ -1,0 +1,151 @@
+-- § 4, n° 4. Типовые кванторы (стр. 57-60): C35-C42.
+--
+-- Задача: кванторы "для всякого x, обладающего свойством A" и "есть x со свойством A".
+-- Проблема: у Бурбаки это новые сокращающие символы (∃_A x)R и (∀_A x)R, связывающие x.
+-- Решение: сокращения со связываемой буквой. Параметры веса 1 (A(x), R(x)) это
+-- соотношения с выделенной буквой; в записи ExA_x(A, R) буква x связывается, как
+-- у Бурбаки индекс под квантором. Печать узнаёт такие знакосочетания и сворачивает их.
+--   ExA_x(A, R)    есть (∃x)(A ∧ R)            (∃_A x)R
+--   AllA_x(A, R)   есть ¬(∃x)(A ∧ ¬R)          (∀_A x)R
+-- Что осталось: C36, C37 это способы рассуждать (присоединить A и доказать R); здесь они
+-- сводятся к C35 и правилам assume/contra, см. пример после C36.
+
+import "00_prelude.bk"
+open base
+import "05_quant.bk"
+open ch1
+
+abbrev ExA (A R : rel 1) := (∃x)(A(x) ∧ R(x))
+abbrev AllA (A R : rel 1) := ¬(∃x)(A(x) ∧ ¬R(x))
+
+namespace ch1
+in Quantified
+
+-- C35 (стр. 58-59), по плану книги: (A ∧ ¬R) ⇔ ¬(A ⇒ R), затем C31 и C23.
+theorem C35 {A R : rel 1} : AllA_x(A(x), R(x)) ⇔ (∀x)(A(x) ⇒ R(x)) {
+  (A(x) ∧ ¬R(x)) ⇔ ¬(A(x) ⇒ R(x))                       by C24_12
+  (∀x)((A(x) ∧ ¬R(x)) ⇔ ¬(A(x) ⇒ R(x)))                 by gen ^ with x
+  (∃x)(A(x) ∧ ¬R(x)) ⇔ (∃x)¬(A(x) ⇒ R(x))               by C31_exists_iff ^
+  _                                                     by C23a ^
+}
+
+-- C36 в форме теоремы: если (∀x)(A ⇒ R), то (∀_A x)R.
+theorem C36 {A R : rel 1} (h : (∀x)(A(x) ⇒ R(x))) : AllA_x(A(x), R(x)) {
+  AllA_x(A(x), R(x)) ⇔ (∀x)(A(x) ⇒ R(x))   by C35
+  _                                        by iff_mpr ^ h
+}
+
+-- Как C36 применяется: "пусть x произвольный элемент, такой что A" (здесь A это x = x ∨ R).
+theorem C36_example {R : rel 1} : AllA_x(R(x), R(x) ∨ ¬R(x)) {
+  R(x) ⇒ (R(x) ∨ ¬R(x)) by assume a {
+    R(x) ∨ ¬R(x)                  by C10
+  }
+  (∀x)(R(x) ⇒ (R(x) ∨ ¬R(x)))     by gen ^ with x
+  _                               by C36 ^
+}
+
+-- C38.
+theorem C38 {A R : rel 1} : ¬AllA_x(A(x), R(x)) ⇔ ExA_x(A(x), ¬R(x)) by C24_1
+
+theorem C38' {A R : rel 1} : ¬ExA_x(A(x), R(x)) ⇔ AllA_x(A(x), ¬R(x)) {
+  (A(x) ∧ R(x)) ⇔ (A(x) ∧ ¬¬R(x))                       by taut
+  (∀x)((A(x) ∧ R(x)) ⇔ (A(x) ∧ ¬¬R(x)))                 by gen ^ with x
+  (∃x)(A(x) ∧ R(x)) ⇔ (∃x)(A(x) ∧ ¬¬R(x))               by C31_exists_iff ^
+  _                                                     by C23a ^
+}
+
+-- C39 (x не константа): гипотеза (∀x)(A ⇒ (R ⇒ S)).
+theorem C39 {A R S : rel 1} (h : (∀x)(A(x) ⇒ (R(x) ⇒ S(x)))) : ExA_x(A(x), R(x)) ⇒ ExA_x(A(x), S(x)) {
+  (∀x)(A(x) ⇒ (R(x) ⇒ S(x))) ⇒ (A(x) ⇒ (R(x) ⇒ S(x)))          by C30
+  A(x) ⇒ (R(x) ⇒ S(x))                                          by mp h ^
+  (A(x) ⇒ (R(x) ⇒ S(x))) ⇒ ((A(x) ∧ R(x)) ⇒ (A(x) ∧ S(x)))      by taut
+  (A(x) ∧ R(x)) ⇒ (A(x) ∧ S(x))                                 by mp 2 3
+  (∀x)((A(x) ∧ R(x)) ⇒ (A(x) ∧ S(x)))                           by gen ^ with x
+  _                                                             by C31_exists ^
+}
+
+theorem C39' {A R S : rel 1} (h : (∀x)(A(x) ⇒ (R(x) ⇒ S(x)))) : AllA_x(A(x), R(x)) ⇒ AllA_x(A(x), S(x)) {
+  (∀x)(A(x) ⇒ (R(x) ⇒ S(x))) ⇒ (A(x) ⇒ (R(x) ⇒ S(x)))          by C30
+  A(x) ⇒ (R(x) ⇒ S(x))                                          by mp h ^
+  (A(x) ⇒ (R(x) ⇒ S(x))) ⇒ ((A(x) ⇒ R(x)) ⇒ (A(x) ⇒ S(x)))      by taut
+  (A(x) ⇒ R(x)) ⇒ (A(x) ⇒ S(x))                                 by mp 2 3
+  (∀x)((A(x) ⇒ R(x)) ⇒ (A(x) ⇒ S(x)))                           by gen ^ with x
+  (∀x)(A(x) ⇒ R(x)) ⇒ (∀x)(A(x) ⇒ S(x))                         by C31 ^
+  AllA_x(A(x), R(x)) ⇔ (∀x)(A(x) ⇒ R(x))                        by C35
+  AllA_x(A(x), R(x)) ⇒ (∀x)(A(x) ⇒ R(x))                        by iff_imp ^
+  AllA_x(A(x), S(x)) ⇔ (∀x)(A(x) ⇒ S(x))                        by C35
+  (∀x)(A(x) ⇒ S(x)) ⇒ AllA_x(A(x), S(x))                        by iff_imp' ^
+  AllA_x(A(x), R(x)) ⇒ (∀x)(A(x) ⇒ S(x))                        by C6 8 6
+  _                                                             by C6 ^ 10
+}
+
+-- C40 (∃_A и ∨): (A ∧ (R ∨ S)) ⇔ ((A ∧ R) ∨ (A ∧ S)), затем C31 и C32.
+theorem C40' {A R S : rel 1} : ExA_x(A(x), R(x) ∨ S(x)) ⇔ (ExA_x(A(x), R(x)) ∨ ExA_x(A(x), S(x))) {
+  (A(x) ∧ (R(x) ∨ S(x))) ⇔ ((A(x) ∧ R(x)) ∨ (A(x) ∧ S(x)))                by C24_10
+  (∀x)((A(x) ∧ (R(x) ∨ S(x))) ⇔ ((A(x) ∧ R(x)) ∨ (A(x) ∧ S(x))))          by gen ^ with x
+  (∃x)(A(x) ∧ (R(x) ∨ S(x))) ⇔ (∃x)((A(x) ∧ R(x)) ∨ (A(x) ∧ S(x)))        by C31_exists_iff ^
+  (∃x)((A(x) ∧ R(x)) ∨ (A(x) ∧ S(x))) ⇔ ((∃x)(A(x) ∧ R(x)) ∨ (∃x)(A(x) ∧ S(x)))   by C32' with R(x) := A(x) ∧ R(x); S(x) := A(x) ∧ S(x)
+  _                                                                       by C22' 3 4
+}
+
+-- C40 (∀_A и ∧): через C35 сводится к C32.
+theorem C40 {A R S : rel 1} : AllA_x(A(x), R(x) ∧ S(x)) ⇔ (AllA_x(A(x), R(x)) ∧ AllA_x(A(x), S(x))) {
+  AllA_x(A(x), R(x) ∧ S(x)) ⇔ (∀x)(A(x) ⇒ (R(x) ∧ S(x)))                  by C35
+  (A(x) ⇒ (R(x) ∧ S(x))) ⇔ ((A(x) ⇒ R(x)) ∧ (A(x) ⇒ S(x)))                by taut
+  (∀x)((A(x) ⇒ (R(x) ∧ S(x))) ⇔ ((A(x) ⇒ R(x)) ∧ (A(x) ⇒ S(x))))          by gen ^ with x
+  (∀x)(A(x) ⇒ (R(x) ∧ S(x))) ⇔ (∀x)((A(x) ⇒ R(x)) ∧ (A(x) ⇒ S(x)))        by C31_iff ^
+  (∀x)((A(x) ⇒ R(x)) ∧ (A(x) ⇒ S(x))) ⇔ ((∀x)(A(x) ⇒ R(x)) ∧ (∀x)(A(x) ⇒ S(x)))   by C32 with R(x) := A(x) ⇒ R(x); S(x) := A(x) ⇒ S(x)
+  AllA_x(A(x), R(x) ∧ S(x)) ⇔ (∀x)((A(x) ⇒ R(x)) ∧ (A(x) ⇒ S(x)))         by C22' 1 4
+  AllA_x(A(x), R(x) ∧ S(x)) ⇔ ((∀x)(A(x) ⇒ R(x)) ∧ (∀x)(A(x) ⇒ S(x)))     by C22' ^ 5
+  AllA_x(A(x), R(x)) ⇔ (∀x)(A(x) ⇒ R(x))                                  by C35
+  AllA_x(A(x), S(x)) ⇔ (∀x)(A(x) ⇒ S(x))                                  by C35
+  (AllA_x(A(x), R(x)) ∧ AllA_x(A(x), S(x))) ⇔ ((∀x)(A(x) ⇒ R(x)) ∧ (∀x)(A(x) ⇒ S(x)))   by and_iff 8 9
+  ((∀x)(A(x) ⇒ R(x)) ∧ (∀x)(A(x) ⇒ S(x))) ⇔ (AllA_x(A(x), R(x)) ∧ AllA_x(A(x), S(x)))   by C22 ^
+  _                                                                       by C22' 7 ^
+}
+
+-- C41 (x не встречается в R, поэтому R веса 0).
+theorem C41' {A S : rel 1} {R : rel} : ExA_x(A(x), R ∧ S(x)) ⇔ (R ∧ ExA_x(A(x), S(x))) {
+  (A(x) ∧ (R ∧ S(x))) ⇔ (R ∧ (A(x) ∧ S(x)))                       by taut
+  (∀x)((A(x) ∧ (R ∧ S(x))) ⇔ (R ∧ (A(x) ∧ S(x))))                 by gen ^ with x
+  (∃x)(A(x) ∧ (R ∧ S(x))) ⇔ (∃x)(R ∧ (A(x) ∧ S(x)))               by C31_exists_iff ^
+  (∃x)(R ∧ (A(x) ∧ S(x))) ⇔ (R ∧ (∃x)(A(x) ∧ S(x)))               by C33' with S(x) := A(x) ∧ S(x)
+  _                                                               by C22' 3 4
+}
+
+theorem C41 {A S : rel 1} {R : rel} : AllA_x(A(x), R ∨ S(x)) ⇔ (R ∨ AllA_x(A(x), S(x))) {
+  (A(x) ∧ ¬(R ∨ S(x))) ⇔ (¬R ∧ (A(x) ∧ ¬S(x)))                    by taut
+  (∀x)((A(x) ∧ ¬(R ∨ S(x))) ⇔ (¬R ∧ (A(x) ∧ ¬S(x))))              by gen ^ with x
+  (∃x)(A(x) ∧ ¬(R ∨ S(x))) ⇔ (∃x)(¬R ∧ (A(x) ∧ ¬S(x)))            by C31_exists_iff ^
+  (∃x)(¬R ∧ (A(x) ∧ ¬S(x))) ⇔ (¬R ∧ (∃x)(A(x) ∧ ¬S(x)))           by C33' with R := ¬R; S(x) := A(x) ∧ ¬S(x)
+  (∃x)(A(x) ∧ ¬(R ∨ S(x))) ⇔ (¬R ∧ (∃x)(A(x) ∧ ¬S(x)))            by C22' 3 4
+  ¬(∃x)(A(x) ∧ ¬(R ∨ S(x))) ⇔ ¬(¬R ∧ (∃x)(A(x) ∧ ¬S(x)))          by C23a ^
+  ¬(¬R ∧ (∃x)(A(x) ∧ ¬S(x))) ⇔ (R ∨ ¬(∃x)(A(x) ∧ ¬S(x)))          by taut
+  _                                                               by C22' 6 7
+}
+
+-- C42, часть (∃_A x)(∃_B y)R ⇔ (∃_B y)(∃_A x)R, по примеру из книги (стр. 60):
+-- обе стороны эквивалентны (∃x)(∃y)(...) по C33 и C31, затем C34.
+-- x не встречается в B, y не встречается в A: A зависит только от x, B только от y.
+theorem C42 {A B : rel 1} {R : rel 2} : ExA_x(A(x), ExA_y(B(y), R(x, y))) ⇔ ExA_y(B(y), ExA_x(A(x), R(x, y))) {
+  (∃y)(A(x) ∧ (B(y) ∧ R(x, y))) ⇔ (A(x) ∧ (∃y)(B(y) ∧ R(x, y)))                by C33' with R := A(x); S(t) := B(t) ∧ R(x, t)
+  (A(x) ∧ (∃y)(B(y) ∧ R(x, y))) ⇔ (∃y)(A(x) ∧ (B(y) ∧ R(x, y)))                by C22 ^
+  (∀x)((A(x) ∧ (∃y)(B(y) ∧ R(x, y))) ⇔ (∃y)(A(x) ∧ (B(y) ∧ R(x, y))))          by gen ^ with x
+  left. (∃x)(A(x) ∧ (∃y)(B(y) ∧ R(x, y))) ⇔ (∃x)(∃y)(A(x) ∧ (B(y) ∧ R(x, y)))  by C31_exists_iff ^
+  (∃x)(B(y) ∧ (A(x) ∧ R(x, y))) ⇔ (B(y) ∧ (∃x)(A(x) ∧ R(x, y)))                by C33' with R := B(y); S(t) := A(t) ∧ R(t, y)
+  (B(y) ∧ (∃x)(A(x) ∧ R(x, y))) ⇔ (∃x)(B(y) ∧ (A(x) ∧ R(x, y)))                by C22 ^
+  (∀y)((B(y) ∧ (∃x)(A(x) ∧ R(x, y))) ⇔ (∃x)(B(y) ∧ (A(x) ∧ R(x, y))))          by gen ^ with y
+  right. (∃y)(B(y) ∧ (∃x)(A(x) ∧ R(x, y))) ⇔ (∃y)(∃x)(B(y) ∧ (A(x) ∧ R(x, y))) by C31_exists_iff ^
+  (A(x) ∧ (B(y) ∧ R(x, y))) ⇔ (B(y) ∧ (A(x) ∧ R(x, y)))                        by taut
+  (∀y)((A(x) ∧ (B(y) ∧ R(x, y))) ⇔ (B(y) ∧ (A(x) ∧ R(x, y))))                  by gen ^ with y
+  (∃y)(A(x) ∧ (B(y) ∧ R(x, y))) ⇔ (∃y)(B(y) ∧ (A(x) ∧ R(x, y)))                by C31_exists_iff ^ with R(y) := A(x) ∧ (B(y) ∧ R(x, y)); S(y) := B(y) ∧ (A(x) ∧ R(x, y))
+  (∀x)((∃y)(A(x) ∧ (B(y) ∧ R(x, y))) ⇔ (∃y)(B(y) ∧ (A(x) ∧ R(x, y))))          by gen ^ with x
+  swap. (∃x)(∃y)(A(x) ∧ (B(y) ∧ R(x, y))) ⇔ (∃x)(∃y)(B(y) ∧ (A(x) ∧ R(x, y))) by C31_exists_iff ^
+  comm. (∃x)(∃y)(B(y) ∧ (A(x) ∧ R(x, y))) ⇔ (∃y)(∃x)(B(y) ∧ (A(x) ∧ R(x, y))) by C34' with R(s, t) := B(t) ∧ (A(s) ∧ R(s, t))
+  (∃x)(A(x) ∧ (∃y)(B(y) ∧ R(x, y))) ⇔ (∃x)(∃y)(B(y) ∧ (A(x) ∧ R(x, y)))       by C22' left swap
+  (∃x)(A(x) ∧ (∃y)(B(y) ∧ R(x, y))) ⇔ (∃y)(∃x)(B(y) ∧ (A(x) ∧ R(x, y)))       by C22' ^ comm
+  (∃y)(∃x)(B(y) ∧ (A(x) ∧ R(x, y))) ⇔ (∃y)(B(y) ∧ (∃x)(A(x) ∧ R(x, y)))       by C22 right
+  _                                                                            by C22' ^^ ^
+}
+
+end

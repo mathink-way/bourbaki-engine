@@ -1,0 +1,15 @@
+[package]
+name = "zed-bourbaki"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+path = "src/lib.rs"
+
+[dependencies]
+zed_extension_api = "0.7"
+
+# отдельный проект, не часть bourbaki-engine
+[workspace]

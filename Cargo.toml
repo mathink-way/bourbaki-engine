@@ -1,0 +1,28 @@
+[package]
+name = "bourbaki-engine"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+authors = ["Rushan Davlitshin <https://github.com/mathink-way>"]
+description = "A proof checker for Bourbaki's Theory of Sets: proofs are written the way the book writes them and checked down to the axioms"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/mathink-way/bourbaki-engine"
+keywords = ["bourbaki", "logic", "proof-checker", "set-theory", "mathematics"]
+categories = ["mathematics", "science"]
+exclude = ["/zed", "/vscode", "/.zed", "/CLAUDE.md"]
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--html-in-header", "katex-header.html"]
+
+[[bin]]
+name = "bourbaki"
+path = "src/main.rs"
+
+[dependencies]
+ariadne = "0.6"
+lsp-server = "0.10"
+serde_json = "1"
+
+[profile.dev]
+opt-level = 1

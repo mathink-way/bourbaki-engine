@@ -1,0 +1,25 @@
+<!-- KaTeX для документации (cargo doc и docs.rs): формулы $...$, $$...$$ и блоки ```math -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  if (typeof katex === "undefined") return;
+  // блоки ```math показываются выключной формулой
+  document.querySelectorAll("pre.language-math").forEach(function (pre) {
+    var div = document.createElement("div");
+    try {
+      katex.render(pre.textContent, div, { displayMode: true, throwOnError: false });
+      pre.replaceWith(div);
+    } catch (e) {}
+  });
+  renderMathInElement(document.body, {
+    delimiters: [
+      { left: "$$", right: "$$", display: true },
+      { left: "$", right: "$", display: false }
+    ],
+    ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code", "option"],
+    throwOnError: false
+  });
+});
+</script>

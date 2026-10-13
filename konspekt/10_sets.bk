@@ -1,0 +1,262 @@
+-- Глава II. Теория множеств. Каркас: § 1 (стр. 75-81) и начало § 2.
+--
+-- Задача: начать главу II на том же языке, что и главу I.
+-- Проблема: теория множеств это новые знаки (∈ и знак пары), новая схема S8 и явные
+-- аксиомы A1-A4; почти все определения это сокращения со связанной буквой
+-- (Coll_x R, ℰ_x(R), {x, y}, ∁, ∅, 𝔓).
+-- Решение: теория ch2.Set наследует sets.Sets (= эгалитарная теория + ∈) и добавляет знак
+-- пары Ͻ, схему S8 и аксиомы. Все теоремы главы I в ней применимы (C4, буквально слабее).
+-- Что осталось: § 2 дальше пар, §§ 3-6 (графики, функции, объединения), аксиома A5 (гл. III).
+--
+-- Знак пары у Бурбаки похож на ⊃, но ⊃ занят под "содержит"; здесь он записан как Ͻ.
+
+import "00_prelude.bk"
+open base
+import "07_equality.bk"
+import "03_notation.bk"
+open ch1
+open sets
+
+-- § 1, n° 4 и n° 6. Коллективизирующие соотношения и множество ℰ_x(R).
+abbrev ∉ [\notin] (X Y : term) infix := ¬(X ∈ Y)
+abbrev Coll (R : rel 1) := (∃y)(∀x)(x ∈ y ⇔ R(x))
+abbrev ℰ (R : rel 1) := τy((∀x)(x ∈ y ⇔ R(x)))
+
+-- § 1, n° 5, 7. {x, y}, {x}, дополнение, пустое множество.
+abbrev set2 (X Y : term) := ℰ_z(z = X ∨ z = Y)
+abbrev set1 (X : term) := set2(X, X)
+abbrev ∁ (X A : term) := ℰ_x(x ∉ A ∧ x ∈ X)
+abbrev ∅ := τX((∀x)(x ∉ X))
+
+-- § 2. Пары. § 5, n° 1. Множество подмножеств.
+sign Ͻ [pair] : term 2
+abbrev pr1 (Z : term) := τx((∃y)(Z = Ͻ(x, y)))
+abbrev pr2 (Z : term) := τy((∃x)(Z = Ͻ(x, y)))
+abbrev × (X Y : term) infix := ℰ_z((∃x)(∃y)(z = Ͻ(x, y) ∧ (x ∈ X ∧ y ∈ Y)))
+abbrev 𝔓 (X : term) := ℰ_Y(Y ⊂ X)
+
+namespace ch2
+
+-- S8, схема отбора и объединения. R{x, y} это метапеременная веса 2; X, Y связаны,
+-- поэтому "X, Y не встречаются в R" выполнено само.
+scheme S8 {R : rel 2} : (∀y)(∃X)(∀x)(R(x, y) ⇒ x ∈ X) ⇒ (∀Y)Coll_x((∃y)(y ∈ Y ∧ R(x, y)))
+
+theory Set extends sets.Sets {
+  signs Ͻ
+  schemes S8
+  axiom A1 : (∀x)(∀y)((x ⊂ y ∧ y ⊂ x) ⇒ x = y)
+  axiom A2 : (∀x)(∀y)Coll_z(z = x ∨ z = y)
+  axiom A3 : (∀x)(∀x')(∀y)(∀y')(Ͻ(x, y) = Ͻ(x', y') ⇒ (x = x' ∧ y = y'))
+  axiom A4 : (∀X)Coll_Y(Y ⊂ X)
+}
+in Set
+
+-- Предложения 1 и 2 (§ 1, n° 2) доказаны в 03_notation.bk для теории sets.Sets.
+alias Prop1 := sets.subset_refl
+
+theorem Prop2 {X Y Z : term} : (X ⊂ Y ∧ Y ⊂ Z) ⇒ X ⊂ Z {
+  (X ⊂ Y ∧ Y ⊂ Z) ⇒ X ⊂ Z by assume h {
+    (X ⊂ Y ∧ Y ⊂ Z) ⇒ X ⊂ Y   by C21
+    X ⊂ Y                     by mp h ^
+    (X ⊂ Y ∧ Y ⊂ Z) ⇒ Y ⊂ Z   by C21'
+    Y ⊂ Z                     by mp h ^
+    X ⊂ Z                     by subset_trans 2 4
+  }
+}
+
+-- § 1, n° 3. Аксиома экстенсиональности в виде правила.
+theorem ext {X Y : term} (h1 : X ⊂ Y) (h2 : Y ⊂ X) : X = Y {
+  a1. (∀x)(∀y)((x ⊂ y ∧ y ⊂ x) ⇒ x = y)                           by axiom A1
+  (∀x)(∀y)((x ⊂ y ∧ y ⊂ x) ⇒ x = y) ⇒ ((X ⊂ Y ∧ Y ⊂ X) ⇒ X = Y)   by C30_2 with R(s, t) := (s ⊂ t ∧ t ⊂ s) ⇒ s = t; T := X; U := Y
+  (X ⊂ Y ∧ Y ⊂ X) ⇒ X = Y                                          by mp a1 ^
+  X ⊂ Y ∧ Y ⊂ X                                                    by C20 h1 h2
+  X = Y                                                            by mp ^ ^^
+}
+
+-- C48 (стр. 77), по плану книги: присоединим обе гипотезы, получим y ⊂ z и z ⊂ y, затем A1.
+theorem C48 {R : rel 1} : Uniq_y((∀x)(x ∈ y ⇔ R(x))) {
+  ((∀x)(x ∈ y ⇔ R(x)) ∧ (∀x)(x ∈ z ⇔ R(x))) ⇒ y = z by assume h {
+    ((∀x)(x ∈ y ⇔ R(x)) ∧ (∀x)(x ∈ z ⇔ R(x))) ⇒ (∀x)(x ∈ y ⇔ R(x))   by C21
+    hy. (∀x)(x ∈ y ⇔ R(x))                                             by mp h ^
+    ((∀x)(x ∈ y ⇔ R(x)) ∧ (∀x)(x ∈ z ⇔ R(x))) ⇒ (∀x)(x ∈ z ⇔ R(x))   by C21'
+    hz. (∀x)(x ∈ z ⇔ R(x))                                             by mp h ^
+    (∀x)(x ∈ y ⇔ R(x)) ⇒ (x ∈ y ⇔ R(x))                                by C30
+    a. x ∈ y ⇔ R(x)                                                    by mp hy ^
+    (∀x)(x ∈ z ⇔ R(x)) ⇒ (x ∈ z ⇔ R(x))                                by C30
+    b. x ∈ z ⇔ R(x)                                                    by mp hz ^
+    (x ∈ y ⇔ R(x)) ⇒ ((x ∈ z ⇔ R(x)) ⇒ (x ∈ y ⇔ x ∈ z))                by taut
+    (x ∈ z ⇔ R(x)) ⇒ (x ∈ y ⇔ x ∈ z)                                   by mp a ^
+    c. x ∈ y ⇔ x ∈ z                                                   by mp b ^
+    x ∈ y ⇒ x ∈ z                                                      by iff_imp c
+    yz. y ⊂ z                                                          by gen ^ with x
+    x ∈ z ⇒ x ∈ y                                                      by iff_imp' c
+    zy. z ⊂ y                                                          by gen ^ with x
+    y = z                                                              by ext yz zy
+  }
+  (∀z)(((∀x)(x ∈ y ⇔ R(x)) ∧ (∀x)(x ∈ z ⇔ R(x))) ⇒ y = z)              by gen ^ with z
+  (∀y)(∀z)(((∀x)(x ∈ y ⇔ R(x)) ∧ (∀x)(x ∈ z ⇔ R(x))) ⇒ y = z)          by gen ^ with y
+}
+
+-- C49: если R коллективизирующее по x, то (∀x)(x ∈ y ⇔ R) функционально по y.
+theorem C49 {R : rel 1} (h : Coll_x(R(x))) : ∃!_y((∀x)(x ∈ y ⇔ R(x))) {
+  Uniq_y((∀x)(x ∈ y ⇔ R(x)))   by C48
+  _                            by C20 h ^
+}
+
+-- Coll_x R буквально есть (∀x)(x ∈ ℰ_x(R) ⇔ R): элементы ℰ_x(R) это в точности те x, что R.
+theorem mem_E {R : rel 1} {T : term} (h : Coll_x(R(x))) : T ∈ ℰ_x(R(x)) ⇔ R(T) {
+  Coll_x(R(x)) ⇒ (T ∈ ℰ_x(R(x)) ⇔ R(T))   by C30 with R(t) := t ∈ ℰ_x(R(x)) ⇔ R(t); T := T
+  _                                       by mp h ^
+}
+
+-- Пример 1 (n° 4): x ∈ y коллективизирующее по x.
+theorem coll_example : Coll_x(x ∈ y) {
+  x ∈ y ⇔ x ∈ y                                          by taut
+  (∀x)(x ∈ y ⇔ x ∈ y)                                    by gen ^ with x
+  (∀x)(x ∈ y ⇔ x ∈ y) ⇒ (∃z)(∀x)(x ∈ z ⇔ x ∈ y)          by S5 with R(t) := (∀x)(x ∈ t ⇔ x ∈ y); T := y
+  _                                                      by mp 2 3
+}
+
+-- Пример 2 (n° 4): x ∉ x не коллективизирующее (Рассел). Аксиомы не нужны: если бы
+-- Coll_x(x ∉ x), то для a = ℰ_x(x ∉ x) было бы a ∈ a ⇔ a ∉ a.
+theorem russell : ¬Coll_x(x ∉ x) {
+  Coll_x(x ∉ x) ⇒ (ℰ_x(x ∉ x) ∈ ℰ_x(x ∉ x) ⇔ ℰ_x(x ∉ x) ∉ ℰ_x(x ∉ x))   by C30 with R(t) := t ∈ ℰ_x(x ∉ x) ⇔ t ∉ t; T := ℰ_x(x ∉ x)
+  (Coll_x(x ∉ x) ⇒ (ℰ_x(x ∉ x) ∈ ℰ_x(x ∉ x) ⇔ ℰ_x(x ∉ x) ∉ ℰ_x(x ∉ x))) ⇒ ¬Coll_x(x ∉ x)   by taut
+  _                                                                     by mp 1 2
+}
+
+-- Эквивалентные соотношения коллективизирующие одновременно (C31 дважды).
+theorem coll_iff {R S : rel 1} (h : (∀x)(R(x) ⇔ S(x))) : Coll_x(R(x)) ⇔ Coll_x(S(x)) {
+  (∀x)(R(x) ⇔ S(x)) ⇒ (R(x) ⇔ S(x))                    by C30
+  rs. R(x) ⇔ S(x)                                      by mp h ^
+  (R(x) ⇔ S(x)) ⇒ ((x ∈ y ⇔ R(x)) ⇔ (x ∈ y ⇔ S(x)))    by taut
+  (x ∈ y ⇔ R(x)) ⇔ (x ∈ y ⇔ S(x))                      by mp rs ^
+  (∀x)((x ∈ y ⇔ R(x)) ⇔ (x ∈ y ⇔ S(x)))                by gen ^ with x
+  (∀x)(x ∈ y ⇔ R(x)) ⇔ (∀x)(x ∈ y ⇔ S(x))              by C31_iff ^
+  (∀y)((∀x)(x ∈ y ⇔ R(x)) ⇔ (∀x)(x ∈ y ⇔ S(x)))        by gen ^ with y
+  _                                                    by C31_exists_iff ^
+}
+
+-- n° 5. Аксиома A2 и множество {x, y}.
+theorem mem_set2 {T X Y : term} : T ∈ set2(X, Y) ⇔ (T = X ∨ T = Y) {
+  a2. (∀x)(∀y)Coll_z(z = x ∨ z = y)                          by axiom A2
+  (∀x)(∀y)Coll_z(z = x ∨ z = y) ⇒ Coll_z(z = X ∨ z = Y)      by C30_2 with R(s, t) := Coll_z(z = s ∨ z = t); T := X; U := Y
+  Coll_z(z = X ∨ z = Y)                                      by mp a2 ^
+  _                                                          by mem_E ^
+}
+
+theorem mem_set1 {T X : term} : T ∈ set1(X) ⇔ T = X {
+  T ∈ set1(X) ⇔ (T = X ∨ T = X)    by mem_set2
+  (T = X ∨ T = X) ⇔ T = X          by C24_7
+  _                                by C22' 1 2
+}
+
+-- {x, y} = {y, x}: по A1 (через ext) и mem_set2.
+theorem set2_comm {X Y : term} : set2(X, Y) = set2(Y, X) {
+  x ∈ set2(X, Y) ⇔ (x = X ∨ x = Y)                       by mem_set2
+  x ∈ set2(Y, X) ⇔ (x = Y ∨ x = X)                       by mem_set2
+  (x = X ∨ x = Y) ⇔ (x = Y ∨ x = X)                      by C24_8
+  (x ∈ set2(X, Y) ⇔ (x = X ∨ x = Y)) ⇒ ((x ∈ set2(Y, X) ⇔ (x = Y ∨ x = X)) ⇒ (((x = X ∨ x = Y) ⇔ (x = Y ∨ x = X)) ⇒ (x ∈ set2(X, Y) ⇔ x ∈ set2(Y, X))))   by taut
+  (x ∈ set2(Y, X) ⇔ (x = Y ∨ x = X)) ⇒ (((x = X ∨ x = Y) ⇔ (x = Y ∨ x = X)) ⇒ (x ∈ set2(X, Y) ⇔ x ∈ set2(Y, X)))   by mp 1 4
+  ((x = X ∨ x = Y) ⇔ (x = Y ∨ x = X)) ⇒ (x ∈ set2(X, Y) ⇔ x ∈ set2(Y, X))   by mp 2 ^
+  e. x ∈ set2(X, Y) ⇔ x ∈ set2(Y, X)                     by mp 3 ^
+  x ∈ set2(X, Y) ⇒ x ∈ set2(Y, X)                        by iff_imp e
+  l. set2(X, Y) ⊂ set2(Y, X)                             by gen ^ with x
+  x ∈ set2(Y, X) ⇒ x ∈ set2(X, Y)                        by iff_imp' e
+  r. set2(Y, X) ⊂ set2(X, Y)                             by gen ^ with x
+  _                                                      by ext l r
+}
+
+-- C51 (стр. 79), по плану книги: S8 для R = "P и x = y", затем C43 и C33.
+theorem C51 {P : rel 1} {A : term} : Coll_x(P(x) ∧ x ∈ A) {
+  (P(x) ∧ x = y) ⇒ x = y                                                   by C21'
+  x ∈ set1(y) ⇔ x = y                                                      by mem_set1
+  x = y ⇒ x ∈ set1(y)                                                      by iff_imp' ^
+  (P(x) ∧ x = y) ⇒ x ∈ set1(y)                                             by C6 1 3
+  (∀x)((P(x) ∧ x = y) ⇒ x ∈ set1(y))                                       by gen ^ with x
+  (∀x)((P(x) ∧ x = y) ⇒ x ∈ set1(y)) ⇒ (∃X)(∀x)((P(x) ∧ x = y) ⇒ x ∈ X)   by S5 with R(t) := (∀x)((P(x) ∧ x = y) ⇒ x ∈ t); T := set1(y)
+  (∃X)(∀x)((P(x) ∧ x = y) ⇒ x ∈ X)                                         by mp 5 6
+  s8. (∀y)(∃X)(∀x)((P(x) ∧ x = y) ⇒ x ∈ X)                                 by gen ^ with y
+  (∀y)(∃X)(∀x)((P(x) ∧ x = y) ⇒ x ∈ X) ⇒ (∀Y)Coll_x((∃y)(y ∈ Y ∧ (P(x) ∧ x = y)))   by S8 with R(s, t) := P(s) ∧ s = t
+  all. (∀Y)Coll_x((∃y)(y ∈ Y ∧ (P(x) ∧ x = y)))                            by mp s8 ^
+  (∀Y)Coll_x((∃y)(y ∈ Y ∧ (P(x) ∧ x = y))) ⇒ Coll_x((∃y)(y ∈ A ∧ (P(x) ∧ x = y)))   by C30 with R(t) := Coll_x((∃y)(y ∈ t ∧ (P(x) ∧ x = y))); T := A
+  coll. Coll_x((∃y)(y ∈ A ∧ (P(x) ∧ x = y)))                               by mp all ^
+  -- осталось: (∃y)(y ∈ A и P и x = y) эквивалентно (P и x ∈ A)
+  c43. (x = y ∧ x ∈ A) ⇔ (x = y ∧ y ∈ A)                                   by C43 with R(t) := t ∈ A; T := x; U := y
+  ((x = y ∧ x ∈ A) ⇔ (x = y ∧ y ∈ A)) ⇒ ((y ∈ A ∧ (P(x) ∧ x = y)) ⇔ ((P(x) ∧ x ∈ A) ∧ x = y))   by taut
+  (y ∈ A ∧ (P(x) ∧ x = y)) ⇔ ((P(x) ∧ x ∈ A) ∧ x = y)                      by mp c43 ^
+  (∀y)((y ∈ A ∧ (P(x) ∧ x = y)) ⇔ ((P(x) ∧ x ∈ A) ∧ x = y))                by gen ^ with y
+  e2. (∃y)(y ∈ A ∧ (P(x) ∧ x = y)) ⇔ (∃y)((P(x) ∧ x ∈ A) ∧ x = y)          by C31_exists_iff ^
+  e3. (∃y)((P(x) ∧ x ∈ A) ∧ x = y) ⇔ ((P(x) ∧ x ∈ A) ∧ (∃y)(x = y))        by C33' with R := P(x) ∧ x ∈ A; S(t) := x = t
+  x = x                                                                    by T1
+  x = x ⇒ (∃y)(x = y)                                                      by S5 with R(t) := x = t; T := x
+  ex. (∃y)(x = y)                                                          by mp ^^ ^
+  (∃y)(x = y) ⇒ (((P(x) ∧ x ∈ A) ∧ (∃y)(x = y)) ⇔ (P(x) ∧ x ∈ A))          by taut
+  e4. ((P(x) ∧ x ∈ A) ∧ (∃y)(x = y)) ⇔ (P(x) ∧ x ∈ A)                      by mp ex ^
+  (∃y)(y ∈ A ∧ (P(x) ∧ x = y)) ⇔ ((P(x) ∧ x ∈ A) ∧ (∃y)(x = y))            by C22' e2 e3
+  (∃y)(y ∈ A ∧ (P(x) ∧ x = y)) ⇔ (P(x) ∧ x ∈ A)                            by C22' ^ e4
+  (∀x)((∃y)(y ∈ A ∧ (P(x) ∧ x = y)) ⇔ (P(x) ∧ x ∈ A))                      by gen ^ with x
+  Coll_x((∃y)(y ∈ A ∧ (P(x) ∧ x = y))) ⇔ Coll_x(P(x) ∧ x ∈ A)              by coll_iff ^
+  _                                                                        by iff_mp ^ coll
+}
+
+-- n° 7. Дополнение: x ∈ ∁(X, A) ⇔ (x ∉ A и x ∈ X), по C51.
+theorem mem_compl {T X A : term} : T ∈ ∁(X, A) ⇔ (T ∉ A ∧ T ∈ X) {
+  Coll_x(x ∉ A ∧ x ∈ X)     by C51 with P(x) := x ∉ A; A := X
+  _                         by mem_E ^
+}
+
+-- Теорема 1 (n° 7): (∀x)(x ∉ X) функционально по X. Существование: ∁(Y, Y) пусто.
+theorem Th1 : ∃!_X((∀x)(x ∉ X)) {
+  x ∈ ∁(Y, Y) ⇔ (x ∉ Y ∧ x ∈ Y)                          by mem_compl
+  (x ∈ ∁(Y, Y) ⇔ (x ∉ Y ∧ x ∈ Y)) ⇒ x ∉ ∁(Y, Y)          by taut
+  x ∉ ∁(Y, Y)                                            by mp 1 2
+  (∀x)(x ∉ ∁(Y, Y))                                      by gen ^ with x
+  ex. (∃X)(∀x)(x ∉ X)                                    by exists_intro ^
+  ((∀x)(x ∉ X) ∧ (∀x)(x ∉ Y)) ⇒ X = Y by assume h {
+    ((∀x)(x ∉ X) ∧ (∀x)(x ∉ Y)) ⇒ (∀x)(x ∉ X)       by C21
+    hx. (∀x)(x ∉ X)                                  by mp h ^
+    ((∀x)(x ∉ X) ∧ (∀x)(x ∉ Y)) ⇒ (∀x)(x ∉ Y)       by C21'
+    hy. (∀x)(x ∉ Y)                                  by mp h ^
+    (∀x)(x ∉ X) ⇒ x ∉ X                              by C30
+    nx. x ∉ X                                        by mp hx ^
+    (∀x)(x ∉ Y) ⇒ x ∉ Y                              by C30
+    ny. x ∉ Y                                        by mp hy ^
+    x ∉ X ⇒ (x ∈ X ⇒ x ∈ Y)                          by taut
+    x ∈ X ⇒ x ∈ Y                                    by mp nx ^
+    xy. X ⊂ Y                                        by gen ^ with x
+    x ∉ Y ⇒ (x ∈ Y ⇒ x ∈ X)                          by taut
+    x ∈ Y ⇒ x ∈ X                                    by mp ny ^
+    yx. Y ⊂ X                                        by gen ^ with x
+    X = Y                                            by ext xy yx
+  }
+  (∀Y)(((∀x)(x ∉ X) ∧ (∀x)(x ∉ Y)) ⇒ X = Y)              by gen ^ with Y
+  uniq. (∀X)(∀Y)(((∀x)(x ∉ X) ∧ (∀x)(x ∉ Y)) ⇒ X = Y)    by gen ^ with X
+  _                                                      by C20 ex uniq
+}
+
+-- ∅ = τX((∀x)(x ∉ X)); то, что в нём нет элементов, это буквально (∃X)(∀x)(x ∉ X).
+theorem empty : (∀x)(x ∉ ∅) {
+  ∃!_X((∀x)(x ∉ X))                          by Th1
+  ∃!_X((∀x)(x ∉ X)) ⇒ (∃X)(∀x)(x ∉ X)        by C21
+  _                                          by mp 1 2
+}
+
+-- § 2, n° 1. Из A3: равные пары имеют равные координаты.
+theorem pair_inj {T U V W : term} : Ͻ(T, U) = Ͻ(V, W) ⇒ (T = V ∧ U = W) {
+  a3. (∀x)(∀x')(∀y)(∀y')(Ͻ(x, y) = Ͻ(x', y') ⇒ (x = x' ∧ y = y'))     by axiom A3
+  (∀x)(∀x')(∀y)(∀y')(Ͻ(x, y) = Ͻ(x', y') ⇒ (x = x' ∧ y = y')) ⇒ (∀y)(∀y')(Ͻ(T, y) = Ͻ(V, y') ⇒ (T = V ∧ y = y'))   by C30_2 with R(s, t) := (∀y)(∀y')(Ͻ(s, y) = Ͻ(t, y') ⇒ (s = t ∧ y = y')); T := T; U := V
+  (∀y)(∀y')(Ͻ(T, y) = Ͻ(V, y') ⇒ (T = V ∧ y = y'))                      by mp a3 ^
+  (∀y)(∀y')(Ͻ(T, y) = Ͻ(V, y') ⇒ (T = V ∧ y = y')) ⇒ (Ͻ(T, U) = Ͻ(V, W) ⇒ (T = V ∧ U = W))   by C30_2 with R(s, t) := Ͻ(T, s) = Ͻ(V, t) ⇒ (T = V ∧ s = t); T := U; U := W
+  _                                                                    by mp 3 4
+}
+
+-- § 5, n° 1. A4 и множество подмножеств: Y ∈ 𝔓(X) ⇔ Y ⊂ X.
+theorem mem_P {U V : term} : U ∈ 𝔓(V) ⇔ U ⊂ V {
+  a4. (∀X)Coll_Y(Y ⊂ X)                      by axiom A4
+  (∀X)Coll_Y(Y ⊂ X) ⇒ Coll_Y(Y ⊂ V)          by C30 with R(t) := Coll_Y(Y ⊂ t); T := V
+  Coll_Y(Y ⊂ V)                              by mp a4 ^
+  _                                          by mem_E ^
+}
+
+end

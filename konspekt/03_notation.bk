@@ -1,0 +1,53 @@
+-- Свои знаки, сокращения и записи.
+--
+-- Специальный знак теории объявляется со своим весом и видом; в квадратных скобках
+-- его имена для набора без юникода. Сокращение (сокращающий символ Бурбаки) это
+-- только запись: проверка всегда сравнивает знакосочетания целиком.
+
+import "00_prelude.bk"
+open base
+import "02_quant_eq.bk"
+open ch1
+
+sign ∈ [\in] : rel 2 infix
+abbrev ⊂ [\subset] (X Y : term) infix := (∀z)(z ∈ X ⇒ z ∈ Y)
+abbrev ≠ [\ne] (X Y : term) infix := ¬(X = Y)
+
+namespace sets
+
+theory Sets extends Egalitarian {
+  signs ∈
+}
+in Sets
+
+-- Одно и то же соотношение по-разному.
+#show x \subset y
+#show x ⊂ y ⇒ ¬(x ≠ y) or x ∈ y
+#signs (∃x)(x ∈ y)
+
+theorem subset_refl {X : term} : X ⊂ X {
+  z ∈ X ⇒ z ∈ X   by imp_refl
+  X ⊂ X           by gen ^ with z
+}
+
+theorem subset_trans {X Y Z : term} (h1 : X ⊂ Y) (h2 : Y ⊂ Z) : X ⊂ Z {
+  X ⊂ Y ⇒ (z ∈ X ⇒ z ∈ Y)   by C30 with R(t) := t ∈ X ⇒ t ∈ Y; T := z
+  z ∈ X ⇒ z ∈ Y             by mp h1 ^
+  Y ⊂ Z ⇒ (z ∈ Y ⇒ z ∈ Z)   by C30 with R(t) := t ∈ Y ⇒ t ∈ Z; T := z
+  z ∈ Y ⇒ z ∈ Z             by mp h2 ^
+  z ∈ X ⇒ z ∈ Z             by imp_trans 2 4
+  X ⊂ Z                     by gen ^ with z
+}
+
+-- Польская запись Бурбаки: всё впереди, скобки не нужны. Действует до #set infix.
+#set prefix
+
+theorem prefix_example {X Y : term} : ⇒ ∈ X Y ∨ ∈ X Y ∈ Y X {
+  ⇒ ∈ X Y ∨ ∈ X Y ∈ Y X   by S2
+}
+
+#print prefix_example
+#set infix
+#print prefix_example
+
+end

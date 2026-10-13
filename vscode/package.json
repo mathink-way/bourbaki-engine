@@ -1,0 +1,48 @@
+{
+  "name": "bourbaki",
+  "displayName": "Bourbaki",
+  "description": "Конспекты .bk (bourbaki-engine): подсветка, ошибки проверки, подсказки",
+  "version": "0.1.0",
+  "publisher": "mathink-way",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mathink-way/bourbaki-engine"
+  },
+  "engines": {
+    "vscode": "^1.82.0"
+  },
+  "categories": ["Programming Languages"],
+  "main": "./extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "languages": [
+      {
+        "id": "bourbaki",
+        "aliases": ["Bourbaki", "bourbaki"],
+        "extensions": [".bk"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "bourbaki",
+        "scopeName": "source.bourbaki",
+        "path": "./syntaxes/bourbaki.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "Bourbaki",
+      "properties": {
+        "bourbaki.serverPath": {
+          "type": "string",
+          "default": "",
+          "description": "Путь к bourbaki-lsp. Пусто: ~/.cargo/bin/bourbaki-lsp, если он есть, иначе bourbaki-lsp из PATH."
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  }
+}

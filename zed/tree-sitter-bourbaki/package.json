@@ -1,0 +1,7 @@
+{
+  "name": "tree-sitter-bourbaki",
+  "version": "0.1.0",
+  "description": "Подсветка конспектов .bk (bourbaki-engine)",
+  "main": "grammar.js",
+  "tree-sitter": [{ "scope": "source.bourbaki", "file-types": ["bk"] }]
+}

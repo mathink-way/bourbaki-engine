@@ -1,0 +1,152 @@
+-- § 3, n° 5. Эквивалентность (стр. 50-52).
+--
+-- Задача: научиться заменять соотношение эквивалентным.
+-- Проблема: A ⇔ B это сокращение (A ⇒ B) ∧ (B ⇒ A), а ∧ само сокращение для ¬(¬A ∨ ¬B);
+-- доказывать каждое свойство из S1-S4 руками долго.
+-- Решение: C22 и C24 (как пример) доказаны так, как подсказывает книга (через C20, C21),
+-- остальные списки C23, C24 приняты как тавтологии (упр. 7, `by taut`): проверка идёт
+-- таблицей истинности, а #expand строит честное доказательство из S1-S4.
+-- Что осталось: ничего, после C25 книга пользуется C1-C25 без ссылок; здесь ссылки нужны.
+
+import "00_prelude.bk"
+open base
+import "01_logic.bk"
+namespace ch1
+in Logical
+
+-- Удобные формы C20, C21 для ⇔ (в книге это замечание перед C22, стр. 51).
+theorem iff_imp {A B : rel} (h : A ⇔ B) : A ⇒ B {
+  (A ⇔ B) ⇒ (A ⇒ B)   by C21
+  A ⇒ B               by mp h ^
+}
+
+theorem iff_imp' {A B : rel} (h : A ⇔ B) : B ⇒ A {
+  (A ⇔ B) ⇒ (B ⇒ A)   by C21'
+  B ⇒ A               by mp h ^
+}
+
+theorem iff_intro {A B : rel} (h1 : A ⇒ B) (h2 : B ⇒ A) : A ⇔ B by C20 h1 h2
+
+theorem iff_mp {A B : rel} (h : A ⇔ B) (a : A) : B {
+  A ⇒ B   by iff_imp h
+  B       by mp a ^
+}
+
+theorem iff_mpr {A B : rel} (h : A ⇔ B) (b : B) : A {
+  B ⇒ A   by iff_imp' h
+  A       by mp b ^
+}
+
+-- C22.
+theorem C22 {A B : rel} (h : A ⇔ B) : B ⇔ A {
+  A ⇒ B    by iff_imp h
+  B ⇒ A    by iff_imp' h
+  B ⇔ A    by C20 2 1
+}
+
+theorem C22' {A B C : rel} (h1 : A ⇔ B) (h2 : B ⇔ C) : A ⇔ C {
+  A ⇒ B    by iff_imp h1
+  B ⇒ C    by iff_imp h2
+  A ⇒ C    by C6 1 2
+  C ⇒ B    by iff_imp' h2
+  B ⇒ A    by iff_imp' h1
+  C ⇒ A    by C6 4 5
+  A ⇔ C    by C20 3 6
+}
+
+-- C23. A и B эквивалентны, C любое. Пять теорем книги.
+theorem C23a {A B : rel} (h : A ⇔ B) : ¬A ⇔ ¬B {
+  (A ⇔ B) ⇒ (¬A ⇔ ¬B)   by taut
+  ¬A ⇔ ¬B               by mp h ^
+}
+
+theorem C23b {A B C : rel} (h : A ⇔ B) : (A ⇒ C) ⇔ (B ⇒ C) {
+  (A ⇔ B) ⇒ ((A ⇒ C) ⇔ (B ⇒ C))   by taut
+  _                               by mp h ^
+}
+
+theorem C23c {A B C : rel} (h : A ⇔ B) : (C ⇒ A) ⇔ (C ⇒ B) {
+  (A ⇔ B) ⇒ ((C ⇒ A) ⇔ (C ⇒ B))   by taut
+  _                               by mp h ^
+}
+
+theorem C23d {A B C : rel} (h : A ⇔ B) : (A ∧ C) ⇔ (B ∧ C) {
+  (A ⇔ B) ⇒ ((A ∧ C) ⇔ (B ∧ C))   by taut
+  _                               by mp h ^
+}
+
+theorem C23e {A B C : rel} (h : A ⇔ B) : (A ∨ C) ⇔ (B ∨ C) {
+  (A ⇔ B) ⇒ ((A ∨ C) ⇔ (B ∨ C))   by taut
+  _                               by mp h ^
+}
+
+-- C24. Первая теорема так, как она следует из C16, C11 и C20; остальные тавтологии.
+theorem C24_1 {A : rel} : ¬¬A ⇔ A {
+  ¬¬A ⇒ A    by C16
+  A ⇒ ¬¬A    by C11
+  ¬¬A ⇔ A    by C20 1 2
+}
+theorem C24_2 {A B : rel} : (A ⇒ B) ⇔ (¬B ⇒ ¬A) by taut
+theorem C24_3 {A : rel} : (A ∧ A) ⇔ A by taut
+theorem C24_4 {A B : rel} : (A ∧ B) ⇔ (B ∧ A) by taut
+theorem C24_5 {A B C : rel} : (A ∧ (B ∧ C)) ⇔ ((A ∧ B) ∧ C) by taut
+theorem C24_6 {A B : rel} : (A ∨ B) ⇔ ¬(¬A ∧ ¬B) by taut
+theorem C24_7 {A : rel} : (A ∨ A) ⇔ A by taut
+theorem C24_8 {A B : rel} : (A ∨ B) ⇔ (B ∨ A) by taut
+theorem C24_9 {A B C : rel} : (A ∨ (B ∨ C)) ⇔ ((A ∨ B) ∨ C) by taut
+theorem C24_10 {A B C : rel} : (A ∧ (B ∨ C)) ⇔ ((A ∧ B) ∨ (A ∧ C)) by taut
+theorem C24_11 {A B C : rel} : (A ∨ (B ∧ C)) ⇔ ((A ∨ B) ∧ (A ∨ C)) by taut
+theorem C24_12 {A B : rel} : (A ∧ ¬B) ⇔ ¬(A ⇒ B) by taut
+theorem C24_13 {A B : rel} : (A ∨ B) ⇔ (¬A ⇒ B) by taut
+
+-- C25.
+theorem C25 {A B : rel} (h : A) : (A ∧ B) ⇔ B {
+  A ⇒ ((A ∧ B) ⇔ B)   by taut
+  _                   by mp h ^
+}
+
+theorem C25' {A B : rel} (h : ¬A) : (A ∨ B) ⇔ B {
+  ¬A ⇒ ((A ∨ B) ⇔ B)   by taut
+  _                    by mp h ^
+}
+
+-- Мелкие правила, которыми удобно склеивать шаги дальше (все тавтологии).
+theorem imp_and {A B C : rel} (h1 : A ⇒ B) (h2 : A ⇒ C) : A ⇒ (B ∧ C) {
+  (A ⇒ B) ⇒ ((A ⇒ C) ⇒ (A ⇒ (B ∧ C)))   by taut
+  (A ⇒ C) ⇒ (A ⇒ (B ∧ C))               by mp h1 ^
+  A ⇒ (B ∧ C)                           by mp h2 ^
+}
+
+theorem cases_imp {A B C : rel} (h1 : A ⇒ C) (h2 : B ⇒ C) : (A ∨ B) ⇒ C {
+  (A ⇒ C) ⇒ ((B ⇒ C) ⇒ ((A ∨ B) ⇒ C))   by taut
+  (B ⇒ C) ⇒ ((A ∨ B) ⇒ C)               by mp h1 ^
+  (A ∨ B) ⇒ C                           by mp h2 ^
+}
+
+theorem curry {A B C : rel} (h : (A ∧ B) ⇒ C) : B ⇒ (A ⇒ C) {
+  ((A ∧ B) ⇒ C) ⇒ (B ⇒ (A ⇒ C))   by taut
+  _                               by mp h ^
+}
+
+theorem uncurry {A B C : rel} (h : B ⇒ (A ⇒ C)) : (A ∧ B) ⇒ C {
+  (B ⇒ (A ⇒ C)) ⇒ ((A ∧ B) ⇒ C)   by taut
+  _                               by mp h ^
+}
+
+theorem and_iff {A B C D : rel} (h1 : A ⇔ B) (h2 : C ⇔ D) : (A ∧ C) ⇔ (B ∧ D) {
+  (A ⇔ B) ⇒ ((C ⇔ D) ⇒ ((A ∧ C) ⇔ (B ∧ D)))   by taut
+  (C ⇔ D) ⇒ ((A ∧ C) ⇔ (B ∧ D))               by mp h1 ^
+  _                                           by mp h2 ^
+}
+
+theorem or_iff {A B C D : rel} (h1 : A ⇔ B) (h2 : C ⇔ D) : (A ∨ C) ⇔ (B ∨ D) {
+  (A ⇔ B) ⇒ ((C ⇔ D) ⇒ ((A ∨ C) ⇔ (B ∨ D)))   by taut
+  (C ⇔ D) ⇒ ((A ∨ C) ⇔ (B ∨ D))               by mp h1 ^
+  _                                           by mp h2 ^
+}
+
+alias iff_symm := C22
+alias iff_trans := C22'
+alias dn_iff := C24_1
+
+end

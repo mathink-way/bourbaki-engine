@@ -1,0 +1,128 @@
+-- § 5, n° 2-3. Свойства равенства и функциональные соотношения (стр. 62-65): C43-C47.
+--
+-- Задача: подстановка равного вместо равного и "существует единственный x".
+-- Проблема: "R однозначно по x" и "R функционально по x" у Бурбаки это слова, а не знаки;
+-- в формулах они раскрываются в длинные соотношения с двумя связанными буквами.
+-- Решение: сокращения со связываемой буквой:
+--   Uniq_x(R)   есть (∀x)(∀y)((R(x) ∧ R(y)) ⇒ x = y)    "существует самое большее одно x, такое что R"
+--   ∃!_x(R)     есть (∃x)R ∧ Uniq_x(R)                  "существует единственное x, такое что R"
+-- Метапеременная терма с выделенной буквой: {V : term 1}, пишется V(x) (V{x} у Бурбаки).
+-- Что осталось: функциональный символ Σ = τx(R) это просто терм; отдельный знак не нужен.
+
+import "00_prelude.bk"
+open base
+import "06_typed.bk"
+open ch1
+
+abbrev Uniq (R : rel 1) := (∀x)(∀y)((R(x) ∧ R(y)) ⇒ x = y)
+abbrev ∃! (R : rel 1) := (∃x)R(x) ∧ Uniq_x(R(x))
+
+namespace ch1
+in Egalitarian
+
+-- C43: S6 вместе с тавтологией.
+theorem C43 {R : rel 1} {T U : term} : (T = U ∧ R(T)) ⇔ (T = U ∧ R(U)) {
+  T = U ⇒ (R(T) ⇔ R(U))                                           by S6 with R(x) := R(x)
+  (T = U ⇒ (R(T) ⇔ R(U))) ⇒ ((T = U ∧ R(T)) ⇔ (T = U ∧ R(U)))     by taut
+  _                                                               by mp 1 2
+}
+
+-- C44: V{x} терм с выделенной буквой. S6 для соотношения V(T) = V(x), затем теорема 1.
+theorem C44 {V : term 1} {T U : term} : T = U ⇒ V(T) = V(U) {
+  T = U ⇒ ((V(T) = V(T)) ⇔ (V(T) = V(U)))                         by S6 with R(x) := V(T) = V(x)
+  (T = U ⇒ ((V(T) = V(T)) ⇔ (V(T) = V(U)))) ⇒ (V(T) = V(T) ⇒ (T = U ⇒ V(T) = V(U)))   by taut
+  V(T) = V(T) ⇒ (T = U ⇒ V(T) = V(U))                             by mp 1 2
+  V(T) = V(T)                                                     by T1
+  _                                                               by mp ^ ^^
+}
+
+-- C45 (x не константа): если R однозначно по x, то R ⇒ (x = τx(R)).
+-- План книги (стр. 63-64): присоединим R; тогда (τx(R)|x)R верно по S5, и однозначность даёт x = τx(R).
+theorem C45 {R : rel 1} (h : Uniq_x(R(x))) : R(x) ⇒ x = τx(R(x)) {
+  R(x) ⇒ x = τx(R(x)) by assume a {
+    R(x) ⇒ (∃x)R(x)                                                       by S5
+    (∃x)R(x)                                                              by mp a ^
+    both. R(x) ∧ (∃x)R(x)                                                 by C20 a ^
+    Uniq_x(R(x)) ⇒ (∀z)((R(x) ∧ R(z)) ⇒ x = z)                            by C30 with R(t) := (∀z)((R(t) ∧ R(z)) ⇒ t = z); T := x
+    (∀z)((R(x) ∧ R(z)) ⇒ x = z)                                           by mp h ^
+    (∀z)((R(x) ∧ R(z)) ⇒ x = z) ⇒ ((R(x) ∧ R(τx(R(x)))) ⇒ x = τx(R(x)))   by C30 with R(t) := (R(x) ∧ R(t)) ⇒ x = t; T := τx(R(x))
+    (R(x) ∧ R(τx(R(x)))) ⇒ x = τx(R(x))                                   by mp 5 6
+    x = τx(R(x))                                                          by mp both ^
+  }
+}
+
+-- C45, обратно: если R ⇒ (x = T) для терма T без x, то R однозначно по x.
+theorem C45' {R : rel 1} {T : term} (h : (∀x)(R(x) ⇒ x = T)) : Uniq_x(R(x)) {
+  (∀x)(R(x) ⇒ x = T) ⇒ (R(y) ⇒ y = T)     by C30
+  ry. R(y) ⇒ y = T                         by mp h ^
+  (∀x)(R(x) ⇒ x = T) ⇒ (R(z) ⇒ z = T)     by C30
+  rz. R(z) ⇒ z = T                         by mp h ^
+  (R(y) ∧ R(z)) ⇒ y = z by assume a {
+    (R(y) ∧ R(z)) ⇒ R(y)                   by C21
+    R(y)                                   by mp a ^
+    yt. y = T                              by mp ^ ry
+    (R(y) ∧ R(z)) ⇒ R(z)                   by C21'
+    R(z)                                   by mp a ^
+    z = T                                  by mp ^ rz
+    T = z                                  by T2 ^
+    y = z                                  by T3 yt ^
+  }
+  (∀z)((R(y) ∧ R(z)) ⇒ y = z)              by gen ^ with z
+  (∀y)(∀z)((R(y) ∧ R(z)) ⇒ y = z)          by gen ^ with y
+}
+
+-- C46: R функционально по x, тогда R ⇔ (x = τx(R)).
+theorem C46 {R : rel 1} (h : ∃!_x(R(x))) : R(x) ⇔ x = τx(R(x)) {
+  ∃!_x(R(x)) ⇒ (∃x)R(x)                                    by C21
+  ex. (∃x)R(x)                                             by mp h ^
+  ∃!_x(R(x)) ⇒ Uniq_x(R(x))                                by C21'
+  Uniq_x(R(x))                                             by mp h ^
+  to. R(x) ⇒ x = τx(R(x))                                  by C45 ^
+  x = τx(R(x)) ⇒ (R(x) ⇔ R(τx(R(x))))                      by S6 with R(t) := R(t); T := x; U := τx(R(x))
+  (x = τx(R(x)) ⇒ (R(x) ⇔ R(τx(R(x))))) ⇒ (R(τx(R(x))) ⇒ (x = τx(R(x)) ⇒ R(x)))   by taut
+  R(τx(R(x))) ⇒ (x = τx(R(x)) ⇒ R(x))                      by mp 6 7
+  x = τx(R(x)) ⇒ R(x)                                      by mp ex ^
+  _                                                        by C20 to ^
+}
+
+-- C46, обратно: если R ⇔ (x = T) для терма T без x, то R функционально по x.
+theorem C46' {R : rel 1} {T : term} (h : (∀x)(R(x) ⇔ x = T)) : ∃!_x(R(x)) {
+  (∀x)(R(x) ⇔ x = T) ⇒ (R(x) ⇔ x = T)        by C30
+  R(x) ⇔ x = T                               by mp h ^
+  R(x) ⇒ x = T                               by iff_imp ^
+  (∀x)(R(x) ⇒ x = T)                         by gen ^ with x
+  uniq. Uniq_x(R(x))                         by C45' ^
+  (∀x)(R(x) ⇔ x = T) ⇒ (R(T) ⇔ T = T)        by C30
+  R(T) ⇔ T = T                               by mp h ^
+  T = T ⇒ R(T)                               by iff_imp' ^
+  T = T                                      by T1
+  R(T)                                       by mp ^ ^^
+  (∃x)R(x)                                   by exists_intro ^
+  _                                          by C20 ^ uniq
+}
+
+-- C47 (x не константа): R функционально по x, тогда (τx(R)|x)S ⇔ (∃x)(R ∧ S).
+-- План книги (стр. 65): по C46 и C43 (R ∧ S) ⇔ (R ∧ (τx(R)|x)S); дальше C33 и (∃x)R.
+theorem C47 {R S : rel 1} (h : ∃!_x(R(x))) : S(τx(R(x))) ⇔ (∃x)(R(x) ∧ S(x)) {
+  eq. R(x) ⇔ x = τx(R(x))                                                       by C46 h
+  x = τx(R(x)) ⇒ (S(x) ⇔ S(τx(R(x))))                                           by S6 with R(t) := S(t); T := x; U := τx(R(x))
+  (R(x) ⇔ x = τx(R(x))) ⇒ ((x = τx(R(x)) ⇒ (S(x) ⇔ S(τx(R(x))))) ⇒ ((R(x) ∧ S(x)) ⇔ (R(x) ∧ S(τx(R(x))))))   by taut
+  (x = τx(R(x)) ⇒ (S(x) ⇔ S(τx(R(x))))) ⇒ ((R(x) ∧ S(x)) ⇔ (R(x) ∧ S(τx(R(x)))))                            by mp eq ^
+  (R(x) ∧ S(x)) ⇔ (R(x) ∧ S(τx(R(x))))                                          by mp 2 ^
+  (∀x)((R(x) ∧ S(x)) ⇔ (R(x) ∧ S(τx(R(x)))))                                    by gen ^ with x
+  a. (∃x)(R(x) ∧ S(x)) ⇔ (∃x)(R(x) ∧ S(τx(R(x))))                               by C31_exists_iff ^
+  (R(x) ∧ S(τx(R(x)))) ⇔ (S(τx(R(x))) ∧ R(x))                                   by C24_4
+  (∀x)((R(x) ∧ S(τx(R(x)))) ⇔ (S(τx(R(x))) ∧ R(x)))                             by gen ^ with x
+  b. (∃x)(R(x) ∧ S(τx(R(x)))) ⇔ (∃x)(S(τx(R(x))) ∧ R(x))                        by C31_exists_iff ^
+  c. (∃x)(S(τx(R(x))) ∧ R(x)) ⇔ (S(τx(R(x))) ∧ (∃x)R(x))                        by C33' with R := S(τx(R(x))); S(t) := R(t)
+  ∃!_x(R(x)) ⇒ (∃x)R(x)                                                         by C21
+  (∃x)R(x)                                                                      by mp h ^
+  (∃x)R(x) ⇒ ((S(τx(R(x))) ∧ (∃x)R(x)) ⇔ S(τx(R(x))))                           by taut
+  d. (S(τx(R(x))) ∧ (∃x)R(x)) ⇔ S(τx(R(x)))                                     by mp ^^ ^
+  (∃x)(R(x) ∧ S(x)) ⇔ (∃x)(S(τx(R(x))) ∧ R(x))                                  by C22' a b
+  (∃x)(R(x) ∧ S(x)) ⇔ (S(τx(R(x))) ∧ (∃x)R(x))                                  by C22' ^ c
+  (∃x)(R(x) ∧ S(x)) ⇔ S(τx(R(x)))                                               by C22' ^ d
+  _                                                                             by C22 ^
+}
+
+end

@@ -1,0 +1,6 @@
+{
+  "grammars": [
+    { "name": "bourbaki", "scope": "source.bourbaki", "path": ".", "file-types": ["bk"] }
+  ],
+  "metadata": { "version": "0.1.0", "license": "MIT", "description": "bourbaki .bk" }
+}

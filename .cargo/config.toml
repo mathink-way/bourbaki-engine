@@ -1,0 +1,3 @@
+# KaTeX в документации: cargo doc подключает katex-header.html к каждой странице
+[build]
+rustdocflags = ["--html-in-header", "katex-header.html"]

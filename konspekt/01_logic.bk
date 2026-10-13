@@ -1,0 +1,165 @@
+-- § 3. Логические теории.
+--
+-- Задача: из четырёх схем S1-S4 и силлогизма C1 получить всю привычную логику высказываний.
+-- Проблема: схем всего четыре, а нужны сотни фактов вида "если A ⇒ B и B ⇒ C, то A ⇒ C".
+-- Решение: доказывать факты для произвольных соотношений A, B, C один раз (метапеременные)
+-- и потом применять одной строкой, как критерии C6, C7, ... в книге.
+-- Что осталось: методы, меняющие теорию (C14 гипотеза, C15 абсурд), встроены как правила.
+--
+-- Строки нумеруются сами (1, 2, ...); ^ это предыдущая строка, ^^ две назад.
+
+import "00_prelude.bk"
+open base
+namespace ch1
+in Logical
+
+-- C6 (стр. 45). Транзитивность ⇒. Гипотезы h1, h2 ведут себя как явные аксиомы.
+theorem C6 {A B C : rel} (h1 : A ⇒ B) (h2 : B ⇒ C) : A ⇒ C {
+  (B ⇒ C) ⇒ ((A ⇒ B) ⇒ (A ⇒ C))   by S4 with A := B; B := C; C := ¬A
+  (A ⇒ B) ⇒ (A ⇒ C)               by mp h2 ^
+  A ⇒ C                           by mp h1 ^
+}
+
+-- C7. Подстановку в схемы можно не писать: она восстанавливается по строке.
+theorem C7 {A B : rel} : B ⇒ (A ∨ B) {
+  B ⇒ (B ∨ A)         by S2
+  (B ∨ A) ⇒ (A ∨ B)   by S3
+  B ⇒ (A ∨ B)         by C6 1 2
+}
+
+-- C8 (§ 3, n° 2), ровно как в книге (номера строк можно писать, они должны совпадать с настоящими).
+theorem C8 {A : rel} : A ⇒ A {
+  1. A ⇒ (A ∨ A)                                  by S2 with A := A; B := A
+  2. (A ∨ A) ⇒ A                                  by S1 with A := A
+  3. ((A ∨ A) ⇒ A) ⇒ ((A ⇒ (A ∨ A)) ⇒ (A ⇒ A))    by S4 with A := A ∨ A; B := A; C := ¬A
+  4. (A ⇒ (A ∨ A)) ⇒ (A ⇒ A)                      by mp 2 3
+  5. A ⇒ A                                        by mp 1 4
+}
+
+-- C9. Если B теорема, то A ⇒ B теорема. "(не A) или B" это буквально A ⇒ B.
+theorem C9 {A B : rel} (h : B) : A ⇒ B {
+  B ⇒ (¬A ∨ B)   by C7
+  A ⇒ B          by mp h ^
+}
+
+-- C10. Закон исключённого третьего.
+theorem C10 {A : rel} : A ∨ ¬A {
+  A ⇒ A                 by C8
+  (¬A ∨ A) ⇒ (A ∨ ¬A)   by S3
+  A ∨ ¬A                by mp 1 2
+}
+
+-- C11. Это C10 для "не A": (не A) или (не не A) и есть A ⇒ не не A. Доказательство в одну строку.
+theorem C11 {A : rel} : A ⇒ ¬¬A by C10 with A := ¬A
+
+-- C12. Контрапозиция.
+theorem C12 {A B : rel} : (A ⇒ B) ⇒ (¬B ⇒ ¬A) {
+  B ⇒ ¬¬B                                 by C11
+  (B ⇒ ¬¬B) ⇒ ((¬A ∨ B) ⇒ (¬A ∨ ¬¬B))     by S4
+  (¬A ∨ B) ⇒ (¬A ∨ ¬¬B)                   by mp 1 2
+  (¬A ∨ ¬¬B) ⇒ (¬¬B ∨ ¬A)                 by S3
+  (A ⇒ B) ⇒ (¬B ⇒ ¬A)                     by C6 3 4
+}
+
+-- C13.
+theorem C13 {A B C : rel} (h : A ⇒ B) : (B ⇒ C) ⇒ (A ⇒ C) {
+  (A ⇒ B) ⇒ (¬B ⇒ ¬A)                  by C12
+  ¬B ⇒ ¬A                              by mp h ^
+  (¬B ⇒ ¬A) ⇒ ((C ∨ ¬B) ⇒ (C ∨ ¬A))    by S4
+  (C ∨ ¬B) ⇒ (C ∨ ¬A)                  by mp 2 3
+  (¬B ∨ C) ⇒ (C ∨ ¬B)                  by S3
+  (C ∨ ¬A) ⇒ (¬A ∨ C)                  by S3
+  (¬B ∨ C) ⇒ (C ∨ ¬A)                  by C6 5 4
+  (B ⇒ C) ⇒ (A ⇒ C)                    by C6 7 6
+}
+
+-- C14 (метод вспомогательной гипотезы) это правило: строка A ⇒ B, а в блоке
+-- доказывается B в теории 𝒯 + A. Первая строка блока может сослаться на гипотезу через ^.
+theorem example_C14 {A B : rel} : A ⇒ (A ∨ B) {
+  A ⇒ (A ∨ B) by assume h {
+    A ⇒ (A ∨ B)   by S2
+    A ∨ B         by mp h ^
+  }
+}
+
+-- C16 как в книге (стр. 48): предположим "не не A"; если бы A было ложно, получилось бы
+-- противоречие "не A" и "не не A".
+theorem C16 {A : rel} : ¬¬A ⇒ A {
+  ¬¬A ⇒ A by assume h {
+    A by contra g {
+      ¬A    by g
+      ¬¬A   by h
+    }
+  }
+}
+
+-- C17.
+theorem C17 {A B : rel} : (¬B ⇒ ¬A) ⇒ (A ⇒ B) {
+  (¬B ⇒ ¬A) ⇒ (A ⇒ B) by assume h {
+    A ⇒ B by assume a {
+      B by contra g {
+        ¬A   by mp g h
+        A    by a
+      }
+    }
+  }
+}
+
+-- C18 (метод разделения случаев).
+theorem C18 {A B C : rel} (h : A ∨ B) (h1 : A ⇒ C) (h2 : B ⇒ C) : C {
+  (A ∨ B) ⇒ (B ∨ A)                 by S3
+  (A ⇒ C) ⇒ ((B ∨ A) ⇒ (B ∨ C))     by S4
+  (B ∨ A) ⇒ (B ∨ C)                 by mp h1 ^
+  (B ∨ C) ⇒ (C ∨ B)                 by S3
+  (B ⇒ C) ⇒ ((C ∨ B) ⇒ (C ∨ C))     by S4
+  (C ∨ B) ⇒ (C ∨ C)                 by mp h2 ^
+  (C ∨ C) ⇒ C                       by S1
+  B ∨ A                             by mp h 1
+  B ∨ C                             by mp ^ 3
+  C ∨ B                             by mp ^ 4
+  C ∨ C                             by mp ^ 6
+  C                                 by mp ^ 7
+}
+
+-- § 3, n° 4. Конъюнкция: "A и B" есть ¬((¬A) ∨ (¬B)).
+-- C20 (§ 3, n° 4), как в книге: предположим, что "A и B" ложно.
+theorem C20 {A B : rel} (ha : A) (hb : B) : A ∧ B {
+  A ∧ B by contra g {
+    ¬¬(¬A ∨ ¬B)                 by g
+    ¬¬(¬A ∨ ¬B) ⇒ (¬A ∨ ¬B)     by C16
+    A ⇒ ¬B                      by mp 1 2
+    ¬B                          by mp ha ^
+    B                           by hb
+  }
+}
+
+-- C21.
+theorem C21 {A B : rel} : (A ∧ B) ⇒ A {
+  ¬A ⇒ (¬A ∨ ¬B)                       by S2
+  (¬A ∨ ¬B) ⇒ ¬¬(¬A ∨ ¬B)              by C11
+  ¬A ⇒ ¬(A ∧ B)                        by C6 1 2
+  (¬A ⇒ ¬(A ∧ B)) ⇒ ((A ∧ B) ⇒ A)      by C17
+  (A ∧ B) ⇒ A                          by mp 3 4
+}
+
+theorem C21' {A B : rel} : (A ∧ B) ⇒ B {
+  ¬B ⇒ (¬A ∨ ¬B)                       by C7
+  (¬A ∨ ¬B) ⇒ ¬¬(¬A ∨ ¬B)              by C11
+  ¬B ⇒ ¬(A ∧ B)                        by C6 1 2
+  (¬B ⇒ ¬(A ∧ B)) ⇒ ((A ∧ B) ⇒ B)      by C17
+  (A ∧ B) ⇒ B                          by mp 3 4
+}
+
+-- § 3, n° 5. Эквивалентность. Упражнение 7: любую тавтологию можно принять одной строкой,
+-- проверка идёт таблицей истинности, а раскрытие строит доказательство из S1-S4.
+theorem C24_example {A B C : rel} : (A ∧ (B ∨ C)) ⇔ ((A ∧ B) ∨ (A ∧ C)) by taut
+
+-- Свои имена для теорем Бурбаки.
+alias imp_refl := C8
+alias imp_trans := C6
+alias dne := C16
+
+end
+
+#expand ch1.C8
+#expand ch1.C18

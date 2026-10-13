@@ -1,0 +1,8 @@
+name = "Bourbaki"
+grammar = "bourbaki"
+path_suffixes = ["bk"]
+line_comments = ["-- "]
+brackets = [
+  { start = "{", end = "}", close = true, newline = true },
+  { start = "(", end = ")", close = true, newline = false },
+]

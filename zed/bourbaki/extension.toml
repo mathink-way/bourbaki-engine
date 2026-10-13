@@ -1,0 +1,17 @@
+id = "bourbaki"
+name = "Bourbaki"
+version = "0.1.0"
+schema_version = 1
+authors = ["Rushan Davlitshin (mathink-way)"]
+description = "Конспекты .bk (bourbaki-engine): подсветка, ошибки проверки, подсказки"
+
+# Откуда Zed берёт грамматику подсветки (см. zed/README.md):
+# либо GitHub-репозиторий проекта с path = "zed/tree-sitter-bourbaki",
+# либо локальная копия, которую готовит zed/setup.sh (он сам заполнит две строки ниже).
+[grammars.bourbaki]
+repository = "file:///Users/mathink-way/.local/share/bourbaki/tree-sitter-bourbaki"
+rev = "0e2edb3ec426ff61320a28a7e76d1be744553747"
+
+[language_servers.bourbaki-lsp]
+name = "bourbaki-lsp"
+languages = ["Bourbaki"]

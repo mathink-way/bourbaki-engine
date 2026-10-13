@@ -1,0 +1,227 @@
+-- § 4, n° 1-3. Кванторы (стр. 53-57): C26-C34.
+--
+-- Задача: свойства ∃ и ∀ (перестановка с ¬, ∧, ∨, друг с другом).
+-- Проблема: у Бурбаки (∃x)R есть R(τx(R)), а единственная новая схема S5; рассуждения
+-- книги идут в теории 𝒯₀, где x не константа.
+-- Решение: R{x} это метапеременная веса 1 (пишется R(x)), "x не встречается в R" это
+-- метапеременная веса 0 (R, без скобок): в знак метапеременной никакая буква не входит.
+-- Условие "R ⇒ S теорема, x не константа" записывается гипотезой (∀x)(R(x) ⇒ S(x)):
+-- при x не константе это одно и то же (C27 и C30).
+-- Что осталось: подставлять R(x) := ... можно не писать, если R видно из строки
+-- (сопоставление образцов Миллера); там, где не видно, подстановка пишется явно.
+
+import "00_prelude.bk"
+open base
+import "04_equiv.bk"
+import "02_quant_eq.bk"
+namespace ch1
+in Quantified
+
+-- CS8: (∃x)R и (∃y)R' это одно и то же знакосочетание (связанная буква ничего не значит).
+-- Поэтому C8 (A ⇒ A) подходит к такой строке буквально.
+theorem CS8_example {R : rel 1} : (∃x)R(x) ⇒ (∃y)R(y) by C8
+
+-- C26: (∀x)R это буквально ¬¬(τx(¬R)|x)R, так что это C24 для "не не".
+theorem C26 {R : rel 1} : (∀x)R(x) ⇔ R(τx(¬R(x))) by C24_1
+
+-- C27 это правило `gen` (обобщение): пример. Буква x здесь не константа.
+theorem C27_example {R : rel 1} : (∀x)(R(x) ⇒ R(x)) {
+  R(x) ⇒ R(x)          by C8
+  (∀x)(R(x) ⇒ R(x))    by gen ^ with x
+}
+
+-- C28: ¬(∀x)R это буквально ¬¬(∃x)¬R.
+theorem C28 {R : rel 1} : ¬(∀x)R(x) ⇔ (∃x)¬R(x) by C24_1
+
+-- C29 (стр. 55), по плану книги: из R ⇔ ¬¬R подстановкой C3 и схемой S5.
+theorem C29 {R : rel 1} : ¬(∃x)R(x) ⇔ (∀x)¬R(x) {
+  R(x) ⇒ ¬¬R(x)                         by C11
+  (∃x)R(x) ⇒ ¬¬R(τx(R(x)))              by subst ^ with x := τx(R(x))
+  ¬¬R(τx(R(x))) ⇒ (∃x)¬¬R(x)            by S5 with R(x) := ¬¬R(x)
+  (∃x)R(x) ⇒ (∃x)¬¬R(x)                 by C6 2 3
+  ¬¬R(x) ⇒ R(x)                         by C16
+  (∃x)¬¬R(x) ⇒ R(τx(¬¬R(x)))            by subst ^ with x := τx(¬¬R(x))
+  R(τx(¬¬R(x))) ⇒ (∃x)R(x)              by S5
+  (∃x)¬¬R(x) ⇒ (∃x)R(x)                 by C6 6 7
+  (∃x)R(x) ⇔ (∃x)¬¬R(x)                 by C20 4 8
+  ¬(∃x)R(x) ⇔ (∀x)¬R(x)                 by C23a ^
+}
+
+-- C30 доказана в 02_quant_eq.bk.
+
+-- C30 для двух кванторов сразу (удобно для аксиом вида (∀x)(∀y)...).
+theorem C30_2 {R : rel 2} {T U : term} : (∀x)(∀y)R(x, y) ⇒ R(T, U) {
+  (∀x)(∀y)R(x, y) ⇒ (∀y)R(T, y)   by C30 with R(t) := (∀y)R(t, y); T := T
+  (∀y)R(T, y) ⇒ R(T, U)           by C30 with R(t) := R(T, t); T := U
+  _                               by C6 1 2
+}
+
+-- C31 (∀, стр. 56). План книги: присоединим (∀x)R; тогда R, значит S, значит (∀x)S.
+theorem C31 {R S : rel 1} (h : (∀x)(R(x) ⇒ S(x))) : (∀x)R(x) ⇒ (∀x)S(x) {
+  (∀x)R(x) ⇒ (∀x)S(x) by assume a {
+    (∀x)R(x) ⇒ R(x)                      by C30
+    R(x)                                 by mp a ^
+    (∀x)(R(x) ⇒ S(x)) ⇒ (R(x) ⇒ S(x))    by C30
+    R(x) ⇒ S(x)                          by mp h ^
+    S(x)                                 by mp 2 4
+    (∀x)S(x)                             by gen ^ with x
+  }
+}
+
+-- C31 (∃). Книга выводит из C29; короче подстановкой: R(x) ⇒ (∃x)S, и x := τx(R(x)).
+theorem C31_exists {R S : rel 1} (h : (∀x)(R(x) ⇒ S(x))) : (∃x)R(x) ⇒ (∃x)S(x) {
+  (∀x)(R(x) ⇒ S(x)) ⇒ (R(x) ⇒ S(x))   by C30
+  R(x) ⇒ S(x)                          by mp h ^
+  S(x) ⇒ (∃x)S(x)                      by S5
+  R(x) ⇒ (∃x)S(x)                      by C6 2 3
+  (∃x)R(x) ⇒ (∃x)S(x)                  by subst ^ with x := τx(R(x))
+}
+
+-- C31 для ⇔.
+theorem C31_iff {R S : rel 1} (h : (∀x)(R(x) ⇔ S(x))) : (∀x)R(x) ⇔ (∀x)S(x) {
+  (∀x)(R(x) ⇔ S(x)) ⇒ (R(x) ⇔ S(x))   by C30
+  rs. R(x) ⇔ S(x)                      by mp h ^
+  R(x) ⇒ S(x)                          by iff_imp rs
+  (∀x)(R(x) ⇒ S(x))                    by gen ^ with x
+  S(x) ⇒ R(x)                          by iff_imp' rs
+  (∀x)(S(x) ⇒ R(x))                    by gen ^ with x
+  (∀x)R(x) ⇒ (∀x)S(x)                  by C31 4
+  (∀x)S(x) ⇒ (∀x)R(x)                  by C31 6
+  _                                    by C20 7 8
+}
+
+theorem C31_exists_iff {R S : rel 1} (h : (∀x)(R(x) ⇔ S(x))) : (∃x)R(x) ⇔ (∃x)S(x) {
+  (∀x)(R(x) ⇔ S(x)) ⇒ (R(x) ⇔ S(x))   by C30
+  rs. R(x) ⇔ S(x)                      by mp h ^
+  R(x) ⇒ S(x)                          by iff_imp rs
+  (∀x)(R(x) ⇒ S(x))                    by gen ^ with x
+  S(x) ⇒ R(x)                          by iff_imp' rs
+  (∀x)(S(x) ⇒ R(x))                    by gen ^ with x
+  (∃x)R(x) ⇒ (∃x)S(x)                  by C31_exists 4
+  (∃x)S(x) ⇒ (∃x)R(x)                  by C31_exists 6
+  _                                    by C20 7 8
+}
+
+-- C32 (∀ и ∧, стр. 56), по плану книги: в обе стороны через вспомогательную гипотезу.
+theorem C32 {R S : rel 1} : (∀x)(R(x) ∧ S(x)) ⇔ ((∀x)R(x) ∧ (∀x)S(x)) {
+  (∀x)(R(x) ∧ S(x)) ⇒ ((∀x)R(x) ∧ (∀x)S(x)) by assume h {
+    (∀x)(R(x) ∧ S(x)) ⇒ (R(x) ∧ S(x))   by C30
+    rs. R(x) ∧ S(x)                      by mp h ^
+    (R(x) ∧ S(x)) ⇒ R(x)                 by C21
+    R(x)                                 by mp rs ^
+    r. (∀x)R(x)                          by gen ^ with x
+    (R(x) ∧ S(x)) ⇒ S(x)                 by C21'
+    S(x)                                 by mp rs ^
+    (∀x)S(x)                             by gen ^ with x
+    (∀x)R(x) ∧ (∀x)S(x)                  by C20 r ^
+  }
+  ((∀x)R(x) ∧ (∀x)S(x)) ⇒ (∀x)(R(x) ∧ S(x)) by assume h {
+    ((∀x)R(x) ∧ (∀x)S(x)) ⇒ (∀x)R(x)    by C21
+    (∀x)R(x)                             by mp h ^
+    (∀x)R(x) ⇒ R(x)                      by C30
+    r. R(x)                              by mp 2 3
+    ((∀x)R(x) ∧ (∀x)S(x)) ⇒ (∀x)S(x)    by C21'
+    (∀x)S(x)                             by mp h ^
+    (∀x)S(x) ⇒ S(x)                      by C30
+    S(x)                                 by mp 6 7
+    R(x) ∧ S(x)                          by C20 r ^
+    (∀x)(R(x) ∧ S(x))                    by gen ^ with x
+  }
+  _ by C20 1 2
+}
+
+-- C32 (∃ и ∨): в одну сторону подстановкой τ, в другую по C31.
+theorem C32' {R S : rel 1} : (∃x)(R(x) ∨ S(x)) ⇔ ((∃x)R(x) ∨ (∃x)S(x)) {
+  R(x) ⇒ (∃x)R(x)                                     by S5
+  (∃x)R(x) ⇒ ((∃x)R(x) ∨ (∃x)S(x))                    by S2
+  R(x) ⇒ ((∃x)R(x) ∨ (∃x)S(x))                        by C6 1 2
+  S(x) ⇒ (∃x)S(x)                                     by S5
+  (∃x)S(x) ⇒ ((∃x)R(x) ∨ (∃x)S(x))                    by C7
+  S(x) ⇒ ((∃x)R(x) ∨ (∃x)S(x))                        by C6 4 5
+  (R(x) ∨ S(x)) ⇒ ((∃x)R(x) ∨ (∃x)S(x))               by cases_imp 3 6
+  (∃x)(R(x) ∨ S(x)) ⇒ ((∃x)R(x) ∨ (∃x)S(x))           by subst ^ with x := τx(R(x) ∨ S(x))
+  R(x) ⇒ (R(x) ∨ S(x))                                by S2
+  (∀x)(R(x) ⇒ (R(x) ∨ S(x)))                          by gen ^ with x
+  (∃x)R(x) ⇒ (∃x)(R(x) ∨ S(x))                        by C31_exists ^
+  S(x) ⇒ (R(x) ∨ S(x))                                by C7
+  (∀x)(S(x) ⇒ (R(x) ∨ S(x)))                          by gen ^ with x
+  (∃x)S(x) ⇒ (∃x)(R(x) ∨ S(x))                        by C31_exists ^
+  ((∃x)R(x) ∨ (∃x)S(x)) ⇒ (∃x)(R(x) ∨ S(x))           by cases_imp 11 14
+  _                                                   by C20 8 15
+}
+
+-- C33 (∃ и ∧), x не встречается в R: R это метапеременная веса 0.
+theorem C33' {R : rel} {S : rel 1} : (∃x)(R ∧ S(x)) ⇔ (R ∧ (∃x)S(x)) {
+  (R ∧ S(x)) ⇒ R                          by C21
+  (R ∧ S(x)) ⇒ S(x)                       by C21'
+  S(x) ⇒ (∃x)S(x)                         by S5
+  (R ∧ S(x)) ⇒ (∃x)S(x)                   by C6 2 3
+  (R ∧ S(x)) ⇒ (R ∧ (∃x)S(x))             by imp_and 1 4
+  (∃x)(R ∧ S(x)) ⇒ (R ∧ (∃x)S(x))         by subst ^ with x := τx(R ∧ S(x))
+  (R ∧ S(x)) ⇒ (∃x)(R ∧ S(x))             by S5
+  S(x) ⇒ (R ⇒ (∃x)(R ∧ S(x)))             by curry ^
+  (∃x)S(x) ⇒ (R ⇒ (∃x)(R ∧ S(x)))         by subst ^ with x := τx(S(x))
+  (R ∧ (∃x)S(x)) ⇒ (∃x)(R ∧ S(x))         by uncurry ^
+  _                                       by C20 6 10
+}
+
+-- C33 (∀ и ∨): двойственно, через ¬ и C33'.
+theorem C33 {R : rel} {S : rel 1} : (∀x)(R ∨ S(x)) ⇔ (R ∨ (∀x)S(x)) {
+  ¬(R ∨ S(x)) ⇔ (¬R ∧ ¬S(x))                      by taut
+  (∀x)(¬(R ∨ S(x)) ⇔ (¬R ∧ ¬S(x)))                by gen ^ with x
+  (∃x)¬(R ∨ S(x)) ⇔ (∃x)(¬R ∧ ¬S(x))              by C31_exists_iff ^
+  (∃x)(¬R ∧ ¬S(x)) ⇔ (¬R ∧ (∃x)¬S(x))             by C33' with R := ¬R; S(x) := ¬S(x)
+  (∃x)¬(R ∨ S(x)) ⇔ (¬R ∧ (∃x)¬S(x))              by C22' 3 4
+  ¬(∃x)¬(R ∨ S(x)) ⇔ ¬(¬R ∧ (∃x)¬S(x))            by C23a ^
+  ¬(¬R ∧ (∃x)¬S(x)) ⇔ (R ∨ (∀x)S(x))              by taut
+  _                                               by C22' 6 7
+}
+
+-- C34. R{x, y} это метапеременная веса 2.
+theorem C34 {R : rel 2} : (∀x)(∀y)R(x, y) ⇔ (∀y)(∀x)R(x, y) {
+  (∀x)(∀y)R(x, y) ⇒ (∀y)(∀x)R(x, y) by assume h {
+    (∀x)(∀y)R(x, y) ⇒ (∀y)R(x, y)       by C30 with R(t) := (∀y)R(t, y); T := x
+    (∀y)R(x, y)                         by mp h ^
+    (∀y)R(x, y) ⇒ R(x, y)               by C30 with R(t) := R(x, t); T := y
+    R(x, y)                             by mp 2 3
+    (∀x)R(x, y)                         by gen ^ with x
+    (∀y)(∀x)R(x, y)                     by gen ^ with y
+  }
+  (∀y)(∀x)R(x, y) ⇒ (∀x)(∀y)R(x, y) by assume h {
+    (∀y)(∀x)R(x, y) ⇒ (∀x)R(x, y)       by C30 with R(t) := (∀x)R(x, t); T := y
+    (∀x)R(x, y)                         by mp h ^
+    (∀x)R(x, y) ⇒ R(x, y)               by C30 with R(t) := R(t, y); T := x
+    R(x, y)                             by mp 2 3
+    (∀y)R(x, y)                         by gen ^ with y
+    (∀x)(∀y)R(x, y)                     by gen ^ with x
+  }
+  _ by C20 1 2
+}
+
+theorem C34' {R : rel 2} : (∃x)(∃y)R(x, y) ⇔ (∃y)(∃x)R(x, y) {
+  R(x, y) ⇒ (∃x)R(x, y)                       by S5 with R(t) := R(t, y); T := x
+  (∃x)R(x, y) ⇒ (∃y)(∃x)R(x, y)               by S5 with R(t) := (∃x)R(x, t); T := y
+  R(x, y) ⇒ (∃y)(∃x)R(x, y)                   by C6 1 2
+  (∃y)R(x, y) ⇒ (∃y)(∃x)R(x, y)               by subst ^ with y := τy(R(x, y))
+  (∃x)(∃y)R(x, y) ⇒ (∃y)(∃x)R(x, y)           by subst ^ with x := τx((∃y)R(x, y))
+  R(x, y) ⇒ (∃y)R(x, y)                       by S5 with R(t) := R(x, t); T := y
+  (∃y)R(x, y) ⇒ (∃x)(∃y)R(x, y)               by S5 with R(t) := (∃y)R(t, y); T := x
+  R(x, y) ⇒ (∃x)(∃y)R(x, y)                   by C6 6 7
+  (∃x)R(x, y) ⇒ (∃x)(∃y)R(x, y)               by subst ^ with x := τx(R(x, y))
+  (∃y)(∃x)R(x, y) ⇒ (∃x)(∃y)R(x, y)           by subst ^ with y := τy((∃x)R(x, y))
+  _                                           by C20 5 10
+}
+
+-- Обратное неверно: из (∀y)(∃x)R не следует (∃x)(∀y)R (см. замечание после C34, стр. 57).
+theorem C34'' {R : rel 2} : (∃x)(∀y)R(x, y) ⇒ (∀y)(∃x)R(x, y) {
+  (∀y)R(x, y) ⇒ R(x, y)                         by C30 with R(t) := R(x, t); T := y
+  R(x, y) ⇒ (∃x)R(x, y)                         by S5 with R(t) := R(t, y); T := x
+  (∀y)R(x, y) ⇒ (∃x)R(x, y)                     by C6 1 2
+  e. (∃x)(∀y)R(x, y) ⇒ (∃x)R(x, y)              by subst ^ with x := τx((∀y)R(x, y))
+  (∃x)(∀y)R(x, y) ⇒ (∀y)(∃x)R(x, y) by assume h {
+    (∃x)R(x, y)                                 by mp h e
+    (∀y)(∃x)R(x, y)                             by gen ^ with y
+  }
+}
+
+end

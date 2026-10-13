@@ -1,0 +1,77 @@
+-- §§ 4-5. Кванторы и равенство.
+--
+-- Задача: научиться доказывать утверждения с ∃ и ∀.
+-- Проблема: у Бурбаки кванторов нет как отдельных знаков: (∃x)R это (τx(R)|x)R,
+-- а единственная новая схема это S5.
+-- Решение: R{x} становится метапеременной веса 1 (пишем R(x)), и всё сводится к
+-- подстановкам в схемы. Для обобщения есть правило C27 (gen), для подстановки в букву C3 (subst).
+-- Что осталось: следить, чтобы буква не была константой (проверяется автоматически).
+
+import "00_prelude.bk"
+open base
+import "01_logic.bk"
+namespace ch1
+in Quantified
+
+-- C30 (стр. 55): из (∀x)R следует (T|x)R.
+theorem C30 {R : rel 1} {T : term} : (∀x) R(x) ⇒ R(T) {
+  ¬R(T) ⇒ (∃x) ¬R(x)                              by S5 with R(x) := ¬R(x); T := T
+  (¬R(T) ⇒ (∃x) ¬R(x)) ⇒ (¬(∃x) ¬R(x) ⇒ ¬¬R(T))  by C12
+  ¬(∃x) ¬R(x) ⇒ ¬¬R(T)                            by mp 1 2
+  ¬¬R(T) ⇒ R(T)                                   by C16
+  (∀x) R(x) ⇒ R(T)                                by C6 3 4
+}
+
+-- Введение ∃: R(T) влечёт (∃x)R(x). Вместо R нужно указать явно, T находится сам.
+theorem exists_intro {R : rel 1} {T : term} (h : R(T)) : (∃x) R(x) {
+  R(T) ⇒ (∃x) R(x)   by S5 with R(x) := R(x)
+  (∃x) R(x)          by mp h ^
+}
+
+-- Удаление ∃ одной подстановкой: x не константа и не входит в A, поэтому из
+-- (R(x) и A) ⇒ A подстановкой τx(R(x) и A) вместо x получается ((∃x)(R(x) и A)) ⇒ A.
+theorem exists_elim {R : rel 1} {A : rel} : (∃x)(R(x) ∧ A) ⇒ A {
+  (R(x) ∧ A) ⇒ A          by C21'
+  (∃x)(R(x) ∧ A) ⇒ A      by subst ^ with x := τx(R(x) ∧ A)
+}
+
+-- § 5. Теорема 1 (стр. 62) так, как она доказана в книге: S7 для R = не (x = x).
+in Egalitarian
+
+theorem T1 {T : term} : T = T {
+  ¬(x = x) ⇔ ¬(x = x)                                            by taut
+  (∀x)(¬(x = x) ⇔ ¬(x = x))                                      by gen ^ with x
+  (∀x)(¬(x = x) ⇔ ¬(x = x)) ⇒ τx(¬(x = x)) = τx(¬(x = x))        by S7 with R(x) := ¬(x = x); S(x) := ¬(x = x)
+  τx(¬(x = x)) = τx(¬(x = x))                                    by mp 2 3
+  τx(¬(x = x)) = τx(¬(x = x)) ⇒ ¬¬(τx(¬(x = x)) = τx(¬(x = x)))  by C11
+  (∀x)(x = x)                                                    by mp 4 5
+  (∀x)(x = x) ⇒ T = T                                            by C30 with R(x) := x = x
+  T = T                                                          by mp 6 7
+}
+
+-- Теорема 2: симметрия.
+theorem T2 {T U : term} (h : T = U) : U = T {
+  T = U ⇒ ((T = T) ⇔ (U = T))                    by S6 with R(x) := x = T
+  (T = T) ⇔ (U = T)                              by mp h ^
+  ((T = T) ⇔ (U = T)) ⇒ ((T = T) ⇒ (U = T))      by C21
+  (T = T) ⇒ (U = T)                              by mp 2 3
+  T = T                                          by T1
+  U = T                                          by mp 5 4
+}
+
+-- Теорема 3: транзитивность.
+theorem T3 {T U V : term} (h1 : T = U) (h2 : U = V) : T = V {
+  U = V ⇒ ((T = U) ⇔ (T = V))                    by S6 with R(x) := T = x
+  (T = U) ⇔ (T = V)                              by mp h2 ^
+  ((T = U) ⇔ (T = V)) ⇒ ((T = U) ⇒ (T = V))      by C21
+  (T = U) ⇒ (T = V)                              by mp 2 3
+  T = V                                          by mp h1 ^
+}
+
+alias eq_refl := T1
+alias eq_symm := T2
+alias eq_trans := T3
+
+end
+
+#expand ch1.T1

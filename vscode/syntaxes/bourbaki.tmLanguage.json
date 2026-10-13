@@ -1,0 +1,20 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Bourbaki",
+  "scopeName": "source.bourbaki",
+  "patterns": [
+    { "name": "comment.line.double-dash.bourbaki", "match": "--.*$" },
+    { "name": "string.quoted.double.bourbaki", "match": "\"[^\"\\n]*\"" },
+    { "name": "keyword.other.directive.bourbaki", "match": "#[a-z]+" },
+    {
+      "name": "keyword.control.bourbaki",
+      "match": "(?<![\\w.])(import|namespace|end|open|alias|sign|abbrev|scheme|theory|extends|in|theorem|lemma|by|with|model|transfer|via|as|signs|schemes|axiom|rel|term|infix)(?![\\w'.])"
+    },
+    {
+      "name": "support.function.rule.bourbaki",
+      "match": "(?<![\\w.])(mp|gen|subst|taut|assume|contra|sorry|C1|C3|C14|C15|C27)(?![\\w'.])"
+    },
+    { "name": "constant.numeric.bourbaki", "match": "(?<![\\w])[0-9]+(?![\\w])" },
+    { "name": "keyword.operator.bourbaki", "match": "[¬∨∧⇒⇔∃∀τ=∈∉⊂≠→↔~^|:]+|:=" }
+  ]
+}
